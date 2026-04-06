@@ -1,0 +1,162 @@
+﻿using Swashbuckle.AspNetCore.Annotations;
+using System.ComponentModel;
+
+#region Common  *************************************************
+public class PaginationRequest
+{
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public string? Search { get; set; }
+}
+
+public class PagedResult<T>
+{
+    public IEnumerable<T> Items { get; set; } = new List<T>();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+}
+
+#endregion
+
+#region Master *************************************************
+public class RequestCreateMasterPendoa
+{
+    public string name { get; set; }
+    public bool dfl { get; set; }
+    public string nohp { get; set; }
+}
+
+public class RequestUpdateMasterPendoa
+{
+    public string name { get; set; }
+    public bool dfl { get; set; }
+    public string nohp { get; set; }
+    public long id_pendoa { get; set; }
+}
+
+public class RequestCreateMasterItem
+{
+    public string code { get; set; }
+    public string name { get; set; }
+    public string classcode { get; set; }
+    public string img1 { get; set; }
+    public string usercreate { get; set; }
+
+}
+
+public class RequestUpdateMasterItem
+{
+    public long iditem { get; set; }
+    public string code { get; set; }
+    public string name { get; set; }
+    public string classcode { get; set; }
+    public string baseunitcode { get; set; }
+    public string? img1 { get; set; }
+    public DateTime activedate { get; set; }
+    public string userupdate { get; set; }
+    public IFormFile? img1File { get; set; }
+}
+public class RequestGetAllItemMaster
+{
+    public string Area { get; set; } = "";
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public string Search { get; set; } = "";
+}
+
+public class RequestGetAllMasterPendoa
+{
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public string Search { get; set; } = "";
+}
+
+# endregion
+
+#region LOGIN *************************************************
+
+public class RequestLogin
+{
+    public string Userid { get; set; }
+    public string Password { get; set; }
+    
+    [DefaultValue("GKY")]
+    public string Userpt { get; set; }
+
+}
+public class RequestLog
+{
+    public string Userid { get; set; }
+    public string Jenistr { get; set; }
+    public string Notr { get; set; }
+    public string FromModul { get; set; }
+    public string Act { get; set; }
+    public string Ket { get; set; }
+    public string Kodearea { get; set; }
+}
+
+#endregion LOGIN
+
+#region Report BC *************************************************
+
+public class RequestModelListBC
+    {
+        public DateTime datefrom { get; set; } 
+        public DateTime dateto { get; set; }
+        [DefaultValue("")]
+        public string typebcfrom { get; set; }
+        [DefaultValue("")]
+        public string typebcto { get; set; }
+        [DefaultValue("")]
+        public string itemfrom { get; set; }
+        [DefaultValue("")]
+        public string itemto { get; set; }
+
+        [DefaultValue(1)]
+        public int intr { get; set; }
+
+        [DefaultValue("MJKKB")]
+        public string area { get; set; } = "MJKKB"; // ✅ default
+    }
+
+    public class RequestModelPosisiWIP
+    {
+        public DateTime datefrom { get; set; }
+        public DateTime dateto { get; set; }
+        [DefaultValue("")]
+        public string itemfrom { get; set; }
+        [DefaultValue("")]
+        public string itemto { get; set; }
+
+        [DefaultValue("MJKKB")]
+        public string area { get; set; } = "MJKKB"; // ✅ default
+    }
+
+    public class RequestModelMutStok
+    {
+        public DateTime datefrom { get; set; }
+        public DateTime dateto { get; set; }
+        [DefaultValue("")]
+        public string itemfrom { get; set; }
+        [DefaultValue("")]
+        public string itemto { get; set; }
+
+        [DefaultValue("MJKKB")]
+        public string area { get; set; } = "MJKKB"; // ✅ default
+    }
+
+    public class RequestModelHistLog
+    {
+        public DateTime datefrom { get; set; }
+        public DateTime dateto { get; set; }
+        [DefaultValue("")]
+        public string userid { get; set; }
+        [DefaultValue("")]
+        public string trno { get; set; }
+
+        [DefaultValue("MJKKB")]
+        public string area { get; set; } = "MJKKB"; // ✅ default
+    }
+
+#endregion Report BC    

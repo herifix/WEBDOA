@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* =========================
+   GLOBAL RESET
+========================= */
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-width: 0;
+  overflow-x: hidden;
+  background: #f8fafc;
+  color: #0f172a;
+  margin: 0;
+  overflow: hidden; /* ⬅️ ini penting */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* =========================
+   GLOBAL ELEMENT
+========================= */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid transparent;
+}
+
+/* DatePicker popup di atas modal/sidebar */
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+/* =========================
+   CUSTOM EFFECT
+========================= */
+.btn-ocean::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.15) 40%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* =========================
+   TAILWIND CUSTOM UTILITIES
+========================= */
+@utility btnmenu {
+  @apply w-full rounded-[14px] bg-white/20 px-[14px] py-[12px]
+    text-[16px] font-bold text-white
+    flex items-center gap-3
+    cursor-pointer transition-all duration-200
+    hover:bg-white/35 hover:text-black
+    hover:translate-x-[6px] hover:scale-[1.03];
+}
+
+@utility btndisabled {
+  @apply cursor-not-allowed opacity-50;
+}
+
+/* @utility btntoolbar {
+  @apply inline-flex min-w-[140px] items-center justify-center gap-1 rounded-md
+    border border-slate-400 px-6 py-2
+    text-[16px] font-bold text-slate-800
+    bg-gradient-to-r from-cyan-300 via-cyan-400 to-cyan-500
+    shadow-md transition-all duration-200
+    hover:text-black hover:from-blue-600 hover:via-sky-600 hover:to-cyan-600
+    hover:shadow-lg;
+} */
+
+@utility btntoolbar {
+  @apply inline-flex min-w-[118px] items-center justify-center gap-1 rounded-md 
+    border border-sky-400 px-5 py-2
+    text-[20px] font-black tracking-wide  text-slate-900
+    bg-gradient-to-r from-cyan-300 via-cyan-400 to-cyan-500
+    shadow-sm transition-all duration-200
+    hover:brightness-135 active:scale-[0.98];
+}
+
+@utility btnocean {
+  @apply relative inline-flex min-w-[140px] items-center justify-center overflow-hidden
+    rounded-full border border-slate-400
+    px-6 py-2
+    text-[16px] font-bold text-slate-800
+    bg-gradient-to-b from-cyan-300 via-cyan-400 to-teal-500
+    shadow-[0_4px_10px_rgba(0,150,170,0.45)]
+    transition-all duration-200
+    hover:text-black hover:to-cyan-600;
+}
+
+@utility btnfind {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-md
+    border border-yellow-400
+    bg-gradient-to-b from-yellow-200 to-yellow-400
+    text-slate-700 shadow-sm
+    transition-all duration-200
+    hover:from-yellow-300 hover:to-yellow-500
+    active:scale-[0.98];
+}
+
+@utility inputtextbox {
+  @apply h-9 rounded-md border border-slate-300 bg-white
+    px-3 text-[16px] text-slate-800 outline-none
+    focus:border-sky-500 focus:ring-1 focus:ring-sky-500;
+}
+
+@utility rowfindmaster {
+  @apply grid grid-cols-[100px_36px_minmax(0,1fr)] gap-1 min-w-0;
+}
+
+@utility inputreadonly {
+  @apply bg-gray-100 text-gray-800 border border-gray-300 select-text;
+}
+
+@utility form3col {
+  @apply grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_380px];
+}
+
+@utility form2col {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+@utility form2colfullheight { 
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6 h-full min-h-0 items-stretch;
+}
+
+@utility checkboxclass { 
+  @apply h-6 w-6 shrink-0 font-semibold;
+}

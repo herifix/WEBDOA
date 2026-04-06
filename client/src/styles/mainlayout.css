@@ -1,0 +1,175 @@
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+#root {
+  max-width: none !important;
+}
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* WRAPPER UTAMA */
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* TOGGLE */
+.global-toggle {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 99999;
+
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #fff;
+
+  background: rgba(26, 240, 255, 0.95);
+  box-shadow:
+    0 0 14px rgba(26, 133, 255, 0.9),
+    0 0 30px rgba(26, 152, 255, 0.6);
+
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.global-toggle:hover {
+  transform: scale(1.08);
+  color: black;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  min-height: 100vh;
+  padding: 70px 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+
+  background: linear-gradient(
+    180deg,
+    rgba(0, 195, 255, 0.9),
+    rgba(26, 255, 224, 0.95)
+  );
+
+  backdrop-filter: blur(6px);
+
+  box-shadow:
+    0 0 25px rgba(255, 159, 26, 0.45),
+    inset 0 0 18px rgba(255, 255, 255, 0.25);
+
+  transition:
+    margin-left 0.3s ease,
+    width 0.3s ease;
+}
+
+/* MODE HIDE */
+.sidebar.hidden {
+  margin-left: -280px;
+}
+
+/* TITLE */
+.sidebar-title {
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+  margin-right: 5px;
+  text-align: right;
+}
+
+/* CONTENT */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  padding: 16px;
+  overflow: auto;
+  transition: all 0.25s ease;
+}
+
+.main-content.expanded {
+  flex: 1;
+}
+
+/* MENU BUTTON */
+.btnmenu {
+  border: none;
+  padding: 12px 14px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.btnmenu:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateX(6px) scale(1.03);
+  box-shadow:
+    0 0 12px rgba(255, 159, 26, 0.8),
+    0 0 28px rgba(255, 159, 26, 0.55);
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.btnmenu:hover .menu-icon {
+  transform: scale(1.15);
+  filter:
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.9))
+    drop-shadow(0 0 12px rgba(255, 159, 26, 0.9));
+}
+
+.submenu {
+  display: flex;
+  flex-direction: column;
+  margin-left: 38px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+  gap: 6px;
+}
+
+.btndisabled {
+  opacity: 0.7;
+}
+
+.arrow {
+  margin-left: auto;
+  font-size: 12px;
+}
