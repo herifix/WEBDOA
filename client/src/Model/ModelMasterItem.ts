@@ -23,3 +23,15 @@ export type ItemMasterRow = {
   activedate: string | null;
   iditem : number ;
 };
+
+// export type ItemMasterRow = {
+//   id?: string | number;
+//   code: string;
+//   name: string;
+//   img1?: string;
+//   classcode: string;
+//   classname: string;
+//   baseunitcode: string;
+//   baseunitname: string;
+//   activedate: string | null;
+// };

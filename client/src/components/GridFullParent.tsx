@@ -11,6 +11,7 @@ export interface Column<T = Record<string, unknown>> {
   key: string;
   label: string;
   width: string;
+  hidden?: boolean;
   render?: (row: T, rowIndex: number) => React.ReactNode;
   headerClassName?: string;
   cellClassName?: string | ((row: T, rowIndex: number) => string);
@@ -110,17 +111,23 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [internalSelectedRowIndex, setInternalSelectedRowIndex] = useState<number | null>(null);
-
+  const visibleColumns = columns.filter((col) => !col.hidden);
+  
   const isControlledSelection = selectedRowIndex !== undefined;
   const currentSelectedRowIndex = isControlledSelection
     ? selectedRowIndex ?? null
     : internalSelectedRowIndex;
 
+  // const visibleColumns = useMemo(
+  //   () => columns.filter((col) => !col.hidden),
+  //   [columns]
+  // );
+
   const gridStyle = useMemo(
     () => ({
-      gridTemplateColumns: columns.map((c) => c.width).join(" "),
+      gridTemplateColumns: visibleColumns.map((c) => c.width ?? "1fr").join(" "),
     }),
-    [columns]
+    [visibleColumns]
   );
 
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
@@ -372,11 +379,11 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
             className="shrink-0 sticky top-0 z-10 grid bg-slate-950 text-sm font-semibold text-white"
             style={gridStyle}
           >
-            {columns.map((col, i) => (
+            {visibleColumns.map((col, i) => (
               <div
                 key={col.key}
                 className={`px-3 py-3 ${
-                  i !== columns.length - 1 ? "border-r border-slate-800" : ""
+                  i !== visibleColumns.length - 1 ? "border-r border-slate-800" : ""
                 } ${col.headerClassName ?? ""}`}
               >
                 {col.label}
@@ -416,7 +423,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                       onRowDoubleClick?.(row, rowIndex);
                     }}
                   >
-                    {columns.map((col, colIndex) => {
+                    {visibleColumns.map((col, colIndex) => {
                       const customCellClass =
                         typeof col.cellClassName === "function"
                           ? col.cellClassName(row, rowIndex)
@@ -426,7 +433,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                         <div
                           key={col.key}
                           className={`truncate border-b border-slate-200 px-3 py-2 ${
-                            colIndex !== columns.length - 1 ? "border-r" : ""
+                            colIndex !== visibleColumns.length - 1 ? "border-r" : ""
                           } ${isSelected ? selectedRowCellClassName : ""} ${customCellClass}`}
                           title={
                             typeof col.render === "function"
@@ -519,11 +526,11 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
               className="sticky top-0 z-10 grid bg-slate-950 text-sm font-semibold text-white"
               style={gridStyle}
             >
-              {columns.map((col, i) => (
+              {visibleColumns.map((col, i) => (
                 <div
                   key={col.key}
                   className={`px-3 py-3 ${
-                    i !== columns.length - 1 ? "border-r border-slate-800" : ""
+                    i !== visibleColumns.length - 1 ? "border-r border-slate-800" : ""
                   } ${col.headerClassName ?? ""}`}
                 >
                   {col.label}
@@ -562,7 +569,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                       onRowDoubleClick?.(row, rowIndex);
                     }}
                   >
-                    {columns.map((col, colIndex) => {
+                    {visibleColumns.map((col, colIndex) => {
                       const customCellClass =
                         typeof col.cellClassName === "function"
                           ? col.cellClassName(row, rowIndex)
@@ -572,7 +579,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                         <div
                           key={col.key}
                           className={`truncate border-b border-slate-200 px-3 py-2 ${
-                            colIndex !== columns.length - 1 ? "border-r" : ""
+                            colIndex !== visibleColumns.length - 1 ? "border-r" : ""
                           } ${isSelected ? selectedRowCellClassName : ""} ${customCellClass}`}
                           title={
                             typeof col.render === "function"

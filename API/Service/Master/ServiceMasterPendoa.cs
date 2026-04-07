@@ -69,7 +69,7 @@ namespace API.Service.Master
 
             try
             {
-                var oldData = Pendoafunc.GetDataById (bodyRequest.id_pendoa, conn, tran).data;
+                var oldData = Pendoafunc.GetDataById (bodyRequest.idpendoa, conn, tran).data;
                 if (oldData == null )
                 {
                     tran.Rollback();
@@ -131,7 +131,7 @@ namespace API.Service.Master
                 }
 
 
-                Pendoafunc.Delate(id_pendoa, conn, tran);
+                Pendoafunc.Delete(id_pendoa, conn, tran);
 
                 tran.Commit();
 

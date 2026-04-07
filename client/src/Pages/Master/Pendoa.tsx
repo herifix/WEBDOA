@@ -1,35 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Search } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
-import http from "../../api/http";
 
 import ERPGridTable from "../../components/GridFullParent";
 import ERPToolbar from "../../components/ToolbarHR";
-import FindDataPopup from "../../components/FindForm";
 
-import type { FindDataRow, JenisPencarian } from "../../Model/ModelFindData";
-import type { ItemMasterRow } from "../../Model/ModelMasterItem";
+import type { MasterPendoaRow } from "../../Model/ModelMasterPendoa";
 
-import { useFetchMasterItem } from "../../hooks/react_query/useFecthMasterItem";
-import { getDataByCode } from "../../service/masterItemService";
-import { useMasterItemPage } from "../../hooks/react_query/useMasterItemPage";
+import { useFetchMasterPendoa } from "../../hooks/react_query/useFetchMasterPendoa";
+import { getDataById } from "../../service/masterDonaturPendoa";
+import { useMasterPendoaPage } from "../../hooks/react_query/useMasterPendoaPage";
 
-export default function MasterBarangPage() {
-  const vm = useMasterItemPage();
+export default function MasterPendoaPage() {
+  const vm = useMasterPendoaPage();
 
-  const [openFind, setOpenFind] = useState(false);
-  const [jenis] = useState<JenisPencarian>("item");
-
-  const { data, isLoading, isFetching, refetch } = useFetchMasterItem({
-    area: vm.area,
+  const { data, isLoading, isFetching, refetch } = useFetchMasterPendoa({
     pageNumber: vm.page,
     pageSize: vm.pageSize,
     search: vm.search,
   });
 
-  useEffect(() => {
+useEffect(() => {
+  const timer = setTimeout(() => {
     vm.setPage(1);
-  }, [vm.search]);
+    vm.setSearch(vm.searchInput.trim());
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [vm.searchInput]);
+
 
 
   const handleSearchGrid = () => {
@@ -45,38 +44,26 @@ export default function MasterBarangPage() {
   };
 
   //@todo Show Data
-  const showData = async (code: string) => {
-    if (!code) return;
+  const showData = async (id: number) => {
+    if (!id) return;
 
     try {
-      const resp = await getDataByCode(code, vm.area);
+      const resp = await getDataById(id);
       const item = resp?.data;
+
 
       if (!item) {
         alert("Data tidak ditemukan");
         return;
       }
 
-      vm.setIdItem(item.iditem ?? "");
-      vm.setItemCode(item.code ?? "");
-      vm.setItemDesc(item.name ?? "");
-      vm.setBaseUnitCode(item.baseunitcode ?? "");
-      vm.setBaseUnitName(item.baseunitname ?? "");
-      vm.setClassCode(item.classcode ?? "");
-      vm.setClassName(item.classname ?? "");
-      vm.setGrupCode(item.grupcode ?? "");
-      vm.setGrupName(item.grupname ?? "");
-      vm.setactiveDate(item.activedate ?? "");
+      vm.setIdPendoa(item.id_pendoa ?? 0);
+      vm.setNama(item.nama ?? "");
+      vm.setNohp(item.nohp ?? "");
+      vm.setDfl(item.dfl ?? false); 
+      vm.setCreatedDate(item.createddate ?? "");
 
-      vm.classRef.current?.setValue(item.classcode ?? "", item.classname ?? "");
-      vm.baseunitRef.current?.setValue(item.baseunitcode ?? "", item.baseunitname ?? "");
-      vm.grupRef.current?.setValue(item.grupcode ?? "", item.grupname ?? "");
-
-      vm.setImageFileName(item.img1 ?? ""); 
-      vm.setImageFile(item.img1.split(/[\\/]/).pop() ?? "");
-      vm.setPreviewUrl(`${http.defaults.baseURL}/uploads/items/${item.img1 ?? ""}`);
-      
-      {/* `${http.defaults.baseURL}/uploads/items/${item.img1 ?? ""}` */}
+      console.log("resp getDataById =", item.dfl );
 
 
       vm.toView();
@@ -86,67 +73,29 @@ export default function MasterBarangPage() {
     }
   };
 
-  const handleSelected = async (row: FindDataRow) => {
-    setOpenFind(false);
-
-    switch (jenis) {
-      case "item":
-      case "data-item":
-        await showData(row.code);
-        break;
-
-      case "class":
-        vm.setClassCode(row.code);
-        vm.setClassName(row.description);
-        vm.classRef.current?.setValue(row.code, row.description);
-        break;
-
-      case "baseunit":
-        vm.setBaseUnitCode(row.code);
-        vm.setBaseUnitName(row.description);
-        vm.baseunitRef.current?.setValue(row.code, row.description);
-        break;
-
-      case "grup":
-        vm.setGrupCode(row.code);
-        vm.setGrupName(row.description);
-        vm.grupRef.current?.setValue(row.code, row.description);
-        break;
-
-      case "warehouse":
-        vm.warehouseRef.current?.setValue(row.code, row.description);
-        break;
-
-      default:
-        console.log("searchType tidak dikenal:", jenis);
-        break;
-    }
-  };
-
   const columns = useMemo(
     () => [
       {
         key: "rowno",
         label: "No.",
         width: "70px",
-        render: (_row: ItemMasterRow, rowIndex: number) =>
+        render: (_row: MasterPendoaRow, rowIndex: number) =>
           (vm.page - 1) * vm.pageSize + rowIndex + 1,
       },
-      { key: "code", label: "Item Code", width: "180px" },
-      { key: "name", label: "Item Name", width: "minmax(300px, 1fr)" },
-      { key: "classcode", label: "Class", width: "140px" },
-      { key: "classname", label: "Class Name", width: "220px" },
-      { key: "baseunitcode", label: "Unit", width: "100px" },
-      { key: "baseunitname", label: "Unit Name", width: "180px" },
+      { key: "nama", label: "nama", width: "minmax(280px, 1fr)" },
+      { key: "nohp", label: "No HP", width: "140px" },
       {
-        key: "activedate",
-        label: "Active Date",
-        width: "140px",
-        render: (row: ItemMasterRow) =>
-          row.activedate
-            ? new Date(row.activedate).toLocaleDateString("id-ID")
-            : "",
+        key: "dfl",
+        label: "Default",
+        width: "60px",
+        render: (row: MasterPendoaRow) => {
+          const checked = row.dfl === true ;
+          return <div className="text-center">{checked ? "✓" : ""}</div>;
+        },
       },
+      { key: "createddate", label: "Created Date", width: "220px" },
+      { key: "id_pendoa", label: "id pendoa", width: "0" , hidden: true},
+
     ],
     [vm.page, vm.pageSize]
   );
@@ -164,7 +113,7 @@ export default function MasterBarangPage() {
           onApprove={vm.toApproved}
           onUnapprove={vm.toView}
           onPrint={() => console.log("print")}
-          onDelete={() => console.log("delete")}
+          onDelete={vm.handleDelete}
           onRefresh={handleRefreshGrid}
           onExport={() => console.log("export")}
           loadingSave={vm.isSaving}
@@ -174,9 +123,11 @@ export default function MasterBarangPage() {
               label: "Tes custome",
               icon: <Search className="h-4 w-4" />,
               onClick: () => console.log("tes"),
+              visible: false,
             },
           ]}
           showExport={false}
+          showApprove={false}
         />
       </div>
 
@@ -186,23 +137,27 @@ export default function MasterBarangPage() {
 
             <label className="text-sm text-slate-700">Nama</label>
             <input
-              value={vm.itemDesc}
-              onChange={(e) => vm.setItemDesc(e.target.value)}
+              value={vm.nama}
+              onChange={(e) => vm.setNama(e.target.value)}
               className="inputtextbox w-full"
+              readOnly={vm.mode === vm.FORM_MODE.VIEW}
             />
 
             <label className="text-sm text-slate-700">No HP</label>
             <input
-              value={vm.itemDesc}
-              onChange={(e) => vm.setItemDesc(e.target.value)}
+              value={vm.nohp}
+              onChange={(e) => vm.setNohp(e.target.value)}
               className="inputtextbox w-full"
+              readOnly={vm.mode === vm.FORM_MODE.VIEW}
             />
 
             <label className="text-sm text-slate-700">Default</label>
             <input
               type="checkbox"
-              checked={true}
+              checked={vm.dfl}
               className="checkboxclass"
+              onChange={(e) => vm.setDfl(e.target.checked)}
+              disabled={vm.mode === vm.FORM_MODE.VIEW}
             />
           </div>
         </div>
@@ -218,7 +173,7 @@ export default function MasterBarangPage() {
               <input
                 className="inputtextbox"
                 value={vm.searchInput}
-                onChange={(e) => vm.setSearchInput(e.target.value)}
+                onChange={(e) => {console.log("searchInput:", e.target.value); vm.setSearchInput(e.target.value)}}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSearchGrid();
                 }}
@@ -230,7 +185,7 @@ export default function MasterBarangPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <ERPGridTable<ItemMasterRow>
+            <ERPGridTable<MasterPendoaRow>
               columns={columns}
                 rows={data?.data ?? []}
                 loading={isLoading || isFetching}
@@ -246,8 +201,8 @@ export default function MasterBarangPage() {
                     console.log("double click row", row);
                 }}
                 onRowClick={(row) => {
-                if (vm.mode === "view") {
-                  void showData(row.code);
+                if (vm.mode === vm.FORM_MODE.VIEW) {
+                  void showData(row.id_pendoa);
                 }
               }}
             />
@@ -256,13 +211,6 @@ export default function MasterBarangPage() {
       </div>
     </div>
 
-    <FindDataPopup
-      open={openFind}
-      jenisPencarian={jenis}
-      title="Find Data"
-      onSelect={handleSelected}
-      onClose={() => setOpenFind(false)}
-    />
   </div>
 );
 }

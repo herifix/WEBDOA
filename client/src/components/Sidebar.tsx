@@ -41,7 +41,7 @@ export default function Sidebar({ hidden }: SidebarProps) {
             <h2 className="text-2xl font-extrabold tracking-wide text-white">
               MENU
             </h2>
-            <p className="mt-1 text-sm text-cyan-100/80">ERP Navigation</p>
+            <p className="mt-1 text-sm text-cyan-100/80">Navigation</p>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
@@ -88,7 +88,10 @@ export default function Sidebar({ hidden }: SidebarProps) {
                   Pendoa
                 </button>
 
-                <button className="btnmenu text-sm font-normal">
+                <button className={`btnmenu text-sm font-normal ${
+                      isActive("/master-donatur") ? "bg-white/40 text-black" : ""
+                    }`}
+                    onClick={() => navigate("/master-donatur")}>
                   Donatur
                 </button>
               </div>

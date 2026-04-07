@@ -23,12 +23,37 @@ namespace API.Controllers
 
         private readonly RepoMasterPendoa repo = new RepoMasterPendoa();
 
+
+        //[Authorize] // ✅ butuh token
+        [HttpPut]
+        [Route("Master/Pendoa/Create")]
+        public ResponseData<int> Create([FromForm] RequestCreateMasterPendoa bodyRequest)
+        {
+            return PendoaService.CreateData(bodyRequest);
+        }
+
+        //[Authorize] // ✅ butuh token
+        [HttpPut]
+        [Route("Master/Pendoa/Update")]
+        public ResponseData<int> Update([FromForm] RequestUpdateMasterPendoa bodyRequest)
+        {
+            return PendoaService.UpdateData(bodyRequest);
+        }
+
+        //[Authorize] // ✅ butuh token
+        [HttpPut]
+        [Route("Master/Pendoa/Delete/{id}")]
+        public ResponseData<int> Delete(long id)
+        {
+            return PendoaService.DeleteData(id);
+        }
+
         //[Authorize] // ✅ butuh token
         [HttpGet]
         [Route("Master/Pendoa/GetDataById")]
-        public ResponseData<ResponseModelMasterPendoa> GetDataById(long id_pendoa)
+        public ResponseData<ResponseModelMasterPendoa> GetDataById(long id)
         {
-            return repo.GetDataById(id_pendoa, conn);
+            return repo.GetDataById(id, conn);
         }
 
         //[Authorize] // ✅ butuh token

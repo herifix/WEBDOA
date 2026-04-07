@@ -24,7 +24,6 @@ export default function MasterBarangPage() {
   const [jenis, setJenis] = useState<JenisPencarian>("item");
 
   const { data, isLoading, isFetching, refetch } = useFetchMasterItem({
-    area: vm.area,
     pageNumber: vm.page,
     pageSize: vm.pageSize,
     search: vm.search,

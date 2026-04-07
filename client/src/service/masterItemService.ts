@@ -7,7 +7,6 @@ export async function getAllItemMaster(params: DataPage) {
     "api/Master/Item/GetAll",
     {
       params: {
-        Area: params.area ?? "",
         PageNumber: params.pageNumber ?? 1,
         PageSize: params.pageSize ,
         Search: params.search ?? "",

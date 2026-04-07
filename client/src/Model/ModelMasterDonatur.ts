@@ -8,7 +8,7 @@ export interface ModelMasterDonatur {
   lastDonation: string| '1900/1/1';
 }
 
-export type ItemMasterRow = {
+export type MasterDonaturRow = {
   id_donatur: number;
   nama: string;
   tglLahir: string;

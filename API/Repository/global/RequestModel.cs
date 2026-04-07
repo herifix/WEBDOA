@@ -22,17 +22,17 @@ public class PagedResult<T>
 #region Master *************************************************
 public class RequestCreateMasterPendoa
 {
-    public string name { get; set; }
+    public string nama { get; set; }
     public bool dfl { get; set; }
     public string nohp { get; set; }
 }
 
 public class RequestUpdateMasterPendoa
 {
-    public string name { get; set; }
+    public string nama { get; set; }
     public bool dfl { get; set; }
     public string nohp { get; set; }
-    public long id_pendoa { get; set; }
+    public long idpendoa { get; set; }
 }
 
 public class RequestCreateMasterItem

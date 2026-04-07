@@ -10,7 +10,7 @@ function getPageTitle(pathname: string) {
     case "/master-barang":
       return "Master Barang";
     default:
-      return "ERP System";
+      return "Donatur System";
   }
 }
 
@@ -42,7 +42,7 @@ export default function MainLayout() {
                   {getPageTitle(location.pathname)}
                 </h1>
                 <p className="text-xs text-slate-500">
-                  ERP System
+                  Donatur System
                 </p>
               </div>
             </div>
@@ -61,7 +61,7 @@ export default function MainLayout() {
                   <div className="text-sm font-semibold text-slate-700">
                     Administrator
                   </div>
-                  <div className="text-xs text-slate-500">ERP User</div>
+                  <div className="text-xs text-slate-500">User</div>
                 </div>
               </div>
             </div>

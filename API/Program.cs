@@ -97,7 +97,8 @@ builder.Services.AddScoped<RepoMasterItem>();
 builder.Services.AddScoped<ServiceMasterItem>();
 builder.Services.AddScoped<RepoMasterDonatur>();
 builder.Services.AddScoped<ServiceMasterDonatur>();
-
+builder.Services.AddScoped<ServiceMasterPendoa>();
+builder.Services.AddScoped<RepoMasterPendoa>();
 
 var app = builder.Build();
 

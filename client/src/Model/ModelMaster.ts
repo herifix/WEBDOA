@@ -9,21 +9,9 @@ export type PagedResponse<T> = {
   totalPages: number;
 };
 
-export type ItemMasterRow = {
-  id?: string | number;
-  code: string;
-  name: string;
-  img1?: string;
-  classcode: string;
-  classname: string;
-  baseunitcode: string;
-  baseunitname: string;
-  activedate: string | null;
-};
 
 // GetAllItemMasterParams
 export type DataPage = {
-  area: string;
   pageNumber: number;
   pageSize: number;
   search: string;

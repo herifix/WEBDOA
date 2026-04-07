@@ -9,7 +9,7 @@ internal interface iRepoMasterPendoa
     public ResponseData<List<ResponseModelMasterPendoa>> GetDataByName(string name, IDbConnection conn);
     int Create(RequestCreateMasterPendoa bodyRequest, IDbConnection conn, IDbTransaction tran);
     public void Update(RequestUpdateMasterPendoa bodyRequest, IDbConnection conn, IDbTransaction tran);
-    public void Delate(long id_pendoa, IDbConnection conn, IDbTransaction tran);
+    public void Delete(long id_pendoa, IDbConnection conn, IDbTransaction tran);
     public ResponseData<ResponseModelMasterPendoa> GetDataById(long id_pendoa, IDbConnection conn, IDbTransaction? tran = null);
 }
 
@@ -54,10 +54,10 @@ public class RepoMasterPendoa : iRepoMasterPendoa
 
         int a = conn.ExecuteScalar<int>(sql, new
         {
-            name = bodyRequest.name,
+            name = bodyRequest.nama,
             nohp = bodyRequest.nohp,
             dfl = bodyRequest.dfl
-        });
+        },tran);
 
         if (bodyRequest.dfl) {
             sql = @"Update Pendoa set dfl = 0 where id_pendoa != @idpendoa and dfl = 1";
@@ -65,7 +65,7 @@ public class RepoMasterPendoa : iRepoMasterPendoa
             conn.ExecuteScalar<int>(sql, new
             {
                 idpendoa = a
-            });
+            },tran);
         }
 
         return a;
@@ -74,17 +74,17 @@ public class RepoMasterPendoa : iRepoMasterPendoa
     public void Update(RequestUpdateMasterPendoa bodyRequest, IDbConnection conn, IDbTransaction tran)
     {
         string sql = @"Update Pendoa set
-                            Nama = @name,
+                            Nama = @nama,
                             nohp = @nohp,
                             dfl = @dfl
                            where id_pendoa = @idpendoa";
 
         conn.ExecuteScalar<int>(sql, new
         {
-            name = bodyRequest.name,
+            nama = bodyRequest.nama,
             nohp = bodyRequest.nohp,
             dfl = bodyRequest.dfl,
-            idpendoa = bodyRequest.id_pendoa
+            idpendoa = bodyRequest.idpendoa
         }, tran);
 
         if (bodyRequest.dfl)
@@ -93,17 +93,17 @@ public class RepoMasterPendoa : iRepoMasterPendoa
 
             conn.ExecuteScalar<int>(sql, new
             {
-                idpendoa = bodyRequest.id_pendoa
-            });
+                idpendoa = bodyRequest.idpendoa
+            },tran);
         }
 
     }
 
-    public void Delate(long id_pendoa, IDbConnection conn, IDbTransaction tran)
+    public void Delete(long id_pendoa, IDbConnection conn, IDbTransaction tran)
     {
-        string sql = @"delete Pendoa where id_pendoa = @idpendoa";
+        string sql = @"Delete Pendoa where id_pendoa = @idpendoa";
 
-        int a = conn.ExecuteScalar<int>(sql, new
+        conn.ExecuteScalar<int>(sql, new
         {
             idpendoa = id_pendoa
         }, tran);
@@ -118,7 +118,7 @@ public class RepoMasterPendoa : iRepoMasterPendoa
         };
 
         const string sql = @$"SELECT id_pendoa,nama,dfl,nohp,createddate FROM Pendoa a
-                                WHERE a.id_pendoa =@idpendoa";
+                                WHERE a.id_pendoa =@id_pendoa";
 
         ResponseModelMasterPendoa rows = conn.QuerySingleOrDefault<ResponseModelMasterPendoa>(sql, new { id_pendoa }, tran);
 
@@ -154,7 +154,7 @@ public class RepoMasterPendoa : iRepoMasterPendoa
         ";
 
         const string sqlData = @"
-            SELECT a.Nama AS name, nohp,dfl, createddate, id_pendoa
+            SELECT a.Nama AS nama, nohp,dfl, createddate, id_pendoa
             FROM Pendoa a
             WHERE ( @Search = ''
                     OR a.nama LIKE '%' + @Search + '%'
