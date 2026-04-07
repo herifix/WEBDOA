@@ -31,7 +31,7 @@ export function useMasterDonaturPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(13);  // Set max row grid run dev ulang untuk lihat hasilnya
+  const [pageSize] = useState(18);  // Set max row grid run dev ulang untuk lihat hasilnya
 
   // image
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);

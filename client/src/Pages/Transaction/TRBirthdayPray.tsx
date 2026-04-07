@@ -60,6 +60,21 @@ function formatRecordingTime(totalSeconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatShortDate(value?: string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 export default function TRBirthdayPrayPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -84,6 +99,7 @@ export default function TRBirthdayPrayPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [saveToAllSameBirthdayDate, setSaveToAllSameBirthdayDate] = useState(true);
   const [recordingSupported, setRecordingSupported] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -137,6 +153,7 @@ export default function TRBirthdayPrayPage() {
     setPesan(detailQuery.data.pesan ?? "");
     setAudioPreviewUrl(toMediaUrl(detailQuery.data.pathPesanSuara ?? ""));
     setSelectedAudioFile(null);
+    setSaveToAllSameBirthdayDate(true);
   }, [detailQuery.data]);
 
   useEffect(() => {
@@ -285,8 +302,8 @@ export default function TRBirthdayPrayPage() {
       return;
     }
 
-    if (!pesan.trim()) {
-      setFormError("Pesan wajib diisi.");
+    if (!hasUnsavedChanges) {
+      setFormError("Belum ada perubahan data yang perlu disimpan.");
       return;
     }
 
@@ -298,6 +315,10 @@ export default function TRBirthdayPrayPage() {
     }
 
     formData.append("pesan", pesan.trim());
+    formData.append(
+      "saveToAllSameBirthdayDate",
+      String(saveToAllSameBirthdayDate)
+    );
 
     if (selectedAudioFile) {
       formData.append("pesanSuaraFile", selectedAudioFile);
@@ -310,7 +331,15 @@ export default function TRBirthdayPrayPage() {
         throw new Error(result?.message || "Gagal menyimpan data.");
       }
 
-      setFormSuccess(result.message || "Data berhasil disimpan.");
+      const warningText =
+        !pesan.trim() ||
+        (!selectedAudioFile && !(pageData?.pathPesanSuara ?? "").trim())
+          ? " Status dashboard akan Complete jika pesan doa dan pesan suara sudah terisi."
+          : "";
+
+      setFormSuccess(
+        `${result.message || "Data berhasil disimpan."}${warningText}`
+      );
       await detailQuery.refetch();
       await historyQuery.refetch();
     } catch (error) {
@@ -386,6 +415,19 @@ export default function TRBirthdayPrayPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <h2 className="text-base font-semibold text-slate-800">Pesan Doa</h2>
+                <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="checkboxclass"
+                    checked={saveToAllSameBirthdayDate}
+                    onChange={(e) =>
+                      setSaveToAllSameBirthdayDate(e.target.checked)
+                    }
+                  />
+                  <span>
+                    Pesan Doa untuk seluruh {formatShortDate(pageData.birthdayDate)}
+                  </span>
+                </label>
                 <textarea
                   value={pesan}
                   onChange={(e) => setPesan(e.target.value)}

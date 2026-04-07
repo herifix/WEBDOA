@@ -160,25 +160,46 @@ namespace API.Service.Transaction
 
                 int targetYear = DateTime.Today.Year;
                 DateTime birthdayDate = BuildBirthdayDate(donatur.TglLahir.Value, targetYear);
-                var existing = repo.GetDataByDonaturId(bodyRequest.idDonatur, targetYear, conn, tran).data;
+                var targetDonaturs = bodyRequest.saveToAllSameBirthdayDate
+                    ? repo.GetDonatursByBirthdayDate(birthdayDate, conn, tran)
+                    : new List<ResponseModeMasterDonatur> { donatur };
 
+                if (targetDonaturs.Count == 0)
+                {
+                    targetDonaturs.Add(donatur);
+                }
+
+                var existing = repo.GetDataByDonaturId(bodyRequest.idDonatur, targetYear, conn, tran).data;
                 string pathPesanSuara = existing?.pathPesanSuara ?? "";
                 if (bodyRequest.pesanSuaraFile != null && bodyRequest.pesanSuaraFile.Length > 0)
                 {
                     pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile, donatur.Nama, birthdayDate);
                 }
 
-                if (existing != null && existing.id_TRBirthdayPray > 0)
+                foreach (var targetDonatur in targetDonaturs)
                 {
-                    repo.Update(existing.id_TRBirthdayPray, bodyRequest.pesan ?? "", pathPesanSuara, conn, tran);
-                    response.data = existing.id_TRBirthdayPray;
-                    response.message = "TRBirthdayPray updated successfully.";
+                    if (targetDonatur == null || targetDonatur.id_donatur == 0 || !targetDonatur.TglLahir.HasValue)
+                    {
+                        continue;
+                    }
+
+                    DateTime targetBirthdayDate = BuildBirthdayDate(targetDonatur.TglLahir.Value, targetYear);
+                    var targetExisting = repo.GetDataByDonaturId(targetDonatur.id_donatur, targetYear, conn, tran).data;
+
+                    if (targetExisting != null && targetExisting.id_TRBirthdayPray > 0)
+                    {
+                        repo.Update(targetExisting.id_TRBirthdayPray, bodyRequest.pesan ?? "", pathPesanSuara, conn, tran);
+                        response.data = targetExisting.id_TRBirthdayPray;
+                    }
+                    else
+                    {
+                        response.data = repo.Create(bodyRequest, targetDonatur, defaultPendoa, targetBirthdayDate, pathPesanSuara, conn, tran);
+                    }
                 }
-                else
-                {
-                    response.data = repo.Create(bodyRequest, donatur, defaultPendoa, birthdayDate, pathPesanSuara, conn, tran);
-                    response.message = "TRBirthdayPray created successfully.";
-                }
+
+                response.message = bodyRequest.saveToAllSameBirthdayDate
+                    ? "TRBirthdayPray saved for all donatur with the same birthday date."
+                    : "TRBirthdayPray saved successfully.";
 
                 tran.Commit();
                 response.success = true;

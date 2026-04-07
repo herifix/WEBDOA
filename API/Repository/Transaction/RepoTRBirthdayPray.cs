@@ -7,6 +7,7 @@ internal interface iRepoTRBirthdayPray
     List<ResponseModelDashboardBirthday> GetUpcomingBirthdayDashboard(DateTime currentDate, IDbConnection conn);
     ResponseData<ResponseModelTRBirthdayPray> GetDataByDonaturId(long idDonatur, int targetYear, IDbConnection conn, IDbTransaction? tran = null);
     List<ResponseModelTRBirthdayPrayHistory> GetHistoryByDonaturId(long idDonatur, IDbConnection conn);
+    List<ResponseModeMasterDonatur> GetDonatursByBirthdayDate(DateTime birthdayDate, IDbConnection conn, IDbTransaction? tran = null);
     ResponseModelMasterPendoa? GetDefaultPendoa(IDbConnection conn, IDbTransaction? tran = null);
     long GetNextId(IDbConnection conn, IDbTransaction tran);
     long Create(RequestSaveTRBirthdayPray bodyRequest, ResponseModeMasterDonatur donatur, ResponseModelMasterPendoa defaultPendoa, DateTime birthdayDate, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
@@ -41,12 +42,19 @@ SELECT
     b.NoHP,
     b.Status,
     b.LastDonation,
-    CAST(CASE WHEN pray.id_TRBirthdayPray IS NULL THEN 0 ELSE 1 END AS bit) AS sudahDidoakan,
+    CAST(
+        CASE
+            WHEN pray.id_TRBirthdayPray IS NULL THEN 0
+            WHEN LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) = '' THEN 0
+            WHEN LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) = '' THEN 0
+            ELSE 1
+        END AS bit
+    ) AS sudahDidoakan,
     pray.id_TRBirthdayPray,
     pray.CreatedDate AS prayCreatedDate
 FROM DonaturBirthday b
 OUTER APPLY (
-    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate
+    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara
     FROM TRBirthdayPray t
     WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(b.Nama))
       AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
@@ -125,6 +133,31 @@ LEFT JOIN Pendoa p
         }
 
         return response;
+    }
+
+    public List<ResponseModeMasterDonatur> GetDonatursByBirthdayDate(DateTime birthdayDate, IDbConnection conn, IDbTransaction? tran = null)
+    {
+        const string sql = @"
+            SELECT
+                d.id_donatur,
+                d.Nama,
+                d.TglLahir,
+                d.CreatedDate,
+                d.NoHP,
+                d.Status,
+                d.LastDonation
+            FROM Donatur d
+            WHERE
+                CAST(
+                    CASE
+                        WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@birthdayDate), 2, 1))) < 29
+                            THEN EOMONTH(DATEFROMPARTS(YEAR(@birthdayDate), 2, 1))
+                        ELSE DATEFROMPARTS(YEAR(@birthdayDate), MONTH(d.TglLahir), DAY(d.TglLahir))
+                    END AS date
+                ) = CAST(@birthdayDate AS date)
+            ORDER BY d.Nama";
+
+        return conn.Query<ResponseModeMasterDonatur>(sql, new { birthdayDate }, tran).ToList();
     }
 
     public List<ResponseModelTRBirthdayPrayHistory> GetHistoryByDonaturId(long idDonatur, IDbConnection conn)

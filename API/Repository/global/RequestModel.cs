@@ -104,6 +104,7 @@ public class RequestSaveTRBirthdayPray
     public long? idTRBirthdayPray { get; set; }
     public string pesan { get; set; } = "";
     public IFormFile? pesanSuaraFile { get; set; }
+    public bool saveToAllSameBirthdayDate { get; set; } = true;
 }
 
 # endregion

@@ -112,7 +112,7 @@ export default function Sidebar({ hidden }: SidebarProps) {
               User
             </button>
 
-            <button className="btnmenu" hidden={true}>
+            <button className="btnmenu" hidden={false}>
               <img src={icoTools} className="menu-icon" alt="" />
               Tools
             </button>
