@@ -5,6 +5,7 @@ import Dashboard from "./Pages/Dashboard";
 import MasterBarang from "./Pages/Master/MasterBarang";
 import MasterPendoa from "./Pages/Master/Pendoa";
 import MasterDonaturPage from "./Pages/Master/Donatur";
+import TRBirthdayPrayPage from "./Pages/Transaction/TRBirthdayPray";
 
 export default function App() {
     return (
@@ -16,10 +17,10 @@ export default function App() {
                     <Route path="/master-barang" element={<MasterBarang/>} />
                     <Route path="/master-pendoa" element={<MasterPendoa/>} />
                     <Route path="/master-donatur" element={<MasterDonaturPage/>} />
+                    <Route path="/transaksi-birthday-pray/:idDonatur" element={<TRBirthdayPrayPage/>} />
 
                 </Route>
             </Routes>
         </BrowserRouter>
     );
 }
-

@@ -1,8 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+import ConfirmDialog from "../../components/ConfirmDialog";
 import ERPGridTable from "../../components/GridFullParent";
+import StatusBanner from "../../components/StatusBanner";
 import ERPToolbar from "../../components/ToolbarHR";
 import type { Column } from "../../components/GridFullParent";
 
@@ -14,6 +17,40 @@ import { useMasterDonaturPage } from "../../hooks/react_query/useMasterDonaturPa
 
 export default function MasterDonaturPage() {
   const vm = useMasterDonaturPage();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const gridDateFormatter = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  const parseInputDate = (value: string) => {
+    if (!value) return null;
+
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+
+    return new Date(year, month - 1, day);
+  };
+
+  const formatInputDate = (date: Date | null) => {
+    if (!date) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatGridDate = (value: string | null | undefined) => {
+    if (!value) return "";
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) return value;
+
+    return gridDateFormatter.format(parsedDate);
+  };
 
   const { data, isLoading, isFetching, refetch } = useFetchMasterDonatur({
     pageNumber: vm.page,
@@ -42,30 +79,49 @@ export default function MasterDonaturPage() {
     refetch();
   };
 
+  const handleDeleteClick = () => {
+    if (!vm.idDonatur || Number(vm.idDonatur) <= 0) {
+      vm.setFormError("Pilih data dulu.");
+      return;
+    }
+
+    vm.clearFormSuccess();
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    await vm.handleDelete();
+    setShowDeleteConfirm(false);
+  };
+
   const showData = async (id: number) => {
     if (!id) return;
 
     try {
+      vm.clearFormMessage();
       const resp = await getDataById(id);
       const item = resp?.data;
 
       if (!item) {
-        alert("Data tidak ditemukan");
+        vm.setFormError("Data tidak ditemukan.");
         return;
       }
 
-      vm.setIdDonatur(item.id_donatur ?? 0);
+      vm.setIdDonatur(String(item.id_donatur ?? 0));
       vm.setNama(item.nama ?? "");
       vm.setTglLahir(item.tglLahir ? item.tglLahir.substring(0, 10) : "");
       vm.setCreatedDate(item.createdDate ? item.createdDate.substring(0, 10) : "");
-      vm.setNohp(item.noHP ?? "");
+      vm.setNohp(item.noHP ?? item.nohp ?? "");
       vm.setStatus(item.status ?? false);
       vm.setLastDonation(item.lastDonation ? item.lastDonation.substring(0, 10) : "");
+      vm.setInitialLastDonation(
+        item.lastDonation ? item.lastDonation.substring(0, 10) : ""
+      );
 
       vm.toView();
     } catch (err) {
       console.error(err);
-      alert("Gagal mengambil data");
+      vm.setFormError("Gagal mengambil data.");
     }
   };
 
@@ -86,6 +142,7 @@ export default function MasterDonaturPage() {
       key: "tglLahir",
       label: "Tgl Lahir",
       width: "130px",
+      render: (row) => formatGridDate(row.tglLahir),
     },
     {
       key: "noHP",
@@ -135,7 +192,7 @@ export default function MasterDonaturPage() {
             onApprove={vm.toApproved}
             onUnapprove={vm.toView}
             onPrint={() => console.log("print")}
-            onDelete={vm.handleDelete}
+            onDelete={handleDeleteClick}
             onRefresh={handleRefreshGrid}
             onExport={() => console.log("export")}
             loadingSave={vm.isSaving}
@@ -153,6 +210,9 @@ export default function MasterDonaturPage() {
           />
         </div>
 
+        <StatusBanner tone="error" message={vm.formError} />
+        <StatusBanner tone="success" message={vm.formSuccess} />
+
         <div className="form2col min-h-0 flex-1">
           <div className="min-w-0 p-2">
             <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-2 gap-y-1">
@@ -165,12 +225,17 @@ export default function MasterDonaturPage() {
               />
 
               <label className="text-sm text-slate-700">Tgl Lahir</label>
-              <input
-                type="date"
-                value={vm.tglLahir}
-                onChange={(e) => vm.setTglLahir(e.target.value)}
+              <DatePicker
+                selected={parseInputDate(vm.tglLahir)}
+                onChange={(date: Date | null) =>
+                  vm.setTglLahir(formatInputDate(date))
+                }
+                dateFormat="dd-MMM-yyyy"
                 className="inputtextbox w-full"
-                readOnly={vm.mode === vm.FORM_MODE.VIEW}
+                wrapperClassName="w-full"
+                popperClassName="z-50"
+                disabled={vm.mode === vm.FORM_MODE.VIEW}
+                isClearable={vm.mode !== vm.FORM_MODE.VIEW}
               />
 
               <label className="text-sm text-slate-700">No HP</label>
@@ -182,30 +247,31 @@ export default function MasterDonaturPage() {
               />
 
               <label className="text-sm text-slate-700">Status</label>
-              <input
-                type="checkbox"
-                checked={vm.Status}
-                className="checkboxclass"
-                onChange={(e) => vm.setStatus(e.target.checked)}
-                disabled={vm.mode === vm.FORM_MODE.VIEW}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={vm.Status}
+                  className="checkboxclass"
+                  onChange={(e) => vm.setStatus(e.target.checked)}
+                  disabled={vm.mode === vm.FORM_MODE.VIEW}
+                />
+                <span className="text-sm text-slate-700">
+                  {vm.Status ? "Aktif" : "Nonaktif"}
+                </span>
+              </div>
 
               <label className="text-sm text-slate-700">Last Donation</label>
-              <input
-                type="date"
-                value={vm.lastDonation}
-                onChange={(e) => vm.setLastDonation(e.target.value)}
+              <DatePicker
+                selected={parseInputDate(vm.lastDonation)}
+                onChange={(date: Date | null) =>
+                  vm.setLastDonationWithAutoStatus(formatInputDate(date))
+                }
+                dateFormat="dd-MMM-yyyy"
                 className="inputtextbox w-full"
-                readOnly={vm.mode === vm.FORM_MODE.VIEW}
-              />
-
-              <label className="text-sm text-slate-700">Created Date</label>
-              <input
-                type="date"
-                value={vm.createddate}
-                onChange={(e) => vm.setCreatedDate(e.target.value)}
-                className="inputtextbox w-full"
-                readOnly={true}
+                wrapperClassName="w-full"
+                popperClassName="z-50"
+                disabled={vm.mode === vm.FORM_MODE.VIEW}
+                isClearable={vm.mode !== vm.FORM_MODE.VIEW}
               />
             </div>
           </div>
@@ -260,6 +326,18 @@ export default function MasterDonaturPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Hapus Donatur"
+        message="Yakin mau hapus data donatur ini?"
+        confirmLabel="Hapus"
+        loading={vm.isSaving}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
+        onClose={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

@@ -21,7 +21,57 @@ namespace API.Controllers
             this.DonaturService = donaturService;
         }
 
-        iRepoMasterDonatur repo = new RepoMasterDonatur();
+        private readonly RepoMasterDonatur repo = new RepoMasterDonatur();
+
+        //[Authorize] // ✅ butuh token
+        [HttpPut]
+        [Route("Master/Donatur/Create")]
+        public ResponseData<int> Create([FromForm] RequestCreateMasterDonatur bodyRequest)
+        {
+            return DonaturService.CreateData(bodyRequest);
+        }
+
+        //[Authorize] // ✅ butuh token
+        [HttpPut]
+        [Route("Master/Donatur/Update")]
+        public ResponseData<int> Update([FromForm] RequestUpdateMasterDonatur bodyRequest)
+        {
+            return DonaturService.UpdateData(bodyRequest);
+        }
+
+        //[Authorize] // ✅ butuh token
+        [HttpPut]
+        [Route("Master/Donatur/Delete/{id}")]
+        public ResponseData<int> Delete(long id)
+        {
+            return DonaturService.DeleteData(id);
+        }
+
+        //[Authorize] // ✅ butuh token
+        [HttpGet]
+        [Route("Master/Donatur/GetDataById")]
+        public ResponseData<ResponseModeMasterDonatur> GetDataById(long id)
+        {
+            return repo.GetDataById(id, conn);
+        }
+
+        //[Authorize] // ✅ butuh token
+        [HttpGet]
+        [Route("Master/Donatur/GetDataAll")]
+        public PagedResponse<ResponseModeMasterDonatur> GetDataAll(
+            [FromQuery] int PageNumber = 1,
+            [FromQuery] int PageSize = 15,
+            [FromQuery] string Search = ""
+        )
+        {
+            var request = new RequestGetAllMasterDonatur
+            {
+                PageNumber = PageNumber,
+                PageSize = PageSize,
+                Search = Search ?? ""
+            };
+            return repo.GetAll(request, conn);
+        }
 
         //[Authorize] // ✅ butuh token
         [HttpGet]

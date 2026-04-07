@@ -125,6 +125,7 @@ public class RepoMasterPendoa : iRepoMasterPendoa
         if (rows != null)
         {
             resp.success = true;
+            resp.message = "OK";
             resp.data = rows;
         }
         else

@@ -4,6 +4,9 @@ import { useERPFormMode } from "./userERPFormMode";
 import { FORM_MODE } from "../../TypeData/forMode";
 import { useUpdateDonatur,useCreateDonatur, useDeleteDonatur } from "./useFetchMasterDonatur";
 import { useQueryClient } from "@tanstack/react-query";
+import { useFormMessage } from "../useFormMessage";
+import { isValidPhoneNumber } from "../../utils/validation";
+import { handleMutationError, handleMutationSuccess } from "./masterCrudHelpers";
 
 type ActiveTab = "general" | "detail";
 
@@ -22,6 +25,7 @@ export function useMasterDonaturPage() {
   const [createddate, setCreatedDate] = useState("");
 
   const [lastDonation, setLastDonation] = useState("");
+  const [initialLastDonation, setInitialLastDonation] = useState("");
 
   // grid / search
   const [searchInput, setSearchInput] = useState("");
@@ -47,70 +51,101 @@ export function useMasterDonaturPage() {
   // mode form
   const { mode, toNew, toEdit, toView, toApproved } = useERPFormMode();
   const [isSaving, setIsSaving] = useState(false);
+  const {
+    formError,
+    setFormError,
+    formSuccess,
+    setFormSuccess,
+    clearFormError,
+    clearFormSuccess,
+    clearFormMessage,
+  } = useFormMessage();
+
+  const validateForm = () => {
+    const trimmedNama = nama.trim();
+    const trimmedNohp = nohp.trim();
+
+    if (!trimmedNama) {
+      setFormError("Nama donatur wajib diisi.");
+      return false;
+    }
+
+    if (!trimmedNohp) {
+      setFormError("No HP wajib diisi.");
+      return false;
+    }
+
+    if (!isValidPhoneNumber(trimmedNohp)) {
+      setFormError("No HP hanya boleh berisi angka dan simbol telepon umum.");
+      return false;
+    }
+
+    if (tglLahir && lastDonation && lastDonation < tglLahir) {
+      setFormError("Last Donation tidak boleh lebih kecil dari Tgl Lahir.");
+      return false;
+    }
+
+    clearFormMessage();
+    return true;
+  };
 
   //@todo Fungsi Update
   const { mutateAsync: updateDonaturAsync } = useUpdateDonatur();
+  const setLastDonationWithAutoStatus = (value: string) => {
+    setLastDonation(value);
+
+    if (initialLastDonation && value && value > initialLastDonation) {
+      setStatus(true);
+    }
+  };
+
   async function handleUpdate() {
-        try {
-            const formData = new FormData();
-            formData.append("idDonatur", idDonatur.toString());            
-            formData.append("nama", nama);
-            formData.append("Status", Status.toString());
-            formData.append("nohp", nohp);
+    const formData = new FormData();
+    formData.append("idDonatur", idDonatur.toString());
+    formData.append("nama", nama.trim());
+    formData.append("status", Status.toString());
+    formData.append("nohp", nohp.trim());
+    formData.append("tglLahir", tglLahir);
+    formData.append("lastDonation", lastDonation);
 
-            const result = await updateDonaturAsync(formData);
+    const result = await updateDonaturAsync(formData);
 
-            if (!result.success) {
-                throw new Error("Gagal update data");
-            }
-
-            // const result = await response.json();
-            //console.log("update sukses", result);
-        } catch (err) {
-            console.error(err);
-            
-        }
+    if (!result.success) {
+      throw new Error(result.message || "Gagal update data");
     }
+  }
 
-const { mutateAsync: createDonaturAsync } = useCreateDonatur();
+  const { mutateAsync: createDonaturAsync } = useCreateDonatur();
   async function CreateSave() {
-        try {
-            const formData = new FormData();
+    const formData = new FormData();
 
-            formData.append("nama", nama);
-            formData.append("Status", Status.toString());
-            formData.append("nohp", nohp);
+    formData.append("nama", nama.trim());
+    formData.append("status", Status.toString());
+    formData.append("nohp", nohp.trim());
+    formData.append("tglLahir", tglLahir);
+    formData.append("lastDonation", lastDonation);
 
-            const result = await createDonaturAsync(formData);
+    const result = await createDonaturAsync(formData);
 
-            if (!result.success) {
-                throw new Error("Gagal create data");
-            }
-
-            // const result = await response.json();
-            //console.log("create sukses", result);
-        } catch (err) {
-            console.error(err);
-            
-        }
+    if (!result.success) {
+      throw new Error(result.message || "Gagal create data");
     }
+  }
 
-    const handleNew = () => {
-        resetForm();
-        toNew();
-    };
+  const handleNew = () => {
+    resetForm();
+    clearFormMessage();
+    toNew();
+  };
 
-const { mutateAsync: DeleteDonaturAsync } = useDeleteDonatur();
+  const { mutateAsync: DeleteDonaturAsync } = useDeleteDonatur();
 
 async function DeleteData() {
   try {
     if (!idDonatur) {
-      alert("Pilih data dulu");
+      setFormError("Pilih data dulu.");
       return false;
     }
-
-    const confirmDelete = confirm("Yakin mau hapus?");
-    if (!confirmDelete) return false;
 
     const result = await DeleteDonaturAsync(Number(idDonatur));
 
@@ -118,7 +153,6 @@ async function DeleteData() {
       throw new Error("Gagal delete data");
     }
 
-    alert("Delete berhasil");
     return true;
   } catch (err) {
     console.error(err);
@@ -131,22 +165,31 @@ const handleDelete = async () => {
     const deleted = await DeleteData();
     if (!deleted) return;
 
-    setPage(1);
-
-    await queryClient.invalidateQueries({
-      queryKey: ["master-Donatur-list"],
+    await handleMutationSuccess({
+      queryClient,
+      queryKey: "master-Donatur-list",
+      setPage,
+      clearFormError,
+      setFormSuccess,
+      successMessage: "Data donatur berhasil dihapus.",
+      toView,
     });
-
-    toView();
   } catch (err) {
     console.error(err);
-    alert("Gagal delete data");
+    handleMutationError({
+      err,
+      clearFormSuccess,
+      setFormError,
+      fallbackMessage: "Gagal delete data",
+    });
   }
 };
 
   const handleSave = async () => {
     try {
-        console.log("state",mode);
+      if (!validateForm()) return;
+
+      clearFormMessage();
       setIsSaving(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -158,14 +201,26 @@ const handleDelete = async () => {
       }
 
       
-      setPage(1);
-      await queryClient.invalidateQueries({
-        queryKey: ["master-Donatur-list"],
+      await handleMutationSuccess({
+        queryClient,
+        queryKey: "master-Donatur-list",
+        setPage,
+        clearFormError,
+        setFormSuccess,
+        successMessage:
+          mode === FORM_MODE.NEW
+            ? "Data donatur berhasil disimpan."
+            : "Data donatur berhasil diperbarui.",
+        toView,
       });
-      toView();
     } catch (err) {
         console.error(err);
-        alert("Fail save data");}
+        handleMutationError({
+          err,
+          clearFormSuccess,
+          setFormError,
+          fallbackMessage: "Fail save data",
+        });}
     finally {
       setIsSaving(false);
     }
@@ -206,6 +261,7 @@ const handleDelete = async () => {
     setStatus(false);
     setTglLahir("");
     setLastDonation("");
+    setInitialLastDonation("");
     setCreatedDate("");
     setActiveTab("general");
     
@@ -230,6 +286,9 @@ const handleDelete = async () => {
     setCreatedDate,
     lastDonation,
     setLastDonation,
+    initialLastDonation,
+    setInitialLastDonation,
+    setLastDonationWithAutoStatus,
 
     // search / grid
     searchInput,
@@ -271,12 +330,20 @@ const handleDelete = async () => {
     // save
     isSaving,
     setIsSaving,
+    formError,
+    setFormError,
+    formSuccess,
+    setFormSuccess,
+    clearFormError,
+    clearFormSuccess,
+    clearFormMessage,
     handleSave,
     handleDelete,
 
     // helper
     clearLookupRefs,
     resetForm,
+    validateForm,
     handleUpdate,
     handleNew,
   };

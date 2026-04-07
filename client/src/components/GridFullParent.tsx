@@ -130,6 +130,15 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
     [visibleColumns]
   );
 
+  const contentGridStyle = useMemo(
+    () => ({
+      ...gridStyle,
+      width: "max-content",
+      minWidth: "100%",
+    }),
+    [gridStyle]
+  );
+
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const canPrev = page > 1;
   const canNext = page < totalPages;
@@ -353,13 +362,13 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
 
   const rootClasses =
     heightMode === "fill"
-      ? `flex h-full min-h-0 flex-col rounded-xl border border-slate-300 bg-white shadow-sm outline-none focus:ring-2 focus:ring-cyan-400/40 ${className}`
-      : `rounded-xl border border-slate-300 bg-white shadow-sm outline-none focus:ring-2 focus:ring-cyan-400/40 ${className}`;
+      ? `flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm outline-none focus:ring-2 focus:ring-cyan-400/40 ${className}`
+      : `overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm outline-none focus:ring-2 focus:ring-cyan-400/40 ${className}`;
 
   const bodyClasses =
     heightMode === "fill"
-      ? "min-h-0 flex-1 overflow-auto"
-      : "overflow-auto";
+      ? "min-h-0 flex-1 overflow-auto bg-white"
+      : "overflow-auto bg-white";
 
   const bodyStyle =
     heightMode === "fill"
@@ -375,23 +384,23 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
     >
       {heightMode === "fill" ? (
         <>
-          <div
-            className="shrink-0 sticky top-0 z-10 grid bg-slate-950 text-sm font-semibold text-white"
-            style={gridStyle}
-          >
-            {visibleColumns.map((col, i) => (
-              <div
-                key={col.key}
-                className={`px-3 py-3 ${
-                  i !== visibleColumns.length - 1 ? "border-r border-slate-800" : ""
-                } ${col.headerClassName ?? ""}`}
-              >
-                {col.label}
-              </div>
-            ))}
-          </div>
-
           <div ref={bodyRef} className={bodyClasses}>
+            <div
+              className="sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950 text-sm font-semibold text-white shadow-sm"
+              style={contentGridStyle}
+            >
+              {visibleColumns.map((col, i) => (
+                <div
+                  key={col.key}
+                  className={`px-3 py-3 ${
+                    i !== visibleColumns.length - 1 ? "border-r border-slate-800" : ""
+                  } ${col.headerClassName ?? ""}`}
+                >
+                  {col.label}
+                </div>
+              ))}
+            </div>
+
             {loading ? (
               <div className="px-4 py-6 text-sm text-slate-500">Loading...</div>
             ) : rows.length === 0 ? (
@@ -415,7 +424,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                         ? "bg-white"
                         : "bg-slate-50"
                     } ${!isSelected ? "hover:bg-cyan-50" : ""} ${customRowClass}`}
-                    style={gridStyle}
+                    style={contentGridStyle}
                     onClick={() => handleRowClick(row, rowIndex)}
                     onDoubleClick={() => {
                       setSelectedIndex(rowIndex);
@@ -523,8 +532,8 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
         <>
           <div ref={bodyRef} className={bodyClasses} style={bodyStyle}>
             <div
-              className="sticky top-0 z-10 grid bg-slate-950 text-sm font-semibold text-white"
-              style={gridStyle}
+              className="sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950 text-sm font-semibold text-white shadow-sm"
+              style={contentGridStyle}
             >
               {visibleColumns.map((col, i) => (
                 <div
@@ -561,7 +570,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                         ? "bg-white"
                         : "bg-slate-50"
                     } ${!isSelected ? "hover:bg-cyan-50" : ""} ${customRowClass}`}
-                    style={gridStyle}
+                    style={contentGridStyle}
                     onClick={() => handleRowClick(row, rowIndex)}
                     onDoubleClick={() => {
                       setSelectedIndex(rowIndex);

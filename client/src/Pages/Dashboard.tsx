@@ -1,17 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ERPGridTable, { type Column } from "../components/Grid";
-import { useFetchDonaturDashboard } from "../hooks/react_query/useFetchMasterDonatur";
-
-type DonaturRow = {
-  id_donatur: number;
-  nama: string;
-  tglLahir: string;
-  createdDate: string;
-  noHP: string;
-  status: boolean;
-  lastDonation: string | null;
-};
+import { useFetchBirthdayDashboard } from "../hooks/react_query/useFetchTRBirthdayPray";
+import type { DashboardBirthdayItem } from "../Model/ModelTRBirthdayPray";
 
 type DashboardRow =
   | {
@@ -21,8 +12,6 @@ type DashboardRow =
       monthLabel: string;
       isExpanded: boolean;
       groupLabel: string;
-      statusText: string;
-      aksi: string;
     }
   | {
       id: string;
@@ -32,92 +21,74 @@ type DashboardRow =
       dateLabel: string;
       isExpanded: boolean;
       groupLabel: string;
-      statusText: string;
-      aksi: string;
     }
   | {
       id: string;
       rowType: "detail";
-      id_donatur: number;
       monthKey: string;
       dateKey: string;
+      id_donatur: number;
+      id_TRBirthdayPray: number | null;
       nama: string;
       noHP: string;
-      status: boolean;
-      statusText: string;
-      aksi: string;
+      birthdayDate: string | null;
+      sudahDidoakan: boolean;
     };
 
-function getDatePart(dateString?: string) {
+function getDatePart(dateString?: string | null) {
   if (!dateString) return "";
   return String(dateString).slice(0, 10);
 }
 
-function getMonthKey(dateString?: string) {
+function getMonthKey(dateString?: string | null) {
   const datePart = getDatePart(dateString);
   return datePart ? datePart.slice(0, 7) : "";
 }
 
-function formatDateFromString(dateString?: string) {
+function formatDateFromString(dateString?: string | null) {
   const datePart = getDatePart(dateString);
   if (!datePart) return "";
 
-  const parts = datePart.split("-");
-  if (parts.length !== 3) return datePart;
+  const [year, month, day] = datePart.split("-").map(Number);
+  if (!year || !month || !day) return datePart;
 
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
 }
 
-function formatMonthFromString(dateString?: string) {
+function formatMonthFromString(dateString?: string | null) {
   const datePart = getDatePart(dateString);
   if (!datePart) return "";
 
-  const parts = datePart.split("-");
-  if (parts.length < 2) return datePart;
+  const [year, month] = datePart.split("-").map(Number);
+  if (!year || !month) return datePart;
 
-  const [year, month] = parts;
-  const monthNames = [
-    "Januari",
-    "Februari",
-    "Maret",
-    "April",
-    "Mei",
-    "Juni",
-    "Juli",
-    "Agustus",
-    "September",
-    "Oktober",
-    "November",
-    "Desember",
-  ];
-
-  const monthIndex = Number(month) - 1;
-  if (monthIndex < 0 || monthIndex > 11) return `${month}/${year}`;
-
-  return `${monthNames[monthIndex]} ${year}`;
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
 }
 
-export default function DonaturDashboardPage() {
+export default function DashboardPage() {
   const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
+  const dashboardQuery = useFetchBirthdayDashboard(today);
 
-  const dashboardQuery = useFetchDonaturDashboard(
-    new Date().toISOString().slice(0, 10)
-  );
-
-  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>(
-    {}
-  );
-  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
 
-  const sourceRows: DonaturRow[] = dashboardQuery.data ?? [];
+  const sourceRows: DashboardBirthdayItem[] = dashboardQuery.data ?? [];
+  const totalUpcoming = sourceRows.length;
+  const totalCompleted = sourceRows.filter((item) => item.sudahDidoakan).length;
+  const totalPending = totalUpcoming - totalCompleted;
 
   const sortedMonthKeys = useMemo(() => {
     const keys = Array.from(
-      new Set(sourceRows.map((x) => getMonthKey(x.tglLahir)).filter(Boolean))
+      new Set(sourceRows.map((item) => getMonthKey(item.birthdayDate)).filter(Boolean))
     );
     return keys.sort();
   }, [sourceRows]);
@@ -125,20 +96,19 @@ export default function DonaturDashboardPage() {
   const firstMonthKey = sortedMonthKeys[0] ?? "";
 
   const flatRows = useMemo<DashboardRow[]>(() => {
-    const monthMap = new Map<string, Map<string, DonaturRow[]>>();
+    const monthMap = new Map<string, Map<string, DashboardBirthdayItem[]>>();
 
     for (const item of sourceRows) {
-      const dateKey = getDatePart(item.tglLahir);
-      const monthKey = getMonthKey(item.tglLahir);
+      const dateKey = getDatePart(item.birthdayDate);
+      const monthKey = getMonthKey(item.birthdayDate);
 
       if (!dateKey || !monthKey) continue;
 
       if (!monthMap.has(monthKey)) {
-        monthMap.set(monthKey, new Map<string, DonaturRow[]>());
+        monthMap.set(monthKey, new Map<string, DashboardBirthdayItem[]>());
       }
 
       const dateMap = monthMap.get(monthKey)!;
-
       if (!dateMap.has(dateKey)) {
         dateMap.set(dateKey, []);
       }
@@ -150,8 +120,7 @@ export default function DonaturDashboardPage() {
     const sortedMonths = Array.from(monthMap.keys()).sort();
 
     for (const monthKey of sortedMonths) {
-      const isMonthExpanded =
-        expandedMonths[monthKey] ?? monthKey === firstMonthKey;
+      const isMonthExpanded = expandedMonths[monthKey] ?? monthKey === firstMonthKey;
 
       result.push({
         id: `month-${monthKey}`,
@@ -160,8 +129,6 @@ export default function DonaturDashboardPage() {
         monthLabel: formatMonthFromString(`${monthKey}-01`),
         isExpanded: isMonthExpanded,
         groupLabel: isMonthExpanded ? "▼ Lihat tanggal" : "▶ Lihat tanggal",
-        statusText: "",
-        aksi: "",
       });
 
       if (!isMonthExpanded) continue;
@@ -180,40 +147,40 @@ export default function DonaturDashboardPage() {
           dateKey,
           dateLabel: formatDateFromString(dateKey),
           isExpanded: isDateExpanded,
-          groupLabel: isDateExpanded ? "▼ Lihat Donatur" : "▶ Lihat Donatur",
-          statusText: "",
-          aksi: "",
+          groupLabel: isDateExpanded ? "▼ Lihat donatur" : "▶ Lihat donatur",
         });
 
         if (!isDateExpanded) continue;
 
-        const items = dateMap.get(dateKey) ?? [];
+        const items = (dateMap.get(dateKey) ?? []).sort((a, b) =>
+          a.nama.localeCompare(b.nama)
+        );
 
         for (const item of items) {
           result.push({
             id: `detail-${item.id_donatur}`,
             rowType: "detail",
-            id_donatur: item.id_donatur,
             monthKey,
             dateKey,
+            id_donatur: item.id_donatur,
+            id_TRBirthdayPray: item.id_TRBirthdayPray,
             nama: item.nama,
             noHP: item.noHP,
-            status: item.status,
-            statusText: item.status ? "Complete" : "Belum Complete",
-            aksi: "",
+            birthdayDate: item.birthdayDate,
+            sudahDidoakan: item.sudahDidoakan,
           });
         }
       }
     }
 
     return result;
-  }, [sourceRows, expandedMonths, expandedDates, firstMonthKey]);
+  }, [expandedDates, expandedMonths, firstMonthKey, sourceRows]);
 
   const columns: Column<DashboardRow>[] = [
     {
       key: "group1",
       label: "Bulan / Tanggal",
-      width: "260px",
+      width: "280px",
       render: (row) => {
         if (row.rowType === "month") {
           return <span className="font-semibold">{row.monthLabel}</span>;
@@ -273,22 +240,26 @@ export default function DonaturDashboardPage() {
       },
     },
     {
-      key: "statusText",
-      label: "Status",
-      width: "180px",
+      key: "noHP",
+      label: "No HP",
+      width: "160px",
+      render: (row) => (row.rowType === "detail" ? row.noHP : null),
+    },
+    {
+      key: "status",
+      label: "Status Doa",
+      width: "170px",
       render: (row) => {
         if (row.rowType !== "detail") return null;
 
         return (
-          <button
-            type="button"
-            className={`rounded px-3 py-1 text-xs font-semibold text-white ${
-              row.status ? "bg-green-600" : "bg-red-500"
+          <span
+            className={`inline-flex rounded px-3 py-1 text-xs font-semibold text-white ${
+              row.sudahDidoakan ? "bg-green-600" : "bg-red-500"
             }`}
-            tabIndex={-1}
           >
-            {row.status ? "Complete" : "Belum Complete"}
-          </button>
+            {row.sudahDidoakan ? "Complete" : "Belum Complete"}
+          </span>
         );
       },
       cellClassName: "text-center",
@@ -297,7 +268,7 @@ export default function DonaturDashboardPage() {
     {
       key: "aksi",
       label: "Aksi",
-      width: "140px",
+      width: "150px",
       render: (row) => {
         if (row.rowType !== "detail") return null;
 
@@ -307,7 +278,7 @@ export default function DonaturDashboardPage() {
             className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/donatur/${row.id_donatur}`);
+              navigate(`/transaksi-birthday-pray/${row.id_donatur}`);
             }}
           >
             Edit
@@ -338,32 +309,38 @@ export default function DonaturDashboardPage() {
   }
 
   function handleRowEnter(row: DashboardRow) {
-    if (row.rowType === "month") {
-      setExpandedMonths((prev) => ({
-        ...prev,
-        [row.monthKey]: !row.isExpanded,
-      }));
+    if (row.rowType === "month" || row.rowType === "date") {
+      handleRowClick(row);
       return;
     }
 
-    if (row.rowType === "date") {
-      const dateExpandKey = `${row.monthKey}|${row.dateKey}`;
-      setExpandedDates((prev) => ({
-        ...prev,
-        [dateExpandKey]: !row.isExpanded,
-      }));
-      return;
-    }
-
-    navigate(`/donatur/${row.id_donatur}`);
+    navigate(`/transaksi-birthday-pray/${row.id_donatur}`);
   }
 
   return (
-    <div className="space-y-3 p-4 text-7xl font-bold">
+    <div className="space-y-4 p-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 p-5 text-white shadow-sm">
+          <div className="text-sm font-medium text-cyan-100">Ulang Tahun Mendatang</div>
+          <div className="mt-2 text-3xl font-bold">{totalUpcoming}</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-sm font-medium text-slate-500">Sudah Dibuat Doa</div>
+          <div className="mt-2 text-3xl font-bold text-green-600">{totalCompleted}</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-sm font-medium text-slate-500">Belum Complete</div>
+          <div className="mt-2 text-3xl font-bold text-red-500">{totalPending}</div>
+        </div>
+      </div>
+
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Dashboard Donatur</h1>
+        <h1 className="text-xl font-bold text-slate-800">Dashboard Birthday Donatur</h1>
         <p className="text-sm text-slate-500">
-          Grouping per bulan lalu per tanggal lahir.
+          Menampilkan donatur dengan ulang tahun yang masih lebih besar dari tanggal hari ini
+          pada tahun berjalan.
         </p>
       </div>
 
@@ -372,9 +349,9 @@ export default function DonaturDashboardPage() {
         rows={flatRows}
         loading={dashboardQuery.isLoading}
         emptyText={
-          dashboardQuery.isError ? "Gagal mengambil data." : "Data tidak ditemukan."
+          dashboardQuery.isError ? "Gagal mengambil data." : "Belum ada donatur ulang tahun mendatang."
         }
-        maxHeight={500}
+        maxHeight={560}
         page={1}
         pageSize={flatRows.length || 10}
         totalRecords={flatRows.length}
@@ -397,38 +374,3 @@ export default function DonaturDashboardPage() {
     </div>
   );
 }
-
-//import bgDashboard from "../assets/bg-dashboard.png";
-
-// export default function Dashboard() {
-//   return (
-//     <div className="h-full w-full p-6">
-//       <div className="rounded-2xl bg-gradient-to-r from-sky-700 to-cyan-600 p-6 text-white shadow-lg">
-//         <h1 className="text-3xl font-bold">Dashboard</h1>
-//         <p className="mt-2 text-sm text-cyan-100">Login berhasil 🎉</p>
-//       </div>
-
-//       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-//         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-//           <h2 className="text-sm font-semibold text-slate-500">Total Barang</h2>
-//           <p className="mt-2 text-2xl font-bold text-slate-800">1,250</p>
-//         </div>
-
-//         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-//           <h2 className="text-sm font-semibold text-slate-500">Customer</h2>
-//           <p className="mt-2 text-2xl font-bold text-slate-800">325</p>
-//         </div>
-
-//         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-//           <h2 className="text-sm font-semibold text-slate-500">Supplier</h2>
-//           <p className="mt-2 text-2xl font-bold text-slate-800">87</p>
-//         </div>
-
-//         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-//           <h2 className="text-sm font-semibold text-slate-500">Transaksi Hari Ini</h2>
-//           <p className="mt-2 text-2xl font-bold text-slate-800">142</p>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }

@@ -60,11 +60,11 @@ public class ResponseModeMasterDonatur
 {
     public long id_donatur { get; set; }
     public string Nama { get; set; } = "";
-    public DateTime TglLahir { get; set; }
-    public DateTime CreatedDate { get; set; }
+    public DateTime? TglLahir { get; set; }
+    public DateTime? CreatedDate { get; set; }
     public string NoHP { get; set; } = "";
     public bool Status { get; set; }
-    public DateTime LastDonation { get; set; }
+    public DateTime? LastDonation { get; set; }
 }
 
 public class ResponseModelMasterPendoa
@@ -74,6 +74,48 @@ public class ResponseModelMasterPendoa
     public DateTime createddate { get; set; }
     public string nohp { get; set; } = "";
     public bool dfl { get; set; }
+}
+
+public class ResponseModelDashboardBirthday
+{
+    public long id_donatur { get; set; }
+    public string nama { get; set; } = "";
+    public DateTime? tglLahir { get; set; }
+    public DateTime? birthdayDate { get; set; }
+    public string noHP { get; set; } = "";
+    public bool status { get; set; }
+    public DateTime? lastDonation { get; set; }
+    public bool sudahDidoakan { get; set; }
+    public long? id_TRBirthdayPray { get; set; }
+    public DateTime? prayCreatedDate { get; set; }
+}
+
+public class ResponseModelTRBirthdayPray
+{
+    public long id_TRBirthdayPray { get; set; }
+    public long id_donatur { get; set; }
+    public long id_pendoa { get; set; }
+    public string namaDonatur { get; set; } = "";
+    public DateTime? tglLahir { get; set; }
+    public DateTime? birthdayDate { get; set; }
+    public string noHPDonatur { get; set; } = "";
+    public string namaPendoa { get; set; } = "";
+    public string noHPPendoa { get; set; } = "";
+    public string pesan { get; set; } = "";
+    public string pathPesanSuara { get; set; } = "";
+    public DateTime? createdDate { get; set; }
+}
+
+public class ResponseModelTRBirthdayPrayHistory
+{
+    public long id_TRBirthdayPray { get; set; }
+    public long id_pendoa { get; set; }
+    public string namaDonatur { get; set; } = "";
+    public string namaPendoa { get; set; } = "";
+    public DateTime? birthdayDate { get; set; }
+    public string pesan { get; set; } = "";
+    public string pathPesanSuara { get; set; } = "";
+    public DateTime? createdDate { get; set; }
 }
 
 #endregion Master

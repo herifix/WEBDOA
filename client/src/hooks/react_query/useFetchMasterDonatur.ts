@@ -1,13 +1,6 @@
 import { useQuery,useMutation } from "@tanstack/react-query";
-import { getAllMasterDonatur,getMasterDonaturByDate,updateDonatur,createDonatur, deleteDonatur } from "../../service/masterDonaturService";
+import { getAllMasterDonatur,updateDonatur,createDonatur, deleteDonatur } from "../../service/masterDonaturService";
 import type { DataPage } from "../../Model/ModelMaster";
-
-export function useFetchDonaturDashboard(tgl: string) {
-  return useQuery({
-    queryKey: ["donatur-dashboard"],
-    queryFn: () => getMasterDonaturByDate(tgl),
-  });
-}
 
 export function useFetchMasterDonatur(params: DataPage) {
   return useQuery({

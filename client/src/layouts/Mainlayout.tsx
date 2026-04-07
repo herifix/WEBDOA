@@ -9,7 +9,14 @@ function getPageTitle(pathname: string) {
       return "Dashboard";
     case "/master-barang":
       return "Master Barang";
+    case "/master-pendoa":
+      return "Master Pendoa";
+    case "/master-donatur":
+      return "Master Donatur";
     default:
+      if (pathname.startsWith("/transaksi-birthday-pray")) {
+        return "TR Birthday Pray";
+      }
       return "Donatur System";
   }
 }

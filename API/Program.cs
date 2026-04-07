@@ -1,5 +1,6 @@
 ﻿using API.Repository.global;
 using API.Service.Master;
+using API.Service.Transaction;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -99,6 +100,8 @@ builder.Services.AddScoped<RepoMasterDonatur>();
 builder.Services.AddScoped<ServiceMasterDonatur>();
 builder.Services.AddScoped<ServiceMasterPendoa>();
 builder.Services.AddScoped<RepoMasterPendoa>();
+builder.Services.AddScoped<RepoTRBirthdayPray>();
+builder.Services.AddScoped<ServiceTRBirthdayPray>();
 
 var app = builder.Build();
 

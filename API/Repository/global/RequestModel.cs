@@ -27,6 +27,25 @@ public class RequestCreateMasterPendoa
     public string nohp { get; set; }
 }
 
+public class RequestCreateMasterDonatur
+{
+    public string nama { get; set; }
+    public DateTime? tglLahir { get; set; }
+    public string nohp { get; set; }
+    public bool status { get; set; }
+    public DateTime? lastDonation { get; set; }
+}
+
+public class RequestUpdateMasterDonatur
+{
+    public long idDonatur { get; set; }
+    public string nama { get; set; }
+    public DateTime? tglLahir { get; set; }
+    public string nohp { get; set; }
+    public bool status { get; set; }
+    public DateTime? lastDonation { get; set; }
+}
+
 public class RequestUpdateMasterPendoa
 {
     public string nama { get; set; }
@@ -70,6 +89,21 @@ public class RequestGetAllMasterPendoa
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 10;
     public string Search { get; set; } = "";
+}
+
+public class RequestGetAllMasterDonatur
+{
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public string Search { get; set; } = "";
+}
+
+public class RequestSaveTRBirthdayPray
+{
+    public long idDonatur { get; set; }
+    public long? idTRBirthdayPray { get; set; }
+    public string pesan { get; set; } = "";
+    public IFormFile? pesanSuaraFile { get; set; }
 }
 
 # endregion

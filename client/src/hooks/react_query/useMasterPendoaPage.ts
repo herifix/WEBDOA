@@ -4,6 +4,9 @@ import { useERPFormMode } from "./userERPFormMode";
 import { FORM_MODE } from "../../TypeData/forMode";
 import { useUpdatePendoa,useCreatePendoa, useDeletePendoa } from "./useFetchMasterPendoa";
 import { useQueryClient } from "@tanstack/react-query";
+import { useFormMessage } from "../useFormMessage";
+import { isValidPhoneNumber } from "../../utils/validation";
+import { handleMutationError, handleMutationSuccess } from "./masterCrudHelpers";
 
 type ActiveTab = "general" | "detail";
 
@@ -45,70 +48,84 @@ export function useMasterPendoaPage() {
   // mode form
   const { mode, toNew, toEdit, toView, toApproved } = useERPFormMode();
   const [isSaving, setIsSaving] = useState(false);
+  const {
+    formError,
+    setFormError,
+    formSuccess,
+    setFormSuccess,
+    clearFormError,
+    clearFormSuccess,
+    clearFormMessage,
+  } = useFormMessage();
+
+  const validateForm = () => {
+    const trimmedNama = nama.trim();
+    const trimmedNohp = nohp.trim();
+
+    if (!trimmedNama) {
+      setFormError("Nama pendoa wajib diisi.");
+      return false;
+    }
+
+    if (!trimmedNohp) {
+      setFormError("No HP wajib diisi.");
+      return false;
+    }
+
+    if (!isValidPhoneNumber(trimmedNohp)) {
+      setFormError("No HP hanya boleh berisi angka dan simbol telepon umum.");
+      return false;
+    }
+
+    clearFormMessage();
+    return true;
+  };
 
   //@todo Fungsi Update
   const { mutateAsync: updatePendoaAsync } = useUpdatePendoa();
   async function handleUpdate() {
-        try {
-            const formData = new FormData();
-            formData.append("idPendoa", idPendoa.toString());            
-            formData.append("nama", nama);
-            formData.append("dfl", dfl.toString());
-            formData.append("nohp", nohp);
+    const formData = new FormData();
+    formData.append("idPendoa", idPendoa.toString());
+    formData.append("nama", nama.trim());
+    formData.append("dfl", dfl.toString());
+    formData.append("nohp", nohp.trim());
 
-            const result = await updatePendoaAsync(formData);
+    const result = await updatePendoaAsync(formData);
 
-            if (!result.success) {
-                throw new Error("Gagal update data");
-            }
-
-            // const result = await response.json();
-            //console.log("update sukses", result);
-        } catch (err) {
-            console.error(err);
-            
-        }
+    if (!result.success) {
+      throw new Error(result.message || "Gagal update data");
     }
+  }
 
-const { mutateAsync: createPendoaAsync } = useCreatePendoa();
+  const { mutateAsync: createPendoaAsync } = useCreatePendoa();
   async function CreateSave() {
-        try {
-            const formData = new FormData();
+    const formData = new FormData();
 
-            formData.append("nama", nama);
-            formData.append("dfl", dfl.toString());
-            formData.append("nohp", nohp);
+    formData.append("nama", nama.trim());
+    formData.append("dfl", dfl.toString());
+    formData.append("nohp", nohp.trim());
 
-            const result = await createPendoaAsync(formData);
+    const result = await createPendoaAsync(formData);
 
-            if (!result.success) {
-                throw new Error("Gagal create data");
-            }
-
-            // const result = await response.json();
-            //console.log("create sukses", result);
-        } catch (err) {
-            console.error(err);
-            
-        }
+    if (!result.success) {
+      throw new Error(result.message || "Gagal create data");
     }
+  }
 
-    const handleNew = () => {
-        resetForm();
-        toNew();
-    };
+  const handleNew = () => {
+    resetForm();
+    clearFormMessage();
+    toNew();
+  };
 
-const { mutateAsync: DeletePendoaAsync } = useDeletePendoa();
+  const { mutateAsync: DeletePendoaAsync } = useDeletePendoa();
 
 async function DeleteData() {
   try {
     if (!idPendoa) {
-      alert("Pilih data dulu");
+      setFormError("Pilih data dulu.");
       return false;
     }
-
-    const confirmDelete = confirm("Yakin mau hapus?");
-    if (!confirmDelete) return false;
 
     const result = await DeletePendoaAsync(Number(idPendoa));
 
@@ -116,7 +133,6 @@ async function DeleteData() {
       throw new Error("Gagal delete data");
     }
 
-    alert("Delete berhasil");
     return true;
   } catch (err) {
     console.error(err);
@@ -129,22 +145,31 @@ const handleDelete = async () => {
     const deleted = await DeleteData();
     if (!deleted) return;
 
-    setPage(1);
-
-    await queryClient.invalidateQueries({
-      queryKey: ["master-pendoa-list"],
+    await handleMutationSuccess({
+      queryClient,
+      queryKey: "master-pendoa-list",
+      setPage,
+      clearFormError,
+      setFormSuccess,
+      successMessage: "Data pendoa berhasil dihapus.",
+      toView,
     });
-
-    toView();
   } catch (err) {
     console.error(err);
-    alert("Gagal delete data");
+    handleMutationError({
+      err,
+      clearFormSuccess,
+      setFormError,
+      fallbackMessage: "Gagal delete data",
+    });
   }
 };
 
   const handleSave = async () => {
     try {
-        console.log("state",mode);
+      if (!validateForm()) return;
+
+      clearFormMessage();
       setIsSaving(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -156,14 +181,26 @@ const handleDelete = async () => {
       }
 
       
-      setPage(1);
-      await queryClient.invalidateQueries({
-        queryKey: ["master-pendoa-list"],
+      await handleMutationSuccess({
+        queryClient,
+        queryKey: "master-pendoa-list",
+        setPage,
+        clearFormError,
+        setFormSuccess,
+        successMessage:
+          mode === FORM_MODE.NEW
+            ? "Data pendoa berhasil disimpan."
+            : "Data pendoa berhasil diperbarui.",
+        toView,
       });
-      toView();
     } catch (err) {
         console.error(err);
-        alert("Fail save data");}
+        handleMutationError({
+          err,
+          clearFormSuccess,
+          setFormError,
+          fallbackMessage: "Fail save data",
+        });}
     finally {
       setIsSaving(false);
     }
@@ -264,12 +301,20 @@ const handleDelete = async () => {
     // save
     isSaving,
     setIsSaving,
+    formError,
+    setFormError,
+    formSuccess,
+    setFormSuccess,
+    clearFormError,
+    clearFormSuccess,
+    clearFormMessage,
     handleSave,
     handleDelete,
 
     // helper
     clearLookupRefs,
     resetForm,
+    validateForm,
     handleUpdate,
     handleNew,
   };
