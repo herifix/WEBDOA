@@ -1,4 +1,5 @@
-﻿using API.Repository.global;
+using API.Repository.global;
+using API.Repository.Master;
 using API.Service.Master;
 using API.Service.Transaction;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,9 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 // (Kalau masih pakai EF) - kalau fokus Dapper, ini bisa dihapus nanti
 //builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connStr));
 
-
-// ✅ Dapper connection
-// DB Transaksi
+// Dapper connection
 builder.Services.AddScoped<IDbConnection>(sp =>
     new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
@@ -32,7 +31,7 @@ builder.Services.AddScoped<IDbConnection>(sp =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// ✅ Swagger + Bearer (gembok)
+// Swagger + Bearer
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
@@ -59,19 +58,19 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ✅ CORS
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("BC",
         policy =>
         {
-            policy.WithOrigins("http://139.255.109.178","http://localhost:5174", "http://localhost:5173")
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+            policy.WithOrigins("http://139.255.109.178", "http://localhost:5174", "http://localhost:5173")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
         });
 });
 
-// ✅ JWT
+// JWT
 var jwt = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwt["Key"]!);
 
@@ -93,7 +92,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// ✅ register repo dan service
+// Register repo dan service
 builder.Services.AddScoped<RepoMasterItem>();
 builder.Services.AddScoped<ServiceMasterItem>();
 builder.Services.AddScoped<RepoMasterDonatur>();
@@ -101,12 +100,14 @@ builder.Services.AddScoped<ServiceMasterDonatur>();
 builder.Services.AddScoped<ServiceMasterPendoa>();
 builder.Services.AddScoped<RepoMasterPendoa>();
 builder.Services.AddScoped<RepoMasterUser>();
+builder.Services.AddScoped<RepoWhatsAppSchedule>();
 builder.Services.AddScoped<RepoTRBirthdayPray>();
 builder.Services.AddScoped<ServiceTRBirthdayPray>();
 builder.Services.AddScoped<ServiceMasterUser>();
+builder.Services.AddScoped<ServiceWhatsAppSchedule>();
+builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
 var app = builder.Build();
-
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -117,7 +118,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-// ✅ CORS harus sebelum auth & endpoint
 app.UseCors("BC");
 
 app.UseAuthentication();

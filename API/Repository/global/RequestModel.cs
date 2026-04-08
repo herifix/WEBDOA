@@ -142,6 +142,12 @@ public class RequestSaveTRBirthdayPray
     public bool saveToAllSameBirthdayDate { get; set; } = true;
 }
 
+public class RequestUpdateWhatsAppSchedule
+{
+    public string? sendTime { get; set; }
+    public bool isActive { get; set; }
+}
+
 # endregion
 
 #region LOGIN *************************************************

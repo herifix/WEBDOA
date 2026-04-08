@@ -41,6 +41,39 @@ public class ResponsePt
     public string TahunAktifGl { get; set; }
 }
 
+public class ResponseModelMenuTreeFlat
+{
+    public long id_form { get; set; }
+    public string formName { get; set; } = "";
+    public long id_menu_parent { get; set; }
+    public int lvl { get; set; }
+    public string iconType { get; set; } = "";
+    public int menuOrder { get; set; }
+    public bool asParent { get; set; }
+    public bool canView { get; set; }
+}
+
+public class ResponseModelMenuTree
+{
+    public long id_form { get; set; }
+    public string formName { get; set; } = "";
+    public long id_menu_parent { get; set; }
+    public int lvl { get; set; }
+    public string iconType { get; set; } = "";
+    public int menuOrder { get; set; }
+    public bool asParent { get; set; }
+    public bool canView { get; set; }
+    public List<ResponseModelMenuTree> children { get; set; } = new();
+}
+
+public class ResponseModelWhatsAppSchedule
+{
+    public long id_setting { get; set; }
+    public string sendTime { get; set; } = "08:00";
+    public bool isActive { get; set; }
+    public DateTime? updatedDate { get; set; }
+}
+
 #endregion LOGIN
 
 #region Master *************************************************
@@ -129,6 +162,19 @@ public class ResponseModelTRBirthdayPrayHistory
     public string pesan { get; set; } = "";
     public string pathPesanSuara { get; set; } = "";
     public DateTime? createdDate { get; set; }
+}
+
+public class ResponseModelBirthdayPrayDispatchItem
+{
+    public long id_TRBirthdayPray { get; set; }
+    public long id_pendoa { get; set; }
+    public string namaDonatur { get; set; } = "";
+    public string noHPDonatur { get; set; } = "";
+    public string namaPendoa { get; set; } = "";
+    public string noHPPendoa { get; set; } = "";
+    public DateTime birthdayDate { get; set; }
+    public string pesan { get; set; } = "";
+    public string pathPesanSuara { get; set; } = "";
 }
 
 #endregion Master

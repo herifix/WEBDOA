@@ -96,5 +96,31 @@ public class AuthController : ControllerBase
             access_token = new JwtSecurityTokenHandler().WriteToken(token)
         });
     }
+
+    [HttpGet("menu")]
+    public ActionResult<ResponseData<List<ResponseModelMenuTree>>> GetMenu([FromQuery] string userid, [FromQuery] string pt)
+    {
+        globalFunction globalFunction = new globalFunction(conn);
+
+        try
+        {
+            var data = globalFunction.GetSidebarMenu(userid ?? "", pt ?? "");
+            return Ok(new ResponseData<List<ResponseModelMenuTree>>
+            {
+                success = true,
+                message = data.Count > 0 ? "OK" : "Data not found",
+                data = data
+            });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new ResponseData<List<ResponseModelMenuTree>>
+            {
+                success = false,
+                message = ex.Message,
+                data = new List<ResponseModelMenuTree>()
+            });
+        }
+    }
 }
 

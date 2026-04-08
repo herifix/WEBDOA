@@ -12,6 +12,8 @@ type DashboardRow =
       monthLabel: string;
       isExpanded: boolean;
       groupLabel: string;
+      totalCount: number;
+      completeCount: number;
     }
   | {
       id: string;
@@ -21,6 +23,8 @@ type DashboardRow =
       dateLabel: string;
       isExpanded: boolean;
       groupLabel: string;
+      totalCount: number;
+      completeCount: number;
     }
   | {
       id: string;
@@ -134,6 +138,11 @@ export default function DashboardPage() {
     for (const monthKey of sortedMonths) {
       const isMonthExpanded = expandedMonths[monthKey] ?? monthKey === firstMonthKey;
 
+      const dateMap = monthMap.get(monthKey)!;
+      const monthItems = Array.from(dateMap.values()).flat();
+      const monthCompleteCount = monthItems.filter((item) => item.sudahDidoakan).length;
+      const monthTotalCount = monthItems.length;
+
       result.push({
         id: `month-${monthKey}`,
         rowType: "month",
@@ -141,16 +150,20 @@ export default function DashboardPage() {
         monthLabel: formatMonthFromString(`${monthKey}-01`),
         isExpanded: isMonthExpanded,
         groupLabel: isMonthExpanded ? "▼ Lihat tanggal" : "▶ Lihat tanggal",
+        totalCount: monthTotalCount,
+        completeCount: monthCompleteCount,
       });
 
       if (!isMonthExpanded) continue;
 
-      const dateMap = monthMap.get(monthKey)!;
       const sortedDates = Array.from(dateMap.keys()).sort();
 
       for (const dateKey of sortedDates) {
         const dateExpandKey = `${monthKey}|${dateKey}`;
         const isDateExpanded = expandedDates[dateExpandKey] ?? false;
+        const dateItems = dateMap.get(dateKey) ?? [];
+        const dateCompleteCount = dateItems.filter((item) => item.sudahDidoakan).length;
+        const dateTotalCount = dateItems.length;
 
         result.push({
           id: `date-${monthKey}-${dateKey}`,
@@ -160,6 +173,8 @@ export default function DashboardPage() {
           dateLabel: formatDateFromString(dateKey),
           isExpanded: isDateExpanded,
           groupLabel: isDateExpanded ? "▼ Lihat donatur" : "▶ Lihat donatur",
+          totalCount: dateTotalCount,
+          completeCount: dateCompleteCount,
         });
 
         if (!isDateExpanded) continue;
@@ -248,30 +263,42 @@ export default function DashboardPage() {
       width: "1.8fr",
       render: (row) => {
         if (row.rowType === "month") {
-          return (
-            <button
-              type="button"
-              className="rounded px-2 py-1 text-left font-semibold text-cyan-700 hover:bg-cyan-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpandedMonths((prev) => ({
-                  ...prev,
-                  [row.monthKey]: !row.isExpanded,
-                }));
-              }}
-            >
-              {row.groupLabel}
-            </button>
-          );
+          const isComplete = row.totalCount > 0 && row.completeCount === row.totalCount;
+      return (
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            className="rounded px-2 py-1 text-left font-semibold text-cyan-700 hover:bg-cyan-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedMonths((prev) => ({
+                ...prev,
+                [row.monthKey]: !row.isExpanded,
+              }));
+            }}
+          >
+            {row.groupLabel}
+          </button>
+          <span
+            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-white ${
+              isComplete ? "bg-emerald-600" : "bg-rose-500"
+            }`}
+          >
+            {isComplete ? "Complete" : "Belum Complete"} ({row.completeCount}/{row.totalCount})
+          </span>
+        </div>
+      );
         }
 
         if (row.rowType === "date") {
           const dateExpandKey = `${row.monthKey}|${row.dateKey}`;
 
-          return (
+          const isComplete = row.totalCount > 0 && row.completeCount === row.totalCount;
+        return (
+          <div className="ml-6 flex items-center justify-between gap-3">
             <button
               type="button"
-              className="ml-6 rounded px-2 py-1 text-left font-medium text-sky-700 hover:bg-sky-100"
+              className="rounded px-2 py-1 text-left font-medium text-sky-700 hover:bg-sky-100"
               onClick={(e) => {
                 e.stopPropagation();
                 setExpandedDates((prev) => ({
@@ -282,7 +309,15 @@ export default function DashboardPage() {
             >
               {row.groupLabel}
             </button>
-          );
+            <span
+              className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-white ${
+                isComplete ? "bg-emerald-600" : "bg-rose-500"
+              }`}
+            >
+              {isComplete ? "Complete" : "Belum Complete"} ({row.completeCount}/{row.totalCount})
+            </span>
+          </div>
+        );
         }
 
         return <span className="pl-12">{row.nama}</span>;
