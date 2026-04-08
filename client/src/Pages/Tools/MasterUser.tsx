@@ -297,7 +297,7 @@ export default function MasterUserPage() {
               />
 
               <label className="text-sm text-slate-700">
-                {vm.mode === vm.FORM_MODE.NEW ? "Password" : "Password Baru"}
+                {vm.mode === vm.FORM_MODE.NEW ? "Password" : "Password"}
               </label>
               <input
                 type="password"

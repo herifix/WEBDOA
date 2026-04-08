@@ -5,7 +5,7 @@ import intlogo from "../../assets/intlogo.png";
 const aboutHighlights = [
   { icon: Building2, label: "Licensed To", value: "Gema Kasih Yobel" },
   { icon: Globe2, label: "Location", value: "Jakarta Pusat, Indonesia" },
-  { icon: Phone, label: "Contact", value: "345 6650" },
+  { icon: Phone, label: "Contact", value: "021 345 6650" },
   { icon: Mail, label: "Email", value: "sgunawan@galva.co.id" },
 ];
 
