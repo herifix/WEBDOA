@@ -2,7 +2,7 @@
 export interface ModelMasterPendoa {
   id_pendoa: number;
   nama: string;
-  noHP: string;
+  nohp: string;
   dfl: boolean;
   createddate: string| '1900/1/1';
 }
@@ -11,7 +11,7 @@ export interface ModelMasterPendoa {
 export type MasterPendoaRow = {
   id_pendoa: number;
   nama: string;
-  noHP: string;
+  nohp: string;
   dfl: boolean;
   createddate: string | null;
 

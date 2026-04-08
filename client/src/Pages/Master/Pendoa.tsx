@@ -75,7 +75,7 @@ export default function MasterPendoaPage() {
 
       vm.setIdPendoa(item.id_pendoa ?? 0);
       vm.setNama(item.nama ?? "");
-      vm.setNohp(item.noHP ?? item.nohp ?? "");
+      vm.setNohp(item.nohp ?? "");
       vm.setDfl(item.dfl ?? false);
       vm.setCreatedDate(
         item.createddate ? String(item.createddate).substring(0, 10) : ""
@@ -99,7 +99,12 @@ export default function MasterPendoaPage() {
       {
         key: "nama",
         label: "Nama",
-        width: "minmax(280px, 1fr)",
+        width: "minmax(220px, 1fr)",
+      },
+      {
+        key: "nohp",
+        label: "No HP",
+        width: "minmax(180px, 1fr)",
       },
       {
         key: "dfl",
