@@ -125,7 +125,11 @@ namespace API.Repository.global
                     ISNULL(t.IconType, '') AS iconType,
                     ISNULL(t.MenuOrder, 0) AS menuOrder,
                     CAST(ISNULL(t.AsParent, 0) AS bit) AS asParent,
-                    CAST(CASE WHEN ISNULL(mu.[VIEW], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canView
+                    CAST(CASE WHEN ISNULL(mu.[VIEW], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canView,
+                    CAST(CASE WHEN ISNULL(mu.[ADD], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canAdd,
+                    CAST(CASE WHEN ISNULL(mu.[EDIT], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canEdit,
+                    CAST(CASE WHEN ISNULL(mu.[PRINT], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canPrint,
+                    CAST(CASE WHEN ISNULL(mu.[DEL], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canDelete
                 FROM MsMenuTree t
                 LEFT JOIN MsForm f
                     ON f.id_form = t.id_form
@@ -157,6 +161,10 @@ namespace API.Repository.global
                     menuOrder = item.menuOrder,
                     asParent = item.asParent,
                     canView = item.canView,
+                    canAdd = item.canAdd,
+                    canEdit = item.canEdit,
+                    canPrint = item.canPrint,
+                    canDelete = item.canDelete,
                     children = new List<ResponseModelMenuTree>()
                 }
             );

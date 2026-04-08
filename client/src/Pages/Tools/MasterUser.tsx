@@ -8,6 +8,8 @@ import type { MasterUserRow } from "../../Model/ModelMasterUser";
 import { useFetchMasterUser } from "../../hooks/react_query/useFetchMasterUser";
 import { useMasterUserPage } from "../../hooks/react_query/useMasterUserPage";
 import { getMasterUserById } from "../../service/masterUserService";
+import { FORM_IDS } from "../../config/formIds";
+import { useFormMenuPermissions } from "../../utils/menuAccess";
 
 export default function MasterUserPage() {
   const vm = useMasterUserPage();
@@ -18,6 +20,7 @@ export default function MasterUserPage() {
     pageSize: vm.pageSize,
     search: vm.search,
   });
+  const { permissions } = useFormMenuPermissions(FORM_IDS.masterUser);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,6 +35,14 @@ export default function MasterUserPage() {
     vm.setPage(1);
     vm.setSearch(vm.searchInput.trim());
   };
+
+  if (!permissions.canView) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
+        Anda tidak memiliki akses untuk membuka form ini.
+      </div>
+    );
+  }
 
   const handleRefreshGrid = () => {
     vm.setSearchInput("");
@@ -129,9 +140,12 @@ export default function MasterUserPage() {
             onCancel={vm.toView}
             onDelete={handleDeleteClick}
             onRefresh={handleRefreshGrid}
+            showNew={permissions.canAdd}
+            showEdit={permissions.canEdit}
+            showDelete={permissions.canDelete}
+            showPrint={permissions.canPrint}
             showExport={false}
             showApprove={false}
-            showPrint={false}
             loadingSave={vm.isSaving}
           />
         </div>

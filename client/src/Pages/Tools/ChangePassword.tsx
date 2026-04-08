@@ -5,11 +5,14 @@ import StatusBanner from "../../components/StatusBanner";
 import { useFormMessage } from "../../hooks/useFormMessage";
 import { useChangePassword } from "../../hooks/react_query/useFetchMasterUser";
 import { getCurrentPassword } from "../../service/masterUserService";
+import { FORM_IDS } from "../../config/formIds";
+import { useFormMenuPermissions } from "../../utils/menuAccess";
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
   const userid = localStorage.getItem("userid") ?? "";
   const pt = localStorage.getItem("userpt") ?? "";
+  const { permissions } = useFormMenuPermissions(FORM_IDS.changePassword);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -41,6 +44,14 @@ export default function ChangePasswordPage() {
 
     void loadCurrentPassword();
   }, [pt, userid]);
+
+  if (!permissions.canView) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
+        Anda tidak memiliki akses untuk membuka form ini.
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     try {
@@ -115,6 +126,7 @@ export default function ChangePasswordPage() {
             }}
             showNew={false}
             showEdit={false}
+            showSave={permissions.canEdit}
             showDelete={false}
             showApprove={false}
             showPrint={false}

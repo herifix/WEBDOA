@@ -11,6 +11,8 @@ import {
   useSaveTRBirthdayPray,
 } from "../../hooks/react_query/useFetchTRBirthdayPray";
 import http from "../../api/http";
+import { FORM_IDS } from "../../config/formIds";
+import { useFormMenuPermissions } from "../../utils/menuAccess";
 
 function formatDate(value?: string | null) {
   if (!value) return "";
@@ -92,6 +94,7 @@ export default function TRBirthdayPrayPage() {
   const detailQuery = useFetchTRBirthdayPrayByDonatur(idDonatur, currentYear);
   const historyQuery = useFetchTRBirthdayPrayHistoryByDonatur(idDonatur);
   const { mutateAsync: saveAsync, isPending: isSaving } = useSaveTRBirthdayPray();
+  const { permissions } = useFormMenuPermissions(FORM_IDS.transaksiBirthdayPray);
 
   const [pesan, setPesan] = useState("");
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
@@ -296,6 +299,14 @@ export default function TRBirthdayPrayPage() {
     setRecordingSeconds(0);
   }
 
+  if (!permissions.canView) {
+    return (
+      <div className="flex min-h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
+        Anda tidak memiliki akses untuk membuka form ini.
+      </div>
+    );
+  }
+
   async function handleSave() {
     clearFormMessage();
 
@@ -365,6 +376,7 @@ export default function TRBirthdayPrayPage() {
             clearFormMessage();
             void detailQuery.refetch();
           }}
+          showSave={permissions.canEdit}
           showEdit={false}
           showDelete={false}
           showApprove={false}

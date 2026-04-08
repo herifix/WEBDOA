@@ -51,6 +51,10 @@ public class ResponseModelMenuTreeFlat
     public int menuOrder { get; set; }
     public bool asParent { get; set; }
     public bool canView { get; set; }
+    public bool canAdd { get; set; }
+    public bool canEdit { get; set; }
+    public bool canPrint { get; set; }
+    public bool canDelete { get; set; }
 }
 
 public class ResponseModelMenuTree
@@ -63,6 +67,10 @@ public class ResponseModelMenuTree
     public int menuOrder { get; set; }
     public bool asParent { get; set; }
     public bool canView { get; set; }
+    public bool canAdd { get; set; }
+    public bool canEdit { get; set; }
+    public bool canPrint { get; set; }
+    public bool canDelete { get; set; }
     public List<ResponseModelMenuTree> children { get; set; } = new();
 }
 

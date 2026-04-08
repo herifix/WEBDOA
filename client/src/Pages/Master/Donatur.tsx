@@ -9,6 +9,8 @@ import StatusBanner from "../../components/StatusBanner";
 import ERPToolbar from "../../components/ToolbarHR";
 import type { Column } from "../../components/GridFullParent";
 
+import { FORM_IDS } from "../../config/formIds";
+import { useFormMenuPermissions } from "../../utils/menuAccess";
 import type { MasterDonaturRow } from "../../Model/ModelMasterDonatur";
 
 import { useFetchMasterDonatur } from "../../hooks/react_query/useFetchMasterDonatur";
@@ -58,6 +60,8 @@ export default function MasterDonaturPage() {
     search: vm.search,
   });
 
+  const { permissions } = useFormMenuPermissions(FORM_IDS.masterDonatur);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       vm.setPage(1);
@@ -71,6 +75,14 @@ export default function MasterDonaturPage() {
     vm.setPage(1);
     vm.setSearch(vm.searchInput.trim());
   };
+
+  if (!permissions.canView) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
+        Anda tidak memiliki akses untuk membuka form ini.
+      </div>
+    );
+  }
 
   const handleRefreshGrid = () => {
     vm.setSearchInput("");
@@ -205,6 +217,10 @@ export default function MasterDonaturPage() {
                 visible: false,
               },
             ]}
+            showNew={permissions.canAdd}
+            showEdit={permissions.canEdit}
+            showPrint={permissions.canPrint}
+            showDelete={permissions.canDelete}
             showExport={false}
             showApprove={false}
           />

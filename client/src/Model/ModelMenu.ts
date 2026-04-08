@@ -7,5 +7,9 @@ export type AppMenuItem = {
   menuOrder: number;
   asParent: boolean;
   canView: boolean;
+  canAdd: boolean;
+  canEdit: boolean;
+  canPrint: boolean;
+  canDelete: boolean;
   children: AppMenuItem[];
 };
