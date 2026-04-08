@@ -30,7 +30,10 @@ const menuRouteMap: Record<string, string> = {
   "whatsapp schedule": "/tools-whatsapp-schedule",
   "jadwal whatsapp": "/tools-whatsapp-schedule",
   "whatsapp scheduler": "/tools-whatsapp-schedule",
-  "application": "/tools-application-setting",
+  application: "/tools-application-setting",
+  "setting application": "/tools-application-setting",
+  "application setting": "/tools-application-setting",
+  "aplication setting": "/tools-application-setting",
 };
 
 function normalizeMenuKey(value?: string | null) {

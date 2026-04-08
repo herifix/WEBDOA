@@ -13,15 +13,7 @@ import ChangePasswordPage from "./Pages/Tools/ChangePassword";
 import AboutPage from "./Pages/Tools/About";
 import WhatsAppSchedulePage from "./Pages/Tools/WhatsAppSchedule";
 import ApplicationSettingPage from "./Pages/Tools/ApplicationSetting";
-import { canManageMasterUser, mustChangePassword } from "./utils/authAccess";
-
-function RequireMasterUserAccess({ children }: { children: ReactElement }) {
-    if (!canManageMasterUser()) {
-        return <Navigate to="/dashboard" replace />;
-    }
-
-    return children;
-}
+import { mustChangePassword } from "./utils/authAccess";
 
 function RequirePasswordChange({ children }: { children: ReactElement }) {
     if (mustChangePassword()) {
@@ -64,9 +56,7 @@ export default function App() {
                     } />
                     <Route path="/tools-master-user" element={
                         <RequirePasswordChange>
-                            <RequireMasterUserAccess>
-                                <MasterUserPage/>
-                            </RequireMasterUserAccess>
+                            <MasterUserPage/>
                         </RequirePasswordChange>
                     } />
                     <Route path="/tools-about" element={

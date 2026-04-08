@@ -24,7 +24,7 @@ namespace API.Controllers
 
         [HttpPut]
         [Route("Tools/ApplicationSetting/Update")]
-        public ResponseData<int> Update([FromBody] RequestUpdateApplicationSetting request)
+        public ResponseData<int> Update([FromForm] RequestUpdateApplicationSetting request)
         {
             return service.Update(request);
         }

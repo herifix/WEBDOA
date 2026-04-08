@@ -32,9 +32,23 @@ export async function getApplicationSetting(
   }
 }
 
-export async function updateApplicationSetting(payload: ApplicationSetting): Promise<UpdateResponse> {
+export async function updateApplicationSetting(payload: {
+  msgTemplate: string;
+  msgLink: string;
+  existingMsgImage: string;
+  msgImageFile?: File | null;
+}): Promise<UpdateResponse> {
   try {
-    const res = await http.put<UpdateResponse>("api/Tools/ApplicationSetting/Update", payload);
+    const formData = new FormData();
+    formData.append("msgTemplate", payload.msgTemplate);
+    formData.append("msgLink", payload.msgLink);
+    formData.append("existingMsgImage", payload.existingMsgImage);
+
+    if (payload.msgImageFile) {
+      formData.append("msgImageFile", payload.msgImageFile);
+    }
+
+    const res = await http.put<UpdateResponse>("api/Tools/ApplicationSetting/Update", formData);
 
     if (!res.data.success) {
       throw new Error(res.data.message || "Gagal menyimpan application setting.");

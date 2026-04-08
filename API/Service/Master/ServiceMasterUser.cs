@@ -1,5 +1,6 @@
 using API.Repository.global;
 using System.Data;
+using System.Text.Json;
 
 namespace API.Service.Master
 {
@@ -41,6 +42,7 @@ namespace API.Service.Master
                 }
 
                 repo.Create(bodyRequest, conn, tran);
+                repo.ReplaceMenuPermissions(pt, userid, ParsePermissions(bodyRequest.permissionsJson), conn, tran);
 
                 tran.Commit();
                 response.success = true;
@@ -96,6 +98,7 @@ namespace API.Service.Master
                 }
 
                 repo.Update(bodyRequest, conn, tran);
+                repo.ReplaceMenuPermissions(pt, userid, ParsePermissions(bodyRequest.permissionsJson), conn, tran);
 
                 tran.Commit();
                 response.success = true;
@@ -284,6 +287,28 @@ namespace API.Service.Master
         {
             var func = new globalFunction(conn);
             return func.DecPass(encryptedPassword ?? "");
+        }
+
+        private static List<RequestMasterUserPermissionItem> ParsePermissions(string? permissionsJson)
+        {
+            if (string.IsNullOrWhiteSpace(permissionsJson))
+            {
+                return new List<RequestMasterUserPermissionItem>();
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<List<RequestMasterUserPermissionItem>>(
+                    permissionsJson,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    }) ?? new List<RequestMasterUserPermissionItem>();
+            }
+            catch
+            {
+                return new List<RequestMasterUserPermissionItem>();
+            }
         }
     }
 }

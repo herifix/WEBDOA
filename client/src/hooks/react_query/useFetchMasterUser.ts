@@ -5,6 +5,7 @@ import {
   createMasterUser,
   deleteMasterUser,
   getAllMasterUser,
+  getMasterUserMenuPermissions,
   updateMasterUser,
 } from "../../service/masterUserService";
 import type { ChangePasswordRequest } from "../../Model/ModelMasterUser";
@@ -38,5 +39,12 @@ export function useDeleteMasterUser() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: (payload: ChangePasswordRequest) => changePassword(payload),
+  });
+}
+
+export function useFetchMasterUserMenuPermissions(pt: string, userid: string) {
+  return useQuery({
+    queryKey: ["master-user-menu-permissions", pt, userid],
+    queryFn: () => getMasterUserMenuPermissions(pt, userid),
   });
 }

@@ -14,17 +14,24 @@ BEGIN
     CREATE TABLE dbo.MsProg
     (
         MsgTemplate NVARCHAR(MAX) NOT NULL CONSTRAINT DF_MsProg_MsgTemplate DEFAULT (''),
-        MsgLink NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgLink DEFAULT ('')
+        MsgLink NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgLink DEFAULT (''),
+        MsgImage NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgImage DEFAULT ('')
     );
 
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink)
-    VALUES ('', '');
+    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage)
+    VALUES ('', '', '');
+END;
+
+IF COL_LENGTH('dbo.MsProg', 'MsgImage') IS NULL
+BEGIN
+    ALTER TABLE dbo.MsProg
+    ADD MsgImage NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgImage_Alter DEFAULT ('');
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.MsProg)
 BEGIN
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink)
-    VALUES ('', '');
+    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage)
+    VALUES ('', '', '');
 END;";
 
             conn.Execute(sql, transaction: tran);
@@ -37,7 +44,8 @@ END;";
             const string sql = @"
 SELECT TOP 1
     ISNULL(MsgTemplate, '') AS msgTemplate,
-    ISNULL(MsgLink, '') AS msgLink
+    ISNULL(MsgLink, '') AS msgLink,
+    ISNULL(MsgImage, '') AS msgImage
 FROM dbo.MsProg";
 
             return conn.QueryFirst<ResponseModelApplicationSetting>(sql, transaction: tran);
@@ -51,18 +59,20 @@ FROM dbo.MsProg";
 UPDATE dbo.MsProg
 SET
     MsgTemplate = @MsgTemplate,
-    MsgLink = @MsgLink;
+    MsgLink = @MsgLink,
+    MsgImage = @MsgImage;
 
 IF @@ROWCOUNT = 0
 BEGIN
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink)
-    VALUES (@MsgTemplate, @MsgLink);
+    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage)
+    VALUES (@MsgTemplate, @MsgLink, @MsgImage);
 END";
 
             conn.Execute(sql, new
             {
                 MsgTemplate = request.msgTemplate ?? "",
-                MsgLink = request.msgLink ?? ""
+                MsgLink = request.msgLink ?? "",
+                MsgImage = request.existingMsgImage ?? ""
             }, tran);
         }
     }

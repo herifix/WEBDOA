@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Mic, Pause, Play, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mic, Pause, Play, Square, Trash2 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import ERPToolbar from "../../components/ToolbarHR";
 import StatusBanner from "../../components/StatusBanner";
 import { useFormMessage } from "../../hooks/useFormMessage";
+import { useFetchApplicationSetting } from "../../hooks/react_query/useFetchApplicationSetting";
 import {
   useFetchTRBirthdayPrayHistoryByDonatur,
   useFetchTRBirthdayPrayByDonatur,
@@ -77,6 +78,26 @@ function formatShortDate(value?: string | null) {
   }).format(date);
 }
 
+function buildTemplateMessage(
+  template: string,
+  replacements: {
+    donatur: string;
+    pendoa: string;
+    link: string;
+    pesandoa: string;
+  }
+) {
+  return template
+    .replace(/<donatur>/gi, replacements.donatur)
+    .replace(/<pendoa>/gi, replacements.pendoa)
+    .replace(/<link>/gi, replacements.link)
+    .replace(/<pesandoa>/gi, replacements.pesandoa);
+}
+
+function splitTextWithLinks(value: string) {
+  return value.split(/(https?:\/\/[^\s]+)/gi).filter(Boolean);
+}
+
 export default function TRBirthdayPrayPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -93,6 +114,7 @@ export default function TRBirthdayPrayPage() {
 
   const detailQuery = useFetchTRBirthdayPrayByDonatur(idDonatur, currentYear);
   const historyQuery = useFetchTRBirthdayPrayHistoryByDonatur(idDonatur);
+  const applicationSettingQuery = useFetchApplicationSetting();
   const { mutateAsync: saveAsync, isPending: isSaving } = useSaveTRBirthdayPray();
   const { permissions } = useFormMenuPermissions(FORM_IDS.transaksiBirthdayPray);
 
@@ -180,6 +202,52 @@ export default function TRBirthdayPrayPage() {
     const parts = originalPath.split("/");
     return parts[parts.length - 1] ?? "";
   }, [pageData?.pathPesanSuara, selectedAudioFile]);
+
+  const previewTemplateMessage = useMemo(() => {
+    if (!pageData) return "";
+
+    const template = applicationSettingQuery.data?.msgTemplate ?? "";
+    if (!template.trim()) return "";
+
+    return buildTemplateMessage(template, {
+      donatur: pageData.namaDonatur || "-",
+      pendoa: pageData.namaPendoa || "-",
+      link: applicationSettingQuery.data?.msgLink || "",
+      pesandoa: pesan.trim(),
+    }).trim();
+  }, [applicationSettingQuery.data, pageData, pesan]);
+
+  const previewCardImageUrl = useMemo(
+    () => toMediaUrl(applicationSettingQuery.data?.msgImage ?? ""),
+    [applicationSettingQuery.data?.msgImage]
+  );
+
+  const previewMessage = useMemo(() => {
+    const template = applicationSettingQuery.data?.msgTemplate ?? "";
+    const hasPesanDoaPlaceholder = /<pesandoa>/i.test(template);
+    const sections = [previewTemplateMessage];
+    const trimmedPesan = pesan.trim();
+
+    if (trimmedPesan && !hasPesanDoaPlaceholder) {
+      sections.push(trimmedPesan);
+    }
+
+    return sections.filter(Boolean).join("\n\n");
+  }, [applicationSettingQuery.data?.msgTemplate, previewTemplateMessage, pesan]);
+
+  const previewParagraphs = useMemo(
+    () => previewMessage.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean),
+    [previewMessage]
+  );
+
+  const previewTimeLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(new Date()).toLowerCase(),
+    []
+  );
 
   const hasUnsavedChanges = useMemo(() => {
     if (!pageData) return false;
@@ -407,48 +475,147 @@ export default function TRBirthdayPrayPage() {
         ) : (
           <div className="grid flex-1 gap-4 p-2 lg:grid-cols-[minmax(0,1fr)_430px]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <h2 className="text-base font-semibold text-slate-800">Informasi Donatur</h2>
-                <div className="mt-3 grid grid-cols-[140px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-                  <div className="text-slate-500">Nama Donatur</div>
-                  <div className="font-medium text-slate-800">{pageData.namaDonatur}</div>
+              <div className="grid gap-4 xl:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <h2 className="text-base font-semibold text-slate-800">Informasi Donatur</h2>
+                  <div className="mt-3 grid grid-cols-[122px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+                    <div className="text-slate-500">Nama Donatur</div>
+                    <div className="font-medium text-slate-800">{pageData.namaDonatur}</div>
 
-                  <div className="text-slate-500">Tgl Lahir</div>
-                  <div className="font-medium text-slate-800">
-                    {formatDate(pageData.tglLahir)}
+                    <div className="text-slate-500">Tgl Lahir</div>
+                    <div className="font-medium text-slate-800">
+                      {formatDate(pageData.tglLahir)}
+                    </div>
+
+                    <div className="text-slate-500">Ulang Tahun Tahun Ini</div>
+                    <div className="font-medium text-slate-800">
+                      {formatDate(pageData.birthdayDate)}
+                    </div>
+
+                    <div className="text-slate-500">No HP Donatur</div>
+                    <div className="font-medium text-slate-800">{pageData.noHPDonatur}</div>
                   </div>
+                </div>
 
-                  <div className="text-slate-500">Ulang Tahun Tahun Ini</div>
-                  <div className="font-medium text-slate-800">
-                    {formatDate(pageData.birthdayDate)}
-                  </div>
-
-                  <div className="text-slate-500">No HP Donatur</div>
-                  <div className="font-medium text-slate-800">{pageData.noHPDonatur}</div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h2 className="text-base font-semibold text-slate-800">Pesan Doa</h2>
+                  <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="checkboxclass"
+                      checked={saveToAllSameBirthdayDate}
+                      onChange={(e) =>
+                        setSaveToAllSameBirthdayDate(e.target.checked)
+                      }
+                    />
+                    <span>
+                      Pesan Doa untuk seluruh {formatShortDate(pageData.birthdayDate)}
+                    </span>
+                  </label>
+                  <textarea
+                    value={pesan}
+                    onChange={(e) => setPesan(e.target.value)}
+                    className="mt-3 min-h-[230px] w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
+                    placeholder="Tulis pesan doa ulang tahun..."
+                  />
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <h2 className="text-base font-semibold text-slate-800">Pesan Doa</h2>
-                <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    className="checkboxclass"
-                    checked={saveToAllSameBirthdayDate}
-                    onChange={(e) =>
-                      setSaveToAllSameBirthdayDate(e.target.checked)
-                    }
-                  />
-                  <span>
-                    Pesan Doa untuk seluruh {formatShortDate(pageData.birthdayDate)}
-                  </span>
-                </label>
-                <textarea
-                  value={pesan}
-                  onChange={(e) => setPesan(e.target.value)}
-                  className="mt-3 min-h-[220px] w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
-                  placeholder="Tulis pesan doa ulang tahun..."
-                />
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-800">Preview Pesan WhatsApp</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Template diambil dari `Application Setting` dan placeholder akan diganti otomatis.
+                    </p>
+                  </div>
+                  {applicationSettingQuery.data?.msgLink ? (
+                    <a
+                      href={applicationSettingQuery.data.msgLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Buka Link
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-900/80 bg-[#0b141a] shadow-[0_22px_60px_rgba(15,23,42,0.25)]">
+                  <div className="bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_35%),linear-gradient(180deg,#0b141a,#111b21)] px-5 py-5">
+                    <div className="mx-auto max-w-[880px] rounded-[22px] rounded-tr-md bg-[#005c4b] px-4 py-4 text-white shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                      <div className="mb-4 text-lg font-bold text-[#f6c56f]">
+                        Gema Kasih Yobel
+                      </div>
+
+                      <div className="rounded-[18px] bg-[#1f2c34] p-3 shadow-inner">
+                        <div className="flex gap-4">
+                          {previewCardImageUrl ? (
+                            <img
+                              src={previewCardImageUrl}
+                              alt="Preview pesan"
+                              className="h-[96px] w-[96px] shrink-0 rounded-2xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-[96px] w-[96px] shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(160deg,#ef4444,#f59e0b)] text-center text-[11px] font-black uppercase tracking-[0.24em] text-white">
+                              Birthday
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <div className="text-xl font-bold text-white">
+                              Happy Birthday dari Gema Kasih Yobel
+                            </div>
+                            <div className="mt-2 text-sm font-medium leading-6 text-slate-200">
+                              Ucapan syukur dan doa ulang tahun dari rekan-rekan pendoa.
+                            </div>
+                            <div className="mt-2 truncate text-sm font-semibold text-slate-400">
+                              {applicationSettingQuery.data?.msgLink || "Link belum diatur"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {applicationSettingQuery.isLoading ? (
+                        <div className="pt-4 text-sm text-emerald-100/80">Memuat template preview...</div>
+                      ) : previewParagraphs.length > 0 ? (
+                        <div className="space-y-5 pt-4 text-[15px] leading-8 text-white">
+                          {previewParagraphs.map((paragraph, paragraphIndex) => (
+                            <p key={`${paragraphIndex}-${paragraph.slice(0, 24)}`} className="whitespace-pre-wrap break-words">
+                              {splitTextWithLinks(paragraph).map((part, partIndex) => {
+                                if (/^https?:\/\//i.test(part)) {
+                                  return (
+                                    <a
+                                      key={`${paragraphIndex}-${partIndex}`}
+                                      href={part}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="font-semibold text-[#53ddec] underline underline-offset-4"
+                                    >
+                                      {part}
+                                    </a>
+                                  );
+                                }
+
+                                return <span key={`${paragraphIndex}-${partIndex}`}>{part}</span>;
+                              })}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="pt-4 text-sm text-emerald-100/80">
+                          Template pesan belum tersedia. Silakan isi di menu Application Setting.
+                        </div>
+                      )}
+
+                      <div className="mt-5 flex items-end justify-end gap-2 text-[11px] font-semibold text-emerald-100/70">
+                        <span>{previewTimeLabel}</span>
+                        <span className="text-[#7fd3c5]">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

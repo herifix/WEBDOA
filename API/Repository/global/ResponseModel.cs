@@ -86,6 +86,7 @@ public class ResponseModelApplicationSetting
 {
     public string msgTemplate { get; set; } = "";
     public string msgLink { get; set; } = "";
+    public string msgImage { get; set; } = "";
 }
 
 #endregion LOGIN
@@ -132,6 +133,23 @@ public class ResponseModelMasterUser
     public byte lvl { get; set; }
     public string kunci { get; set; } = "";
     public bool gantiKunci { get; set; }
+}
+
+public class ResponseModelMasterUserPermission
+{
+    public long id_form { get; set; }
+    public string formName { get; set; } = "";
+    public long id_menu_parent { get; set; }
+    public int lvl { get; set; }
+    public int menuOrder { get; set; }
+    public bool asParent { get; set; }
+    public string positionCode { get; set; } = "";
+    public string positionLabel { get; set; } = "";
+    public bool canView { get; set; }
+    public bool canAdd { get; set; }
+    public bool canEdit { get; set; }
+    public bool canPrint { get; set; }
+    public bool canDelete { get; set; }
 }
 
 public class ResponseModelDashboardBirthday

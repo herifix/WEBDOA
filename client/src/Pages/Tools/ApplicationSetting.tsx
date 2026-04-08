@@ -1,4 +1,4 @@
-import { Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
+import { ImagePlus, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import StatusBanner from "../../components/StatusBanner";
 import { FORM_IDS } from "../../config/formIds";
@@ -7,6 +7,16 @@ import {
   useUpdateApplicationSetting,
 } from "../../hooks/react_query/useFetchApplicationSetting";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
+import http from "../../api/http";
+
+function toMediaUrl(pathValue: string) {
+  if (!pathValue) return "";
+  if (/^https?:\/\//i.test(pathValue)) return pathValue;
+
+  const baseUrl = String(http.defaults.baseURL ?? "").replace(/\/+$/, "");
+  const cleanPath = pathValue.replace(/^\/+/, "");
+  return `${baseUrl}/${cleanPath}`;
+}
 
 export default function ApplicationSettingPage() {
   const settingQuery = useFetchApplicationSetting();
@@ -15,6 +25,9 @@ export default function ApplicationSettingPage() {
 
   const [msgTemplate, setMsgTemplate] = useState("");
   const [msgLink, setMsgLink] = useState("");
+  const [msgImage, setMsgImage] = useState("");
+  const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
+  const [msgImagePreviewUrl, setMsgImagePreviewUrl] = useState("");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
@@ -23,15 +36,37 @@ export default function ApplicationSettingPage() {
 
     setMsgTemplate(settingQuery.data.msgTemplate || "");
     setMsgLink(settingQuery.data.msgLink || "");
+    setMsgImage(settingQuery.data.msgImage || "");
+    setMsgImageFile(null);
+    setMsgImagePreviewUrl("");
   }, [settingQuery.data]);
+
+  useEffect(() => {
+    if (!msgImageFile) {
+      setMsgImagePreviewUrl("");
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(msgImageFile);
+    setMsgImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+      setMsgImagePreviewUrl("");
+    };
+  }, [msgImageFile]);
+
+  const previewImageUrl = msgImagePreviewUrl || toMediaUrl(msgImage);
 
   const dirty = useMemo(() => {
     if (!settingQuery.data) return false;
     return (
       (settingQuery.data.msgTemplate || "") !== msgTemplate ||
-      (settingQuery.data.msgLink || "") !== msgLink
+      (settingQuery.data.msgLink || "") !== msgLink ||
+      (settingQuery.data.msgImage || "") !== msgImage ||
+      msgImageFile !== null
     );
-  }, [msgLink, msgTemplate, settingQuery.data]);
+  }, [msgImage, msgImageFile, msgLink, msgTemplate, settingQuery.data]);
 
   if (!permissions.canView) {
     return (
@@ -54,6 +89,8 @@ export default function ApplicationSettingPage() {
       const response = await updateMutation.mutateAsync({
         msgTemplate: msgTemplate.trim(),
         msgLink: msgLink.trim(),
+        existingMsgImage: msgImage,
+        msgImageFile,
       });
       setFormSuccess(response.message || "Application setting berhasil disimpan.");
       await settingQuery.refetch();
@@ -139,6 +176,55 @@ export default function ApplicationSettingPage() {
                   Kosongkan bila aplikasi tidak membutuhkan link tambahan.
                 </p>
               </div>
+
+              <label className="pt-3 text-sm font-semibold text-slate-700">Image Pesan</label>
+              <div className="space-y-3">
+                <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-amber-300 bg-white/80 px-4 py-6 text-center transition hover:border-amber-400 hover:bg-amber-50/60">
+                  {previewImageUrl ? (
+                    <img
+                      src={previewImageUrl}
+                      alt="Preview image pesan"
+                      className="max-h-[190px] rounded-2xl object-cover shadow-sm"
+                    />
+                  ) : (
+                    <>
+                      <ImagePlus className="h-8 w-8 text-amber-500" />
+                      <div className="mt-3 text-sm font-semibold text-slate-700">
+                        Upload gambar kartu pesan
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        JPG, PNG, atau WEBP untuk preview pesan WhatsApp
+                      </div>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => setMsgImageFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMsgImageFile(null)}
+                    className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50"
+                  >
+                    Reset File Baru
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMsgImage("");
+                      setMsgImageFile(null);
+                    }}
+                    className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                  >
+                    Hapus Gambar
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -180,6 +266,10 @@ export default function ApplicationSettingPage() {
               <p>
                 `MsgLink` disimpan sebagai `NVARCHAR(255)` untuk URL, tautan landing page, atau
                 link pendukung lain yang dipakai oleh aplikasi.
+              </p>
+              <p>
+                `MsgImage` dipakai sebagai gambar kartu preview pesan dan disimpan sebagai path file
+                upload pada server.
               </p>
               <p>
                 Bila tabel `dbo.MsProg` belum ada, backend akan membuatnya otomatis saat halaman

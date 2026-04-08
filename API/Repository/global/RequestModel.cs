@@ -62,6 +62,7 @@ public class RequestCreateMasterUser
     public byte? lvl { get; set; }
     public string? kunci { get; set; }
     public bool gantiKunci { get; set; }
+    public string? permissionsJson { get; set; }
 }
 
 public class RequestUpdateMasterUser
@@ -72,6 +73,17 @@ public class RequestUpdateMasterUser
     public byte? lvl { get; set; }
     public string? kunci { get; set; }
     public bool gantiKunci { get; set; }
+    public string? permissionsJson { get; set; }
+}
+
+public class RequestMasterUserPermissionItem
+{
+    public long id_form { get; set; }
+    public bool canView { get; set; }
+    public bool canAdd { get; set; }
+    public bool canEdit { get; set; }
+    public bool canPrint { get; set; }
+    public bool canDelete { get; set; }
 }
 
 public class RequestGetAllMasterUser
@@ -152,6 +164,8 @@ public class RequestUpdateApplicationSetting
 {
     public string? msgTemplate { get; set; }
     public string? msgLink { get; set; }
+    public string? existingMsgImage { get; set; }
+    public IFormFile? msgImageFile { get; set; }
 }
 
 # endregion

@@ -48,6 +48,18 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [Route("Tools/User/GetMenuPermissions")]
+        public ResponseData<List<ResponseModelMasterUserPermission>> GetMenuPermissions([FromQuery] string pt = "", [FromQuery] string userid = "")
+        {
+            return new ResponseData<List<ResponseModelMasterUserPermission>>
+            {
+                success = true,
+                message = "OK",
+                data = repo.GetMenuPermissions(pt ?? "", userid ?? "", conn)
+            };
+        }
+
+        [HttpGet]
         [Route("Tools/User/GetDataAll")]
         public PagedResponse<ResponseModelMasterUser> GetDataAll(
             [FromQuery] int PageNumber = 1,

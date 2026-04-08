@@ -3,7 +3,6 @@ import {
   getApplicationSetting,
   updateApplicationSetting,
 } from "../../service/applicationSettingService";
-import type { ApplicationSetting } from "../../Model/ModelApplicationSetting";
 
 export function useFetchApplicationSetting() {
   return useQuery({
@@ -14,6 +13,11 @@ export function useFetchApplicationSetting() {
 
 export function useUpdateApplicationSetting() {
   return useMutation({
-    mutationFn: (payload: ApplicationSetting) => updateApplicationSetting(payload),
+    mutationFn: (payload: {
+      msgTemplate: string;
+      msgLink: string;
+      existingMsgImage: string;
+      msgImageFile?: File | null;
+    }) => updateApplicationSetting(payload),
   });
 }
