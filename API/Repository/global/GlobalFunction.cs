@@ -117,26 +117,32 @@ namespace API.Repository.global
                       AND ISNULL(PT, '') = @pt
                 );
 
-                SELECT
-                    ISNULL(t.id_form, 0) AS id_form,
-                    ISNULL(f.FormName, '') AS formName,
-                    ISNULL(t.id_menu_parent, 0) AS id_menu_parent,
-                    ISNULL(t.Lvl, 0) AS lvl,
-                    ISNULL(t.IconType, '') AS iconType,
-                    ISNULL(t.MenuOrder, 0) AS menuOrder,
-                    CAST(ISNULL(t.AsParent, 0) AS bit) AS asParent,
-                    CAST(CASE WHEN ISNULL(mu.[VIEW], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canView,
-                    CAST(CASE WHEN ISNULL(mu.[ADD], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canAdd,
-                    CAST(CASE WHEN ISNULL(mu.[EDIT], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canEdit,
-                    CAST(CASE WHEN ISNULL(mu.[PRINT], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canPrint,
-                    CAST(CASE WHEN ISNULL(mu.[DEL], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canDelete
-                FROM MsMenuTree t
-                LEFT JOIN MsForm f
-                    ON f.id_form = t.id_form
-                LEFT JOIN MsMenuUser mu
-                    ON mu.id_user = @id_user
-                   AND mu.id_form = t.id_form
-                ORDER BY ISNULL(t.Lvl, 0), ISNULL(t.MenuOrder, 0), ISNULL(t.id_form, 0)";
+                SELECT  * from (
+                    SELECT
+                        ISNULL(t.id_form, 0) AS id_form,
+                        ISNULL(f.FormName, '') AS formName,
+                        ISNULL(t.id_menu_parent, 0) AS id_menu_parent,
+                        ISNULL(t.Lvl, 0) AS lvl,
+                        ISNULL(t.IconType, '') AS iconType,
+                        ISNULL(t.MenuOrder, 0) AS menuOrder,
+                        CAST(ISNULL(t.AsParent, 0) AS bit) AS asParent,
+                        CAST(CASE WHEN ISNULL(mu.[VIEW], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canView,
+                        CAST(CASE WHEN ISNULL(mu.[ADD], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canAdd,
+                        CAST(CASE WHEN ISNULL(mu.[EDIT], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canEdit,
+                        CAST(CASE WHEN ISNULL(mu.[PRINT], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canPrint,
+                        CAST(CASE WHEN ISNULL(mu.[DEL], 0) <> 0 THEN 1 ELSE 0 END AS bit) AS canDelete
+                    FROM MsMenuTree t
+                    LEFT JOIN MsForm f ON f.id_form = t.id_form
+                    LEFT JOIN MsMenuUser mu ON mu.id_user = @id_user AND mu.id_form = t.id_form
+
+                    union all
+
+                    select a.id_form,b.formname,0 id_menu_parent,1 lvl ,'' iconType, 999 menuOrder,0 asparent,[view],[add],[edit],[print],[del]
+                    from MsMenuUser a 
+                    left join MsForm b on b.id_form=a.id_form
+                    where a.id_form not in (select c.id_form From MsMenuTree c) and a.id_user=@id_user
+                ) z
+                ORDER BY ISNULL(Lvl, 0), ISNULL(MenuOrder, 0), ISNULL(id_form, 0)";
 
             var flatRows = conn.Query<ResponseModelMenuTreeFlat>(sql, new
             {

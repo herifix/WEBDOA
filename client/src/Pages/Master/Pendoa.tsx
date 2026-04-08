@@ -3,12 +3,16 @@ import { Search } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
 
 import ConfirmDialog from "../../components/ConfirmDialog";
+import CountryPhoneInput from "../../components/CountryPhoneInput";
 import ERPGridTable from "../../components/GridFullParent";
 import StatusBanner from "../../components/StatusBanner";
 import ERPToolbar from "../../components/ToolbarHR";
 import type { Column } from "../../components/GridFullParent";
 
 import type { MasterPendoaRow } from "../../Model/ModelMasterPendoa";
+import {
+  normalizeInternationalPhoneNumber,
+} from "../../utils/validation";
 
 import { useFetchMasterPendoa } from "../../hooks/react_query/useFetchMasterPendoa";
 import { getDataById } from "../../service/masterDonaturPendoa";
@@ -75,7 +79,7 @@ export default function MasterPendoaPage() {
 
       vm.setIdPendoa(item.id_pendoa ?? 0);
       vm.setNama(item.nama ?? "");
-      vm.setNohp(item.nohp ?? "");
+      vm.setNohp(normalizeInternationalPhoneNumber(item.nohp ?? ""));
       vm.setDfl(item.dfl ?? false);
       vm.setCreatedDate(
         item.createddate ? String(item.createddate).substring(0, 10) : ""
@@ -175,12 +179,16 @@ export default function MasterPendoaPage() {
               />
 
               <label className="text-sm text-slate-700">No HP</label>
-              <input
-                value={vm.nohp}
-                onChange={(e) => vm.setNohp(e.target.value)}
-                className="inputtextbox w-full"
-                readOnly={vm.mode === vm.FORM_MODE.VIEW}
-              />
+              <div className="space-y-1">
+                <CountryPhoneInput
+                  value={vm.nohp}
+                  onChange={vm.setNohp}
+                  readOnly={vm.mode === vm.FORM_MODE.VIEW}
+                />
+                <div className="text-xs text-slate-500">
+                  Pilih kode negara lalu isi nomor tanpa awalan `0`.
+                </div>
+              </div>
 
               <label className="text-sm text-slate-700">Default</label>
               <input

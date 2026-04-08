@@ -5,7 +5,10 @@ import { FORM_MODE } from "../../TypeData/forMode";
 import { useUpdateDonatur,useCreateDonatur, useDeleteDonatur } from "./useFetchMasterDonatur";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormMessage } from "../useFormMessage";
-import { isValidPhoneNumber } from "../../utils/validation";
+import {
+  isValidInternationalPhoneNumber,
+  normalizeInternationalPhoneNumber,
+} from "../../utils/validation";
 import { handleMutationError, handleMutationSuccess } from "./masterCrudHelpers";
 
 type ActiveTab = "general" | "detail";
@@ -63,20 +66,20 @@ export function useMasterDonaturPage() {
 
   const validateForm = () => {
     const trimmedNama = nama.trim();
-    const trimmedNohp = nohp.trim();
+    const normalizedNohp = normalizeInternationalPhoneNumber(nohp);
 
     if (!trimmedNama) {
       setFormError("Nama donatur wajib diisi.");
       return false;
     }
 
-    if (!trimmedNohp) {
+    if (!normalizedNohp) {
       setFormError("No HP wajib diisi.");
       return false;
     }
 
-    if (!isValidPhoneNumber(trimmedNohp)) {
-      setFormError("No HP hanya boleh berisi angka dan simbol telepon umum.");
+    if (!isValidInternationalPhoneNumber(normalizedNohp)) {
+      setFormError("No HP harus menggunakan format internasional yang valid, misalnya +628123456789.");
       return false;
     }
 
@@ -100,11 +103,12 @@ export function useMasterDonaturPage() {
   };
 
   async function handleUpdate() {
+    const normalizedNohp = normalizeInternationalPhoneNumber(nohp);
     const formData = new FormData();
     formData.append("idDonatur", idDonatur.toString());
     formData.append("nama", nama.trim());
     formData.append("status", Status.toString());
-    formData.append("nohp", nohp.trim());
+    formData.append("nohp", normalizedNohp);
     formData.append("tglLahir", tglLahir);
     formData.append("lastDonation", lastDonation);
 
@@ -117,11 +121,12 @@ export function useMasterDonaturPage() {
 
   const { mutateAsync: createDonaturAsync } = useCreateDonatur();
   async function CreateSave() {
+    const normalizedNohp = normalizeInternationalPhoneNumber(nohp);
     const formData = new FormData();
 
     formData.append("nama", nama.trim());
     formData.append("status", Status.toString());
-    formData.append("nohp", nohp.trim());
+    formData.append("nohp", normalizedNohp);
     formData.append("tglLahir", tglLahir);
     formData.append("lastDonation", lastDonation);
 

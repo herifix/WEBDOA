@@ -82,6 +82,12 @@ public class ResponseModelWhatsAppSchedule
     public DateTime? updatedDate { get; set; }
 }
 
+public class ResponseModelApplicationSetting
+{
+    public string msgTemplate { get; set; } = "";
+    public string msgLink { get; set; } = "";
+}
+
 #endregion LOGIN
 
 #region Master *************************************************

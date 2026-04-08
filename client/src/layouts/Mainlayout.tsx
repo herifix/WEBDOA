@@ -20,6 +20,8 @@ function getPageTitle(pathname: string) {
       return "About";
     case "/tools-whatsapp-schedule":
       return "WhatsApp Schedule";
+    case "/tools-application-setting":
+      return "Application Setting";
     case "/tools-change-password":
       return "Change Password";
     default:

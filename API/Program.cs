@@ -101,10 +101,12 @@ builder.Services.AddScoped<ServiceMasterPendoa>();
 builder.Services.AddScoped<RepoMasterPendoa>();
 builder.Services.AddScoped<RepoMasterUser>();
 builder.Services.AddScoped<RepoWhatsAppSchedule>();
+builder.Services.AddScoped<RepoApplicationSetting>();
 builder.Services.AddScoped<RepoTRBirthdayPray>();
 builder.Services.AddScoped<ServiceTRBirthdayPray>();
 builder.Services.AddScoped<ServiceMasterUser>();
 builder.Services.AddScoped<ServiceWhatsAppSchedule>();
+builder.Services.AddScoped<ServiceApplicationSetting>();
 builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
 var app = builder.Build();

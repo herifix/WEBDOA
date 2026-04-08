@@ -12,6 +12,7 @@ import MasterUserPage from "./Pages/Tools/MasterUser";
 import ChangePasswordPage from "./Pages/Tools/ChangePassword";
 import AboutPage from "./Pages/Tools/About";
 import WhatsAppSchedulePage from "./Pages/Tools/WhatsAppSchedule";
+import ApplicationSettingPage from "./Pages/Tools/ApplicationSetting";
 import { canManageMasterUser, mustChangePassword } from "./utils/authAccess";
 
 function RequireMasterUserAccess({ children }: { children: ReactElement }) {
@@ -76,6 +77,11 @@ export default function App() {
                     <Route path="/tools-whatsapp-schedule" element={
                         <RequirePasswordChange>
                             <WhatsAppSchedulePage/>
+                        </RequirePasswordChange>
+                    } />
+                    <Route path="/tools-application-setting" element={
+                        <RequirePasswordChange>
+                            <ApplicationSettingPage/>
                         </RequirePasswordChange>
                     } />
                     <Route path="/tools-change-password" element={<ChangePasswordPage/>} />

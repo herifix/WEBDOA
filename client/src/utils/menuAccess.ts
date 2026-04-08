@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useFetchSidebarMenu } from "../hooks/react_query/useFetchSidebarMenu";
 import type { AppMenuItem } from "../Model/ModelMenu";
+import { isCurrentUserSuperAdmin } from "./authAccess";
 
 export type FormMenuPermissions = {
   id_form: number;
@@ -25,6 +26,17 @@ export function getFormMenuPermissions(
   items: AppMenuItem[],
   formId: number
 ): FormMenuPermissions {
+  if (isCurrentUserSuperAdmin()) {
+    return {
+      id_form: formId,
+      canView: true,
+      canAdd: true,
+      canEdit: true,
+      canPrint: true,
+      canDelete: true,
+    };
+  }
+
   const menuItem = flattenMenu(items).find((item) => item.id_form === formId);
 
   return {

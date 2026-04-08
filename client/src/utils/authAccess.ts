@@ -17,9 +17,17 @@ export function getCurrentUserLevel() {
   return roles[0] ?? "";
 }
 
+export function isSuperAdminLevel(level?: string | null) {
+  const normalizedLevel = String(level ?? "").trim().toLowerCase();
+  return normalizedLevel === "0" || normalizedLevel === "1" || normalizedLevel === "admin";
+}
+
+export function isCurrentUserSuperAdmin() {
+  return isSuperAdminLevel(getCurrentUserLevel());
+}
+
 export function canManageMasterUser() {
-  const level = getCurrentUserLevel();
-  return level === "0" || level.toLowerCase?.() === "admin";
+  return isCurrentUserSuperAdmin();
 }
 
 export function mustChangePassword() {

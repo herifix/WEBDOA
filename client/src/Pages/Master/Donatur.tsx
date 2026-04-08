@@ -4,6 +4,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 import ConfirmDialog from "../../components/ConfirmDialog";
+import CountryPhoneInput from "../../components/CountryPhoneInput";
 import ERPGridTable from "../../components/GridFullParent";
 import StatusBanner from "../../components/StatusBanner";
 import ERPToolbar from "../../components/ToolbarHR";
@@ -12,6 +13,9 @@ import type { Column } from "../../components/GridFullParent";
 import { FORM_IDS } from "../../config/formIds";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
 import type { MasterDonaturRow } from "../../Model/ModelMasterDonatur";
+import {
+  normalizeInternationalPhoneNumber,
+} from "../../utils/validation";
 
 import { useFetchMasterDonatur } from "../../hooks/react_query/useFetchMasterDonatur";
 import { getDataById } from "../../service/masterDonaturService";
@@ -123,7 +127,7 @@ export default function MasterDonaturPage() {
       vm.setNama(item.nama ?? "");
       vm.setTglLahir(item.tglLahir ? item.tglLahir.substring(0, 10) : "");
       vm.setCreatedDate(item.createdDate ? item.createdDate.substring(0, 10) : "");
-      vm.setNohp(item.noHP ?? item.nohp ?? "");
+      vm.setNohp(normalizeInternationalPhoneNumber(item.noHP ?? item.nohp ?? ""));
       vm.setStatus(item.status ?? false);
       vm.setLastDonation(item.lastDonation ? item.lastDonation.substring(0, 10) : "");
       vm.setInitialLastDonation(
@@ -255,12 +259,16 @@ export default function MasterDonaturPage() {
               />
 
               <label className="text-sm text-slate-700">No HP</label>
-              <input
-                value={vm.nohp}
-                onChange={(e) => vm.setNohp(e.target.value)}
-                className="inputtextbox w-full"
-                readOnly={vm.mode === vm.FORM_MODE.VIEW}
-              />
+              <div className="space-y-1">
+                <CountryPhoneInput
+                  value={vm.nohp}
+                  onChange={vm.setNohp}
+                  readOnly={vm.mode === vm.FORM_MODE.VIEW}
+                />
+                <div className="text-xs text-slate-500">
+                  Pilih kode negara lalu isi nomor tanpa awalan `0`.
+                </div>
+              </div>
 
               <label className="text-sm text-slate-700">Status</label>
               <div className="flex items-center gap-2">

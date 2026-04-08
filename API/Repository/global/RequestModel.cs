@@ -148,6 +148,12 @@ public class RequestUpdateWhatsAppSchedule
     public bool isActive { get; set; }
 }
 
+public class RequestUpdateApplicationSetting
+{
+    public string? msgTemplate { get; set; }
+    public string? msgLink { get; set; }
+}
+
 # endregion
 
 #region LOGIN *************************************************

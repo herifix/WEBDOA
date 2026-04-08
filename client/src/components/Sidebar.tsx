@@ -13,6 +13,7 @@ import icoSetting from "../assets/iconplate/flatsettings.png";
 import icoTools from "../assets/iconplate/flattools.png";
 import type { AppMenuItem } from "../Model/ModelMenu";
 import { useFetchSidebarMenu } from "../hooks/react_query/useFetchSidebarMenu";
+import { isCurrentUserSuperAdmin } from "../utils/authAccess";
 
 type SidebarProps = {
   hidden: boolean;
@@ -29,6 +30,7 @@ const menuRouteMap: Record<string, string> = {
   "whatsapp schedule": "/tools-whatsapp-schedule",
   "jadwal whatsapp": "/tools-whatsapp-schedule",
   "whatsapp scheduler": "/tools-whatsapp-schedule",
+  "application": "/tools-application-setting",
 };
 
 function normalizeMenuKey(value?: string | null) {
@@ -57,11 +59,13 @@ function hasPath(item: AppMenuItem) {
 }
 
 function filterVisibleMenus(items: AppMenuItem[]): AppMenuItem[] {
+  const isSuperAdmin = isCurrentUserSuperAdmin();
+
   return items
     .map((item): AppMenuItem | null => {
       const nextChildren: AppMenuItem[] = filterVisibleMenus(item.children ?? []);
       const isHome = normalizeMenuKey(item.formName) === "home";
-      const showSelf = item.canView || isHome;
+      const showSelf = isSuperAdmin || item.canView || isHome;
       const shouldShow = nextChildren.length > 0 || (hasPath(item) && showSelf);
 
       if (!shouldShow) return null;

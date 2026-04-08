@@ -5,7 +5,10 @@ import { FORM_MODE } from "../../TypeData/forMode";
 import { useUpdatePendoa,useCreatePendoa, useDeletePendoa } from "./useFetchMasterPendoa";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormMessage } from "../useFormMessage";
-import { isValidPhoneNumber } from "../../utils/validation";
+import {
+  isValidInternationalPhoneNumber,
+  normalizeInternationalPhoneNumber,
+} from "../../utils/validation";
 import { handleMutationError, handleMutationSuccess } from "./masterCrudHelpers";
 
 type ActiveTab = "general" | "detail";
@@ -60,20 +63,20 @@ export function useMasterPendoaPage() {
 
   const validateForm = () => {
     const trimmedNama = nama.trim();
-    const trimmedNohp = nohp.trim();
+    const normalizedNohp = normalizeInternationalPhoneNumber(nohp);
 
     if (!trimmedNama) {
       setFormError("Nama pendoa wajib diisi.");
       return false;
     }
 
-    if (!trimmedNohp) {
+    if (!normalizedNohp) {
       setFormError("No HP wajib diisi.");
       return false;
     }
 
-    if (!isValidPhoneNumber(trimmedNohp)) {
-      setFormError("No HP hanya boleh berisi angka dan simbol telepon umum.");
+    if (!isValidInternationalPhoneNumber(normalizedNohp)) {
+      setFormError("No HP harus menggunakan format internasional yang valid, misalnya +628123456789.");
       return false;
     }
 
@@ -84,11 +87,12 @@ export function useMasterPendoaPage() {
   //@todo Fungsi Update
   const { mutateAsync: updatePendoaAsync } = useUpdatePendoa();
   async function handleUpdate() {
+    const normalizedNohp = normalizeInternationalPhoneNumber(nohp);
     const formData = new FormData();
     formData.append("idPendoa", idPendoa.toString());
     formData.append("nama", nama.trim());
     formData.append("dfl", dfl.toString());
-    formData.append("nohp", nohp.trim());
+    formData.append("nohp", normalizedNohp);
 
     const result = await updatePendoaAsync(formData);
 
@@ -99,11 +103,12 @@ export function useMasterPendoaPage() {
 
   const { mutateAsync: createPendoaAsync } = useCreatePendoa();
   async function CreateSave() {
+    const normalizedNohp = normalizeInternationalPhoneNumber(nohp);
     const formData = new FormData();
 
     formData.append("nama", nama.trim());
     formData.append("dfl", dfl.toString());
-    formData.append("nohp", nohp.trim());
+    formData.append("nohp", normalizedNohp);
 
     const result = await createPendoaAsync(formData);
 
