@@ -117,7 +117,7 @@ export default function ApplicationSettingPage() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-amber-100 bg-amber-50/70 p-5 lg:w-[320px]">
+          <div hidden={true} className="rounded-3xl border border-amber-100 bg-amber-50/70 p-5 lg:w-[320px]">
             <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
               Storage
             </div>
