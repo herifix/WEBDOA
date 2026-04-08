@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { Menu, Bell, UserCircle2 } from "lucide-react";
+import { getCurrentUserLevel, getCurrentUserName, mustChangePassword } from "../utils/authAccess";
 
 function getPageTitle(pathname: string) {
   switch (pathname) {
@@ -13,6 +14,12 @@ function getPageTitle(pathname: string) {
       return "Master Pendoa";
     case "/master-donatur":
       return "Master Donatur";
+    case "/tools-master-user":
+      return "Master User";
+    case "/tools-about":
+      return "About";
+    case "/tools-change-password":
+      return "Change Password";
     default:
       if (pathname.startsWith("/transaksi-birthday-pray")) {
         return "TR Birthday Pray";
@@ -24,25 +31,31 @@ function getPageTitle(pathname: string) {
 export default function MainLayout() {
   const [hidden, setHidden] = useState(false);
   const location = useLocation();
+  const userName = getCurrentUserName();
+  const userLevel = getCurrentUserLevel();
+  const isForcedChangePassword =
+    mustChangePassword() && location.pathname === "/tools-change-password";
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100">
       <div className="flex h-full w-full">
         {/* SIDEBAR */}
-        <Sidebar hidden={hidden} />
+        <Sidebar hidden={hidden || isForcedChangePassword} />
 
         {/* CONTENT AREA */}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* TOPBAR */}
           <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setHidden((v) => !v)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+              {!isForcedChangePassword ? (
+                <button
+                  type="button"
+                  onClick={() => setHidden((v) => !v)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              ) : null}
 
               <div>
                 <h1 className="text-lg font-bold text-slate-800">
@@ -66,9 +79,11 @@ export default function MainLayout() {
                 <UserCircle2 className="h-6 w-6 text-slate-600" />
                 <div className="hidden text-left sm:block">
                   <div className="text-sm font-semibold text-slate-700">
-                    Administrator
+                    {userName}
                   </div>
-                  <div className="text-xs text-slate-500">User</div>
+                  <div className="text-xs text-slate-500">
+                    {userLevel ? `Level ${userLevel}` : "User"}
+                  </div>
                 </div>
               </div>
             </div>

@@ -8,6 +8,7 @@ import illustrationDefault from "../assets/LOGOGKY.png";
 import intLogo from "../assets/intlogo.png";
 import { useFetchPTs } from "../hooks/react_query/useFetchPTs";
 import { useFetchLogin } from "../hooks/react_query/useFetchLogin";
+import { mustChangePassword } from "../utils/authAccess";
 // import { login } from "../api/auth"; // aktifkan kalau sudah dipakai
 
 export default function Login() {
@@ -51,7 +52,7 @@ const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
       localStorage.setItem("area", "MJKKB");
 
       setLoading(false);
-      nav("/Dashboard");
+      nav(mustChangePassword() ? "/tools-change-password" : "/Dashboard");
     },
     onError: (err: unknown) => {
       setLoading(false);

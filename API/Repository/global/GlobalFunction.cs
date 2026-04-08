@@ -75,7 +75,7 @@ namespace API.Repository.global
         public ResponseLogin GetDataUser(string userid, string pt)
         {
             const string sql = @"
-                SELECT top 1 Userid,pt as Userpt,nama Username,kunci as [Password],lvl Userlvl
+                SELECT top 1 Userid,pt as Userpt,nama Username,kunci as [Password],lvl Userlvl, ISNULL(GantiKunci, 0) AS GantiKunci
                 FROM KeyUser
                 WHERE UserID = @UserID AND PT = @pt
                 ";

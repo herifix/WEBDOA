@@ -31,8 +31,26 @@ WITH DonaturBirthday AS (
             WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@currentDate), 2, 1))) < 29
                 THEN EOMONTH(DATEFROMPARTS(YEAR(@currentDate), 2, 1))
             ELSE DATEFROMPARTS(YEAR(@currentDate), MONTH(d.TglLahir), DAY(d.TglLahir))
-        END AS birthdayDate
+        END AS birthdayDateThisYear
     FROM Donatur d
+),
+UpcomingBirthday AS (
+    SELECT
+        b.id_donatur,
+        b.Nama,
+        b.TglLahir,
+        b.NoHP,
+        b.Status,
+        b.LastDonation,
+        CASE
+            WHEN CAST(b.birthdayDateThisYear AS date) > CAST(@currentDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
+            ELSE CAST(CASE
+                WHEN MONTH(b.TglLahir) = 2 AND DAY(b.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@currentDate) + 1, 2, 1))) < 29
+                    THEN EOMONTH(DATEFROMPARTS(YEAR(@currentDate) + 1, 2, 1))
+                ELSE DATEFROMPARTS(YEAR(@currentDate) + 1, MONTH(b.TglLahir), DAY(b.TglLahir))
+            END AS date)
+        END AS birthdayDate
+    FROM DonaturBirthday b
 )
 SELECT
     b.id_donatur,
@@ -50,9 +68,23 @@ SELECT
             ELSE 1
         END AS bit
     ) AS sudahDidoakan,
+    CAST(
+        CASE
+            WHEN pray.id_TRBirthdayPray IS NULL THEN 0
+            WHEN LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) = '' THEN 0
+            ELSE 1
+        END AS bit
+    ) AS sudahAdaPesanDoa,
+    CAST(
+        CASE
+            WHEN pray.id_TRBirthdayPray IS NULL THEN 0
+            WHEN LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) = '' THEN 0
+            ELSE 1
+        END AS bit
+    ) AS sudahAdaPesanSuara,
     pray.id_TRBirthdayPray,
     pray.CreatedDate AS prayCreatedDate
-FROM DonaturBirthday b
+FROM UpcomingBirthday b
 OUTER APPLY (
     SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara
     FROM TRBirthdayPray t
@@ -61,7 +93,8 @@ OUTER APPLY (
     ORDER BY t.CreatedDate DESC, t.id_TRBirthdayPray DESC
 ) pray
 WHERE CAST(b.birthdayDate AS date) > CAST(@currentDate AS date)
-ORDER BY MONTH(b.birthdayDate), DAY(b.birthdayDate), b.Nama;";
+  AND CAST(b.birthdayDate AS date) <= CAST(DATEADD(MONTH, 6, @currentDate) AS date)
+ORDER BY b.birthdayDate, b.Nama;";
 
         return conn.Query<ResponseModelDashboardBirthday>(sql, new { currentDate }).ToList();
     }

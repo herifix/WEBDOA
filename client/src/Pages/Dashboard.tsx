@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import ERPGridTable, { type Column } from "../components/Grid";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import ERPGridTable, { type Column } from "../components/GridFullParent";
 import { useFetchBirthdayDashboard } from "../hooks/react_query/useFetchTRBirthdayPray";
 import type { DashboardBirthdayItem } from "../Model/ModelTRBirthdayPray";
 
@@ -52,9 +52,9 @@ function formatDateFromString(dateString?: string | null) {
   const [year, month, day] = datePart.split("-").map(Number);
   if (!year || !month || !day) return datePart;
 
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "long",
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
     year: "numeric",
   }).format(new Date(year, month - 1, day));
 }
@@ -72,9 +72,18 @@ function formatMonthFromString(dateString?: string | null) {
   }).format(new Date(year, month - 1, 1));
 }
 
+function getTodayLocalDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const today = new Date().toISOString().slice(0, 10);
+  const location = useLocation();
+  const today = getTodayLocalDate();
   const dashboardQuery = useFetchBirthdayDashboard(today);
 
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
@@ -84,6 +93,8 @@ export default function DashboardPage() {
   const sourceRows: DashboardBirthdayItem[] = dashboardQuery.data ?? [];
   const totalUpcoming = sourceRows.length;
   const totalCompleted = sourceRows.filter((item) => item.sudahDidoakan).length;
+  const totalWithText = sourceRows.filter((item) => item.sudahAdaPesanDoa).length;
+  const totalWithVoice = sourceRows.filter((item) => item.sudahAdaPesanSuara).length;
   const totalPending = totalUpcoming - totalCompleted;
 
   const sortedMonthKeys = useMemo(() => {
@@ -94,6 +105,7 @@ export default function DashboardPage() {
   }, [sourceRows]);
 
   const firstMonthKey = sortedMonthKeys[0] ?? "";
+  const focusDonaturId = Number(location.state?.focusDonaturId ?? 0);
 
   const flatRows = useMemo<DashboardRow[]>(() => {
     const monthMap = new Map<string, Map<string, DashboardBirthdayItem[]>>();
@@ -175,6 +187,43 @@ export default function DashboardPage() {
 
     return result;
   }, [expandedDates, expandedMonths, firstMonthKey, sourceRows]);
+
+  useEffect(() => {
+    if (!focusDonaturId || sourceRows.length === 0) return;
+
+    const target = sourceRows.find((item) => item.id_donatur === focusDonaturId);
+    if (!target) return;
+
+    const monthKey = getMonthKey(target.birthdayDate);
+    const dateKey = getDatePart(target.birthdayDate);
+
+    if (monthKey) {
+      setExpandedMonths((prev) => ({
+        ...prev,
+        [monthKey]: true,
+      }));
+    }
+
+    if (monthKey && dateKey) {
+      setExpandedDates((prev) => ({
+        ...prev,
+        [`${monthKey}|${dateKey}`]: true,
+      }));
+    }
+  }, [focusDonaturId, sourceRows]);
+
+  useEffect(() => {
+    if (!focusDonaturId || flatRows.length === 0) return;
+
+    const nextIndex = flatRows.findIndex(
+      (row) => row.rowType === "detail" && row.id_donatur === focusDonaturId
+    );
+
+    if (nextIndex >= 0) {
+      setSelectedRowIndex(nextIndex);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [flatRows, focusDonaturId, location.pathname, navigate]);
 
   const columns: Column<DashboardRow>[] = [
     {
@@ -278,7 +327,7 @@ export default function DashboardPage() {
             className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/transaksi-birthday-pray/${row.id_donatur}`);
+              handleEditRow(row);
             }}
           >
             Edit
@@ -314,20 +363,43 @@ export default function DashboardPage() {
       return;
     }
 
-    navigate(`/transaksi-birthday-pray/${row.id_donatur}`);
+    navigate(`/transaksi-birthday-pray/${row.id_donatur}`, {
+      state: { fromDashboard: true },
+    });
+  }
+
+  function handleEditRow(row: Extract<DashboardRow, { rowType: "detail" }>) {
+    const rowIndex = flatRows.findIndex((item) => item.id === row.id);
+    if (rowIndex >= 0) {
+      setSelectedRowIndex(rowIndex);
+    }
+
+    navigate(`/transaksi-birthday-pray/${row.id_donatur}`, {
+      state: { fromDashboard: true, focusDonaturId: row.id_donatur },
+    });
   }
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="flex h-full min-h-0 flex-col gap-4 p-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 p-5 text-white shadow-sm">
           <div className="text-sm font-medium text-cyan-100">Ulang Tahun Mendatang</div>
           <div className="mt-2 text-3xl font-bold">{totalUpcoming}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-sm font-medium text-slate-500">Sudah Dibuat Doa</div>
+          <div className="text-sm font-medium text-slate-500">Sudah Complete</div>
           <div className="mt-2 text-3xl font-bold text-green-600">{totalCompleted}</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-sm font-medium text-slate-500">Sudah Ada Pesan Doa</div>
+          <div className="mt-2 text-3xl font-bold text-blue-600">{totalWithText}</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-sm font-medium text-slate-500">Sudah Ada Doa Suara</div>
+          <div className="mt-2 text-3xl font-bold text-violet-600">{totalWithVoice}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -339,38 +411,40 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-xl font-bold text-slate-800">Dashboard Birthday Donatur</h1>
         <p className="text-sm text-slate-500">
-          Menampilkan donatur dengan ulang tahun yang masih lebih besar dari tanggal hari ini
-          pada tahun berjalan.
+          Menampilkan donatur dengan ulang tahun berikutnya dalam 6 bulan ke depan.
         </p>
       </div>
 
-      <ERPGridTable<DashboardRow>
-        columns={columns}
-        rows={flatRows}
-        loading={dashboardQuery.isLoading}
-        emptyText={
-          dashboardQuery.isError ? "Gagal mengambil data." : "Belum ada donatur ulang tahun mendatang."
-        }
-        maxHeight={560}
-        page={1}
-        pageSize={flatRows.length || 10}
-        totalRecords={flatRows.length}
-        onPageChange={() => {}}
-        showPagination={false}
-        selectedRowIndex={selectedRowIndex}
-        onSelectedRowChange={(_, rowIndex) => setSelectedRowIndex(rowIndex)}
-        onRowClick={handleRowClick}
-        onRowEnter={handleRowEnter}
-        autoSelectFirstRow
-        autoFocus
-        rowClassName={(row) => {
-          if (row.rowType === "month") return "bg-slate-200 font-bold";
-          if (row.rowType === "date") return "bg-slate-100";
-          return "";
-        }}
-        selectedRowClassName="bg-cyan-100"
-        selectedRowCellClassName="font-bold text-slate-900"
-      />
+      <div className="min-h-0 flex-1">
+        <ERPGridTable<DashboardRow>
+          columns={columns}
+          rows={flatRows}
+          loading={dashboardQuery.isLoading}
+          emptyText={
+            dashboardQuery.isError ? "Gagal mengambil data." : "Belum ada donatur ulang tahun mendatang."
+          }
+          heightMode="fill"
+          className="h-full"
+          page={1}
+          pageSize={flatRows.length || 10}
+          totalRecords={flatRows.length}
+          onPageChange={() => {}}
+          showPagination={false}
+          selectedRowIndex={selectedRowIndex}
+          onSelectedRowChange={(_, rowIndex) => setSelectedRowIndex(rowIndex)}
+          onRowClick={handleRowClick}
+          onRowEnter={handleRowEnter}
+          autoSelectFirstRow
+          autoFocus
+          rowClassName={(row) => {
+            if (row.rowType === "month") return "bg-slate-200 font-bold";
+            if (row.rowType === "date") return "bg-slate-100";
+            return "";
+          }}
+          selectedRowClassName="bg-cyan-100"
+          selectedRowCellClassName="font-bold text-slate-900"
+        />
+      </div>
     </div>
   );
 }

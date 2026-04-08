@@ -7,6 +7,8 @@ export interface DashboardBirthdayItem {
   status: boolean;
   lastDonation: string | null;
   sudahDidoakan: boolean;
+  sudahAdaPesanDoa: boolean;
+  sudahAdaPesanSuara: boolean;
   id_TRBirthdayPray: number | null;
   prayCreatedDate: string | null;
 }

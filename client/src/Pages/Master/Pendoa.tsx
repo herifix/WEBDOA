@@ -102,11 +102,6 @@ export default function MasterPendoaPage() {
         width: "minmax(280px, 1fr)",
       },
       {
-        key: "noHP",
-        label: "No HP",
-        width: "140px",
-      },
-      {
         key: "dfl",
         label: "Default",
         width: "90px",

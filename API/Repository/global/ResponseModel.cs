@@ -28,6 +28,7 @@ public class ResponseLogin
     public string Username { get; set; }
     public string Password { get; set; }
     public string Userlvl { get; set; }
+    public bool GantiKunci { get; set; }
     public bool Supportprice { get; set; }
 
 }
@@ -76,6 +77,16 @@ public class ResponseModelMasterPendoa
     public bool dfl { get; set; }
 }
 
+public class ResponseModelMasterUser
+{
+    public string pt { get; set; } = "";
+    public string userid { get; set; } = "";
+    public string nama { get; set; } = "";
+    public byte lvl { get; set; }
+    public string kunci { get; set; } = "";
+    public bool gantiKunci { get; set; }
+}
+
 public class ResponseModelDashboardBirthday
 {
     public long id_donatur { get; set; }
@@ -86,6 +97,8 @@ public class ResponseModelDashboardBirthday
     public bool status { get; set; }
     public DateTime? lastDonation { get; set; }
     public bool sudahDidoakan { get; set; }
+    public bool sudahAdaPesanDoa { get; set; }
+    public bool sudahAdaPesanSuara { get; set; }
     public long? id_TRBirthdayPray { get; set; }
     public DateTime? prayCreatedDate { get; set; }
 }

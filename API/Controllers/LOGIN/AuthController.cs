@@ -78,7 +78,8 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.Name, datauser.Username),
             new Claim(ClaimTypes.Role, "User"),
             new Claim("pt", datauser.Userpt),
-            new Claim("userlvl", datauser.Userlvl)
+            new Claim("userlvl", datauser.Userlvl),
+            new Claim("gantiKunci", datauser.GantiKunci ? "1" : "0")
 
         };
 

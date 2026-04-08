@@ -132,6 +132,8 @@ namespace API.Service.Transaction
                     };
                 }
 
+                //if (bodyRequest.pesan == "-") { bodyRequest.pesan = ""; }
+
                 var donaturResponse = donaturRepo.GetDataById(bodyRequest.idDonatur, conn, tran);
                 var donatur = donaturResponse.data;
 
@@ -185,15 +187,33 @@ namespace API.Service.Transaction
 
                     DateTime targetBirthdayDate = BuildBirthdayDate(targetDonatur.TglLahir.Value, targetYear);
                     var targetExisting = repo.GetDataByDonaturId(targetDonatur.id_donatur, targetYear, conn, tran).data;
+                    bool isCurrentDonatur = targetDonatur.id_donatur == bodyRequest.idDonatur;
+                    string targetPathPesanSuara = isCurrentDonatur
+                        ? pathPesanSuara
+                        : (targetExisting?.pathPesanSuara ?? "");
 
                     if (targetExisting != null && targetExisting.id_TRBirthdayPray > 0)
                     {
-                        repo.Update(targetExisting.id_TRBirthdayPray, bodyRequest.pesan ?? "", pathPesanSuara, conn, tran);
+                        repo.Update(
+                            targetExisting.id_TRBirthdayPray,
+                            bodyRequest.pesan ?? "",
+                            targetPathPesanSuara,
+                            conn,
+                            tran
+                        );
                         response.data = targetExisting.id_TRBirthdayPray;
                     }
                     else
                     {
-                        response.data = repo.Create(bodyRequest, targetDonatur, defaultPendoa, targetBirthdayDate, pathPesanSuara, conn, tran);
+                        response.data = repo.Create(
+                            bodyRequest,
+                            targetDonatur,
+                            defaultPendoa,
+                            targetBirthdayDate,
+                            targetPathPesanSuara,
+                            conn,
+                            tran
+                        );
                     }
                 }
 

@@ -54,6 +54,41 @@ public class RequestUpdateMasterPendoa
     public long idpendoa { get; set; }
 }
 
+public class RequestCreateMasterUser
+{
+    public string? pt { get; set; }
+    public string? userid { get; set; }
+    public string? nama { get; set; }
+    public byte? lvl { get; set; }
+    public string? kunci { get; set; }
+    public bool gantiKunci { get; set; }
+}
+
+public class RequestUpdateMasterUser
+{
+    public string? pt { get; set; }
+    public string? userid { get; set; }
+    public string? nama { get; set; }
+    public byte? lvl { get; set; }
+    public string? kunci { get; set; }
+    public bool gantiKunci { get; set; }
+}
+
+public class RequestGetAllMasterUser
+{
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 15;
+    public string Search { get; set; } = "";
+}
+
+public class RequestChangePassword
+{
+    public string? pt { get; set; }
+    public string? userid { get; set; }
+    public string? currentPassword { get; set; }
+    public string? newPassword { get; set; }
+}
+
 public class RequestCreateMasterItem
 {
     public string code { get; set; }
@@ -102,7 +137,7 @@ public class RequestSaveTRBirthdayPray
 {
     public long idDonatur { get; set; }
     public long? idTRBirthdayPray { get; set; }
-    public string pesan { get; set; } = "";
+    public string? pesan { get; set; }
     public IFormFile? pesanSuaraFile { get; set; }
     public bool saveToAllSameBirthdayDate { get; set; } = true;
 }

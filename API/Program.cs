@@ -100,8 +100,10 @@ builder.Services.AddScoped<RepoMasterDonatur>();
 builder.Services.AddScoped<ServiceMasterDonatur>();
 builder.Services.AddScoped<ServiceMasterPendoa>();
 builder.Services.AddScoped<RepoMasterPendoa>();
+builder.Services.AddScoped<RepoMasterUser>();
 builder.Services.AddScoped<RepoTRBirthdayPray>();
 builder.Services.AddScoped<ServiceTRBirthdayPray>();
+builder.Services.AddScoped<ServiceMasterUser>();
 
 var app = builder.Build();
 

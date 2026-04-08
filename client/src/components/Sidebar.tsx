@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import "../styles/dashboard.css";
 
 import icoHome from "../assets/iconplate/platehome.png";
@@ -10,6 +11,7 @@ import icoLogout from "../assets/iconplate/platelogout.png";
 import icoTR from "../assets/iconplate/flattransaction.png";
 import icoSetting from "../assets/iconplate/flatsettings.png";
 import icoTools from "../assets/iconplate/flattools.png";
+import { canManageMasterUser } from "../utils/authAccess";
 
 type SidebarProps = {
   hidden: boolean;
@@ -17,8 +19,10 @@ type SidebarProps = {
 
 export default function Sidebar({ hidden }: SidebarProps) {
   const [openMaster, setOpenMaster] = useState(true);
+  const [openTools, setOpenTools] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const allowMasterUser = canManageMasterUser();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -60,17 +64,18 @@ export default function Sidebar({ hidden }: SidebarProps) {
               <img src={icoMaster} className="menu-icon" alt="" />
               Master Data
               <span
-                className={`ml-auto inline-block transform transition-transform duration-200 ${
+                className={`ml-auto inline-flex transform transition-transform duration-200 ${
                   openMaster ? "rotate-90" : "rotate-0"
                 }`}
               >
-                ▶
+                <ChevronRight className="h-4 w-4" />
               </span>
             </button>
 
             {openMaster && (
               <div className="ml-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/10 p-2">
-                <button hidden={true}
+                <button
+                  hidden={true}
                   className={`btnmenu text-sm font-normal ${
                     isActive("/master-barang") ? "bg-white/40 text-black" : ""
                   }`}
@@ -79,19 +84,21 @@ export default function Sidebar({ hidden }: SidebarProps) {
                   Master Barang
                 </button>
 
-                <button 
+                <button
                   className={`btnmenu text-sm font-normal ${
-                      isActive("/master-pendoa") ? "bg-white/40 text-black" : ""
-                    }`}
-                    onClick={() => navigate("/master-pendoa")}
+                    isActive("/master-pendoa") ? "bg-white/40 text-black" : ""
+                  }`}
+                  onClick={() => navigate("/master-pendoa")}
                 >
                   Pendoa
                 </button>
 
-                <button className={`btnmenu text-sm font-normal ${
-                      isActive("/master-donatur") ? "bg-white/40 text-black" : ""
-                    }`}
-                    onClick={() => navigate("/master-donatur")}>
+                <button
+                  className={`btnmenu text-sm font-normal ${
+                    isActive("/master-donatur") ? "bg-white/40 text-black" : ""
+                  }`}
+                  onClick={() => navigate("/master-donatur")}
+                >
                   Donatur
                 </button>
               </div>
@@ -112,10 +119,54 @@ export default function Sidebar({ hidden }: SidebarProps) {
               User
             </button>
 
-            <button className="btnmenu" hidden={false}>
+            <button
+              className={`btnmenu ${location.pathname.startsWith("/tools") ? "bg-white/30" : ""}`}
+              hidden={false}
+              onClick={() => setOpenTools((v) => !v)}
+            >
               <img src={icoTools} className="menu-icon" alt="" />
               Tools
+              <span
+                className={`ml-auto inline-flex transform transition-transform duration-200 ${
+                  openTools ? "rotate-90" : "rotate-0"
+                }`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </span>
             </button>
+
+            {openTools && (
+              <div className="ml-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/10 p-2">
+                {allowMasterUser ? (
+                  <button
+                    className={`btnmenu text-sm font-normal ${
+                      isActive("/tools-master-user") ? "bg-white/40 text-black" : ""
+                    }`}
+                    onClick={() => navigate("/tools-master-user")}
+                  >
+                    Master User
+                  </button>
+                ) : null}
+
+                <button
+                  className={`btnmenu text-sm font-normal ${
+                    isActive("/tools-change-password") ? "bg-white/40 text-black" : ""
+                  }`}
+                  onClick={() => navigate("/tools-change-password")}
+                >
+                  Change Password
+                </button>
+
+                <button
+                  className={`btnmenu text-sm font-normal ${
+                    isActive("/tools-about") ? "bg-white/40 text-black" : ""
+                  }`}
+                  onClick={() => navigate("/tools-about")}
+                >
+                  About
+                </button>
+              </div>
+            )}
 
             <button className="btnmenu" hidden={true}>
               <img src={icoSetting} className="menu-icon" alt="" />

@@ -194,7 +194,9 @@ export default function TRBirthdayPrayPage() {
       return;
     }
 
-    navigate("/dashboard");
+    navigate("/dashboard", {
+      state: { focusDonaturId: idDonatur, fromTRBirthdayPray: true },
+    });
   }
 
   async function startRecording() {
@@ -313,8 +315,9 @@ export default function TRBirthdayPrayPage() {
     if (pageData?.id_TRBirthdayPray) {
       formData.append("idTRBirthdayPray", String(pageData.id_TRBirthdayPray));
     }
-
+    
     formData.append("pesan", pesan.trim());
+
     formData.append(
       "saveToAllSameBirthdayDate",
       String(saveToAllSameBirthdayDate)
@@ -357,7 +360,7 @@ export default function TRBirthdayPrayPage() {
           onSave={() => {
             void handleSave();
           }}
-          onCancel={() => navigate("/dashboard")}
+          onCancel={handleBackToDashboard}
           onRefresh={() => {
             clearFormMessage();
             void detailQuery.refetch();
@@ -618,7 +621,9 @@ export default function TRBirthdayPrayPage() {
         confirmClassName="bg-amber-600 hover:bg-amber-700"
         onConfirm={() => {
           setShowLeaveConfirm(false);
-          navigate("/dashboard");
+          navigate("/dashboard", {
+            state: { focusDonaturId: idDonatur, fromTRBirthdayPray: true },
+          });
         }}
         onClose={() => setShowLeaveConfirm(false)}
       />

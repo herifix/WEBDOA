@@ -9,4 +9,5 @@ export type ModelDataUserResponse = {
   userid: string;
   password: string;     
   userpt: string;      
+  gantiKunci?: boolean | string | number;
 };
