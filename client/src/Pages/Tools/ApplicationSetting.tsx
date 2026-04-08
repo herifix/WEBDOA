@@ -7,16 +7,7 @@ import {
   useUpdateApplicationSetting,
 } from "../../hooks/react_query/useFetchApplicationSetting";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
-import http from "../../api/http";
-
-function toMediaUrl(pathValue: string) {
-  if (!pathValue) return "";
-  if (/^https?:\/\//i.test(pathValue)) return pathValue;
-
-  const baseUrl = String(http.defaults.baseURL ?? "").replace(/\/+$/, "");
-  const cleanPath = pathValue.replace(/^\/+/, "");
-  return `${baseUrl}/${cleanPath}`;
-}
+import { buildMediaUrl } from "../../config/appConfig";
 
 export default function ApplicationSettingPage() {
   const settingQuery = useFetchApplicationSetting();
@@ -56,7 +47,7 @@ export default function ApplicationSettingPage() {
     };
   }, [msgImageFile]);
 
-  const previewImageUrl = msgImagePreviewUrl || toMediaUrl(msgImage);
+  const previewImageUrl = msgImagePreviewUrl || buildMediaUrl(msgImage);
 
   const dirty = useMemo(() => {
     if (!settingQuery.data) return false;

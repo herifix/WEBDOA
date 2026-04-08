@@ -3,7 +3,6 @@ import type { ChangeEvent } from "react";
 import { Search } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import http from "../../api/http";
 
 import ERPGridTable from "../../components/Grid";
 import ERPToolbar from "../../components/ToolbarHR";
@@ -16,6 +15,7 @@ import type { ItemMasterRow } from "../../Model/ModelMasterItem";
 import { useFetchMasterItem } from "../../hooks/react_query/useFecthMasterItem";
 import { getDataByCode } from "../../service/masterItemService";
 import { useMasterItemPage } from "../../hooks/react_query/useMasterItemPage";
+import { buildMediaUrl } from "../../config/appConfig";
 
 export default function MasterBarangPage() {
   const vm = useMasterItemPage();
@@ -101,7 +101,7 @@ export default function MasterBarangPage() {
 
       vm.setImageFileName(item.img1 ?? ""); 
       vm.setImageFile(item.img1.split(/[\\/]/).pop() ?? "");
-      vm.setPreviewUrl(`${http.defaults.baseURL}/uploads/items/${item.img1 ?? ""}`);
+      vm.setPreviewUrl(buildMediaUrl(`uploads/items/${item.img1 ?? ""}`));
       
       {/* `${http.defaults.baseURL}/uploads/items/${item.img1 ?? ""}` */}
 

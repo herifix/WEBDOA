@@ -11,6 +11,7 @@ using System.Data;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+var allowedOrigins = builder.Configuration.GetSection("AppClient:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
 //var server = builder.Configuration["DB_SERVER"];
 //var db = builder.Configuration["DB_NAME"];
@@ -64,7 +65,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy("BC",
         policy =>
         {
-            policy.WithOrigins("http://139.255.109.178", "http://localhost:5174", "http://localhost:5173")
+            if (allowedOrigins.Length == 0)
+            {
+                policy.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader();
+                return;
+            }
+
+            policy.WithOrigins(allowedOrigins)
                 .AllowAnyMethod()
                 .AllowAnyHeader();
         });

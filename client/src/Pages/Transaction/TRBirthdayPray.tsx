@@ -11,8 +11,8 @@ import {
   useFetchTRBirthdayPrayByDonatur,
   useSaveTRBirthdayPray,
 } from "../../hooks/react_query/useFetchTRBirthdayPray";
-import http from "../../api/http";
 import { FORM_IDS } from "../../config/formIds";
+import { buildMediaUrl } from "../../config/appConfig";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
 
 function formatDate(value?: string | null) {
@@ -45,15 +45,6 @@ function formatDateTime(value?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function toMediaUrl(pathValue: string) {
-  if (!pathValue) return "";
-  if (/^https?:\/\//i.test(pathValue)) return pathValue;
-
-  const baseUrl = String(http.defaults.baseURL ?? "").replace(/\/+$/, "");
-  const cleanPath = pathValue.replace(/^\/+/, "");
-  return `${baseUrl}/${cleanPath}`;
 }
 
 function formatRecordingTime(totalSeconds: number) {
@@ -176,7 +167,7 @@ export default function TRBirthdayPrayPage() {
     if (!detailQuery.data) return;
 
     setPesan(detailQuery.data.pesan ?? "");
-    setAudioPreviewUrl(toMediaUrl(detailQuery.data.pathPesanSuara ?? ""));
+    setAudioPreviewUrl(buildMediaUrl(detailQuery.data.pathPesanSuara ?? ""));
     setSelectedAudioFile(null);
     setSaveToAllSameBirthdayDate(true);
   }, [detailQuery.data]);
@@ -218,7 +209,7 @@ export default function TRBirthdayPrayPage() {
   }, [applicationSettingQuery.data, pageData, pesan]);
 
   const previewCardImageUrl = useMemo(
-    () => toMediaUrl(applicationSettingQuery.data?.msgImage ?? ""),
+    () => buildMediaUrl(applicationSettingQuery.data?.msgImage ?? ""),
     [applicationSettingQuery.data?.msgImage]
   );
 
@@ -363,7 +354,7 @@ export default function TRBirthdayPrayPage() {
 
   function clearSelectedAudio() {
     setSelectedAudioFile(null);
-    setAudioPreviewUrl(toMediaUrl(pageData?.pathPesanSuara ?? ""));
+    setAudioPreviewUrl(buildMediaUrl(pageData?.pathPesanSuara ?? ""));
     setRecordingSeconds(0);
   }
 
@@ -732,7 +723,7 @@ export default function TRBirthdayPrayPage() {
                 ) : (
                   <div className="mt-3 space-y-3">
                     {historyQuery.data.map((item) => {
-                      const historyAudioUrl = toMediaUrl(item.pathPesanSuara ?? "");
+                      const historyAudioUrl = buildMediaUrl(item.pathPesanSuara ?? "");
 
                       return (
                         <div

@@ -1,10 +1,8 @@
 import axios from "axios";
+import { APP_CONFIG } from "../config/appConfig";
 
 const http = axios.create({
-  baseURL: "https://localhost:7125", // ⬅️ kosong karena pakai Vite proxy
-  // headers: {
-  //   "Content-Type": "application/json",
-  // },
+  baseURL: APP_CONFIG.apiBaseUrl,
 });
 
 http.interceptors.request.use((config) => {
