@@ -178,6 +178,19 @@ Catatan sinkronisasi:
 - `Runtime:AspNetCoreUrls` adalah alamat bind server API saat dijalankan
 - untuk akses dari komputer lain, biasanya `Runtime:AspNetCoreUrls` dibuat `http://0.0.0.0:5000`, lalu `VITE_API_BASE_URL` dan `PublicBaseUrl` diisi alamat host/IP server yang benar, misalnya `http://192.168.1.10:5000`
 
+Jika host/IP/domain hosting berubah lagi di kemudian hari, cek dan ubah minimal file berikut:
+
+- [client/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production)
+- [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
+
+Field yang biasanya wajib ikut disesuaikan:
+
+- `VITE_API_BASE_URL`
+- `AppClient:AllowedOrigins`
+- `WhatsAppGateway:PublicBaseUrl`
+
+Jika UI dan API dipindah ke host baru, lakukan publish ulang setelah nilai-nilai di atas diperbarui.
+
 ## D. Kalau setelah pindah server aplikasi tidak bisa dibuka
 
 Periksa urutan ini:
@@ -314,6 +327,9 @@ Cara baca tabel:
 
 - `AllowedOrigins` diisi alamat backend/API.
   Yang benar: isi dengan alamat frontend yang membuka aplikasi.
+
+- host/IP/domain sudah berubah, tapi `VITE_API_BASE_URL`, `AllowedOrigins`, atau `PublicBaseUrl` masih memakai alamat lama.
+  Akibatnya UI, API, CORS, atau link file masih mengarah ke server sebelumnya.
 
 - `VITE_API_BASE_URL` masih `localhost` padahal frontend dibuka dari komputer lain.
   Akibatnya browser user lain tetap mencoba mengakses API di komputernya sendiri.

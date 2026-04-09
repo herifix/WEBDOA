@@ -74,6 +74,18 @@ Hubungan antar setting URL:
 - `WhatsAppGateway:PublicBaseUrl` menentukan URL publik yang dibagikan aplikasi untuk file/link dari API
 - `VITE_API_BASE_URL` di frontend sebaiknya mengarah ke URL publik API yang sama
 
+Jika host/IP/domain berubah:
+
+- update [client/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production)
+- update [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
+- publish ulang frontend dan backend
+
+Bagian yang paling sering perlu diubah:
+
+- `VITE_API_BASE_URL`
+- `AppClient:AllowedOrigins`
+- `WhatsAppGateway:PublicBaseUrl`
+
 Mode runtime:
 
 - `ASPNETCORE_ENVIRONMENT=Development`

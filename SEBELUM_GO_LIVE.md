@@ -74,3 +74,4 @@ Checklist singkat ini dipakai sebelum aplikasi benar-benar digunakan user.
 - [ ] tidak ada IP/server lama yang masih tertinggal di `PublicBaseUrl`
 - [ ] port API yang dipakai benar-benar bisa diakses dari komputer user
 - [ ] skema `http/https` frontend dan API sudah konsisten
+- [ ] jika hosting baru memakai host/IP/domain berbeda, `VITE_API_BASE_URL`, `AllowedOrigins`, dan `PublicBaseUrl` sudah ikut diperbarui
