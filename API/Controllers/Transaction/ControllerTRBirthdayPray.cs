@@ -23,6 +23,20 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [Route("Transaction/TRBirthdayPray/UpcomingBirthdayByTgl")]
+        public ResponseData<List<ResponseModelDashboardBirthday>> UpcomingBirthdayByTgl([FromQuery] DateTime tgl)
+        {
+            return service.GetUpcomingBirthdayByDate(tgl.Date);
+        }
+
+        [HttpGet]
+        [Route("Transaction/TRBirthdayPray/GetDateStatuses")]
+        public ResponseData<List<ResponseModelTRBirthdayPrayDateStatus>> GetDateStatuses()
+        {
+            return service.GetDateStatuses();
+        }
+
+        [HttpGet]
         [Route("Transaction/TRBirthdayPray/GetDataByDonatur")]
         public ResponseData<ResponseModelTRBirthdayPray> GetDataByDonatur([FromQuery] long idDonatur, [FromQuery] int? year = null)
         {

@@ -5,8 +5,8 @@ for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
 set "API_OUT=%ROOT%publish\production\api"
 set "API_CONFIG=%ROOT%API\appsettings.Production.json"
 
-if not exist "%API_OUT%\API.exe" (
-  echo File "%API_OUT%\API.exe" tidak ditemukan.
+if not exist "%API_OUT%\API.exe" if not exist "%API_OUT%\API.dll" (
+  echo File "%API_OUT%\API.exe" atau "%API_OUT%\API.dll" tidak ditemukan.
   echo Jalankan dulu publish-production.bat
   exit /b 1
 )
@@ -23,4 +23,8 @@ if not defined ASPNETCORE_URLS set "ASPNETCORE_URLS=http://0.0.0.0:5000"
 set "ASPNETCORE_ENVIRONMENT=Production"
 echo Menjalankan API Production di %ASPNETCORE_URLS%
 cd /d "%API_OUT%"
-API.exe
+if exist "%API_OUT%\API.exe" (
+  API.exe
+) else (
+  dotnet API.dll
+)

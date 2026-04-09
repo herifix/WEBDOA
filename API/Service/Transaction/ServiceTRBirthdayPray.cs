@@ -53,6 +53,66 @@ namespace API.Service.Transaction
             }
         }
 
+        public ResponseData<List<ResponseModelDashboardBirthday>> GetUpcomingBirthdayByDate(DateTime targetDate)
+        {
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                    conn.Open();
+
+                return new ResponseData<List<ResponseModelDashboardBirthday>>
+                {
+                    success = true,
+                    message = "OK",
+                    data = repo.GetUpcomingBirthdayByDate(targetDate.Date, conn)
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<List<ResponseModelDashboardBirthday>>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = new List<ResponseModelDashboardBirthday>()
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+        }
+
+        public ResponseData<List<ResponseModelTRBirthdayPrayDateStatus>> GetDateStatuses()
+        {
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                    conn.Open();
+
+                return new ResponseData<List<ResponseModelTRBirthdayPrayDateStatus>>
+                {
+                    success = true,
+                    message = "OK",
+                    data = repo.GetDateStatuses( conn)
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<List<ResponseModelTRBirthdayPrayDateStatus>>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = new List<ResponseModelTRBirthdayPrayDateStatus>()
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+        }
+
         public ResponseData<ResponseModelTRBirthdayPray> GetDataByDonatur(long idDonatur, int? year = null)
         {
             int targetYear = year ?? DateTime.Today.Year;

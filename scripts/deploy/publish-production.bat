@@ -74,7 +74,22 @@ if not errorlevel 1 (
 )
 
 if exist "%CLIENT_OUT%" rmdir /s /q "%CLIENT_OUT%"
-if exist "%API_OUT%" rmdir /s /q "%API_OUT%"
+if exist "%API_OUT%" (
+  echo.
+  echo [0/2] Stop API production lama jika masih berjalan...
+  set "TARGET_API_OUT=%API_OUT%"
+  powershell -NoProfile -Command ^
+    "$target = [System.IO.Path]::GetFullPath($env:TARGET_API_OUT);" ^
+    "$exe = Join-Path $target 'API.exe';" ^
+    "$dll = Join-Path $target 'API.dll';" ^
+    "$procs = Get-CimInstance Win32_Process | Where-Object { " ^
+    "  ($_.ExecutablePath -and [System.IO.Path]::GetFullPath($_.ExecutablePath) -eq $exe) -or " ^
+    "  ($_.CommandLine -and $_.CommandLine -like ('*' + $dll.Replace('\','\\') + '*'))" ^
+    "};" ^
+    "foreach ($proc in $procs) { Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue; Write-Host ('Stop process API lama PID ' + $proc.ProcessId) }"
+  timeout /t 2 /nobreak >nul
+  rmdir /s /q "%API_OUT%"
+)
 
 echo.
 echo [1/2] Build frontend (production)...

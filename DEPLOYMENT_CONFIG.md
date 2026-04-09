@@ -25,8 +25,10 @@ Lokasi konfigurasi:
 - [appConfig.ts](/d:/KANTOR/Project%20VB/WEB%20DOA/client/src/config/appConfig.ts)
 - [vite.config.ts](/d:/KANTOR/Project%20VB/WEB%20DOA/client/vite.config.ts)
 - [.env.development](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development)
+- [.env.devpublish](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.devpublish)
 - [.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production)
 - [.env.development.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development.sample)
+- [.env.devpublish.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.devpublish.sample)
 - [.env.production.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production.sample)
 
 Variable utama:
@@ -38,10 +40,13 @@ Catatan:
 
 - `VITE_API_BASE_URL` dipakai frontend saat mengakses API yang sudah dipublish
 - `VITE_API_PROXY_TARGET` dipakai saat development tooling/proxy
+- `.env.development` dipakai untuk coding harian (`npm run dev`)
+- `.env.devpublish` dipakai khusus untuk `publish-development.bat`
 
 Build command:
 
 - `npm run build:development`
+- `npm run build:devpublish`
 - `npm run build:production`
 
 ## Backend

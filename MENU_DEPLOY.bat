@@ -101,7 +101,7 @@ goto menu
 
 :checkDevelopmentConfig
 set "API_CONFIG=%~dp0API\appsettings.Development.json"
-set "CLIENT_CONFIG=%~dp0client\.env.development"
+set "CLIENT_CONFIG=%~dp0client\.env.devpublish"
 
 echo.
 echo ========================================

@@ -54,12 +54,30 @@ Cara termudah:
 
 ## A. Jika untuk komputer development / test
 
-1. Buka file [client/.env.development](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development)
+Catatan penting:
+
+- `client/.env.development` dipakai untuk coding harian dengan `npm run dev`
+- `client/.env.devpublish` dipakai khusus untuk `publish-development.bat`
+- jadi konfigurasi deploy development tidak lagi menimpa konfigurasi coding harian
+
+### A1. Development coding harian
+
+File [client/.env.development](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development)
+```env
+VITE_API_BASE_URL=https://localhost:7125
+VITE_API_PROXY_TARGET=http://127.0.0.1:5178
+```
+
+Ini mengikuti API local dari [launchSettings.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/Properties/launchSettings.json).
+
+### A2. Development hasil publish
+
+1. Buka file [client/.env.devpublish](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.devpublish)
    Isi `VITE_API_BASE_URL` sesuai alamat API.
    Untuk contoh default paket publish development ini, gunakan `http://127.0.0.1:5000`.
 
    Jika belum ada, bisa mulai dari:
-   - [client/.env.development.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development.sample)
+   - [client/.env.devpublish.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.devpublish.sample)
 
 2. Buka file [API/appsettings.Development.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Development.json)
    Isi:
@@ -178,6 +196,12 @@ Jika frontend dan backend dijalankan di komputer yang sama:
 
 File [client/.env.development](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development)
 ```env
+VITE_API_BASE_URL=https://localhost:7125
+VITE_API_PROXY_TARGET=http://127.0.0.1:5178
+```
+
+File [client/.env.devpublish](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.devpublish)
+```env
 VITE_API_BASE_URL=http://127.0.0.1:5000
 VITE_API_PROXY_TARGET=http://127.0.0.1:5000
 ```
@@ -257,6 +281,7 @@ Catatan:
 
 | Skenario | `Runtime:AspNetCoreUrls` | `WhatsAppGateway:PublicBaseUrl` | `VITE_API_BASE_URL` | `AllowedOrigins` |
 | --- | --- | --- | --- | --- |
+| Dev coding harian | `https://localhost:7125;http://localhost:5178` | sesuaikan kebutuhan file publik | `https://localhost:7125` | origin frontend lokal, mis. `http://localhost:5173` |
 | Lokal 1 komputer | `http://127.0.0.1:5000` | `http://127.0.0.1:5000` | `http://127.0.0.1:5000` | origin frontend lokal, mis. `http://localhost:5173` |
 | Server LAN kantor | `http://0.0.0.0:5000` | `http://192.168.1.10:5000` | `http://192.168.1.10:5000` | origin frontend LAN yang dipakai user |
 | Server live domain | `http://0.0.0.0:5000` | `https://api.domainanda.com` | `https://api.domainanda.com` | domain frontend, mis. `https://app.domainanda.com` |

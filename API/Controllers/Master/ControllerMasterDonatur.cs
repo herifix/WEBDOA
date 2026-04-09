@@ -76,7 +76,7 @@ namespace API.Controllers
         //[Authorize] // ✅ butuh token
         [HttpGet]
         [Route("Master/Donatur/GetDataByTgl")]
-        public ResponseData<List<ResponseModeMasterDonatur>> GetDataByTgl(string Tgl)
+        public ResponseData<List<ResponseModeMasterDonatur>> GetDataByTgl([FromQuery] DateTime Tgl)
         {
             return repo.GetDataByTgl(Tgl, conn);
         }

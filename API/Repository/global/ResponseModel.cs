@@ -196,6 +196,13 @@ public class ResponseModelTRBirthdayPrayHistory
     public DateTime? createdDate { get; set; }
 }
 
+public class ResponseModelTRBirthdayPrayDateStatus
+{
+    public string date { get; set; } = "";
+    public bool isAllPrayed { get; set; }
+    public bool hasDonors { get; set; }
+}
+
 public class ResponseModelBirthdayPrayDispatchItem
 {
     public long id_TRBirthdayPray { get; set; }

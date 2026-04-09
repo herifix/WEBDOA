@@ -4,8 +4,8 @@ setlocal
 for %%I in ("%~dp0..\..") do set "ROOT=%%~fI\"
 set "API_SAMPLE=%ROOT%API\appsettings.Development.sample.json"
 set "API_TARGET=%ROOT%API\appsettings.Development.json"
-set "CLIENT_SAMPLE=%ROOT%client\.env.development.sample"
-set "CLIENT_TARGET=%ROOT%client\.env.development"
+set "CLIENT_SAMPLE=%ROOT%client\.env.devpublish.sample"
+set "CLIENT_TARGET=%ROOT%client\.env.devpublish"
 
 echo ========================================
 echo Prepare Development Config
@@ -32,9 +32,9 @@ if not exist "%API_TARGET%" (
 
 if not exist "%CLIENT_TARGET%" (
   copy "%CLIENT_SAMPLE%" "%CLIENT_TARGET%" >nul
-  echo Frontend config development dibuat dari sample.
+  echo Frontend config development publish dibuat dari sample.
 ) else (
-  echo Frontend config development sudah ada, tidak ditimpa.
+  echo Frontend config development publish sudah ada, tidak ditimpa.
 )
 
 echo.

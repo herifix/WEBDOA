@@ -5,7 +5,7 @@ using System.Data;
 internal interface iRepoMasterDonatur
 {
     ResponseData<List<ResponseModeMasterDonatur>> GetDataByName(string name, IDbConnection conn);
-    ResponseData<List<ResponseModeMasterDonatur>> GetDataByTgl(string Tgl, IDbConnection conn);
+    ResponseData<List<ResponseModeMasterDonatur>> GetDataByTgl(DateTime tgl, IDbConnection conn);
     bool IsDuplicateNamaDanTglLahir(string nama, DateTime? tglLahir, IDbConnection conn, IDbTransaction? tran = null, long? excludeIdDonatur = null);
     int Create(RequestCreateMasterDonatur bodyRequest, IDbConnection conn, IDbTransaction tran);
     void Update(RequestUpdateMasterDonatur bodyRequest, IDbConnection conn, IDbTransaction tran);
@@ -43,28 +43,33 @@ public class RepoMasterDonatur : iRepoMasterDonatur
         return resp;
     }
 
-    public ResponseData<List<ResponseModeMasterDonatur>> GetDataByTgl(string Tgl, IDbConnection conn)
+    public ResponseData<List<ResponseModeMasterDonatur>> GetDataByTgl(DateTime tgl, IDbConnection conn)
     {
         ResponseData<List<ResponseModeMasterDonatur>> resp = new ResponseData<List<ResponseModeMasterDonatur>>()
         {
             data = new List<ResponseModeMasterDonatur>()
         };
 
-        const string sql = @"SELECT id_donatur, Nama, TglLahir, CreatedDate, NoHP, Status, LastDonation
-                             FROM Donatur
-                             WHERE YEAR(TglLahir) = YEAR(@Tgl)";
-
-        var rows = conn.Query<ResponseModeMasterDonatur>(sql, new { Tgl });
-
-        if (rows != null)
+        try
         {
+            const string sql = @"
+                SELECT id_donatur, Nama, TglLahir, CreatedDate, NoHP, Status, LastDonation
+                FROM Donatur
+                WHERE TglLahir IS NOT NULL
+                  AND MONTH(TglLahir) = MONTH(@tgl)
+                  AND DAY(TglLahir) = DAY(@tgl)
+                ORDER BY Nama";
+
+            var rows = conn.Query<ResponseModeMasterDonatur>(sql, new { tgl }).ToList();
+
             resp.success = true;
-            resp.data = rows.ToList();
+            resp.message = rows.Any() ? "OK" : "Data not found";
+            resp.data = rows;
         }
-        else
+        catch (Exception ex)
         {
             resp.success = false;
-            resp.message = "Data not found";
+            resp.message = ex.Message;
         }
 
         return resp;
