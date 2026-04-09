@@ -154,6 +154,14 @@ public class RequestSaveTRBirthdayPray
     public bool saveToAllSameBirthdayDate { get; set; } = true;
 }
 
+public class RequestSaveTRBirthdayPrayVoice
+{
+    public long idDonatur { get; set; }
+    public long? idTRBirthdayPray { get; set; }
+    public IFormFile? pesanSuaraFile { get; set; }
+    public bool saveToAllSameBirthdayDate { get; set; } = true;
+}
+
 public class RequestUpdateWhatsAppSchedule
 {
     public string? sendTime { get; set; }

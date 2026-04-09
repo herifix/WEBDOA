@@ -42,5 +42,12 @@ namespace API.Controllers
         {
             return service.Save(bodyRequest);
         }
+
+        [HttpPut]
+        [Route("Transaction/TRBirthdayPray/SaveVoice")]
+        public ResponseData<long> SaveVoice([FromForm] RequestSaveTRBirthdayPrayVoice bodyRequest)
+        {
+            return service.SaveVoice(bodyRequest);
+        }
     }
 }

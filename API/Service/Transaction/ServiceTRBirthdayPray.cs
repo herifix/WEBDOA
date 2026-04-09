@@ -243,6 +243,140 @@ namespace API.Service.Transaction
             }
         }
 
+        public ResponseData<long> SaveVoice(RequestSaveTRBirthdayPrayVoice bodyRequest)
+        {
+            var response = new ResponseData<long> { data = 0 };
+
+            if (conn.State == ConnectionState.Closed)
+                conn.Open();
+
+            using var tran = conn.BeginTransaction();
+
+            try
+            {
+                if (bodyRequest.idDonatur <= 0)
+                {
+                    tran.Rollback();
+                    return new ResponseData<long>
+                    {
+                        success = false,
+                        message = "Data donatur tidak valid.",
+                        data = 0
+                    };
+                }
+
+                if (bodyRequest.pesanSuaraFile == null || bodyRequest.pesanSuaraFile.Length <= 0)
+                {
+                    tran.Rollback();
+                    return new ResponseData<long>
+                    {
+                        success = false,
+                        message = "File pesan suara wajib diisi.",
+                        data = 0
+                    };
+                }
+
+                var donaturResponse = donaturRepo.GetDataById(bodyRequest.idDonatur, conn, tran);
+                var donatur = donaturResponse.data;
+
+                if (!donaturResponse.success || donatur == null || donatur.id_donatur == 0 || !donatur.TglLahir.HasValue)
+                {
+                    tran.Rollback();
+                    return new ResponseData<long>
+                    {
+                        success = false,
+                        message = "Data donatur tidak ditemukan.",
+                        data = 0
+                    };
+                }
+
+                var defaultPendoa = repo.GetDefaultPendoa(conn, tran);
+                if (defaultPendoa == null || defaultPendoa.id_pendoa <= 0)
+                {
+                    tran.Rollback();
+                    return new ResponseData<long>
+                    {
+                        success = false,
+                        message = "Pendoa default belum tersedia.",
+                        data = 0
+                    };
+                }
+
+                int targetYear = DateTime.Today.Year;
+                DateTime birthdayDate = BuildBirthdayDate(donatur.TglLahir.Value, targetYear);
+                var targetDonaturs = bodyRequest.saveToAllSameBirthdayDate
+                    ? repo.GetDonatursByBirthdayDate(birthdayDate, conn, tran)
+                    : new List<ResponseModeMasterDonatur> { donatur };
+
+                if (targetDonaturs.Count == 0)
+                {
+                    targetDonaturs.Add(donatur);
+                }
+
+                string pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile, donatur.Nama, birthdayDate);
+
+                foreach (var targetDonatur in targetDonaturs)
+                {
+                    if (targetDonatur == null || targetDonatur.id_donatur == 0 || !targetDonatur.TglLahir.HasValue)
+                    {
+                        continue;
+                    }
+
+                    DateTime targetBirthdayDate = BuildBirthdayDate(targetDonatur.TglLahir.Value, targetYear);
+                    var targetExisting = repo.GetDataByDonaturId(targetDonatur.id_donatur, targetYear, conn, tran).data;
+
+                    if (targetExisting != null && targetExisting.id_TRBirthdayPray > 0)
+                    {
+                        repo.UpdateVoicePath(targetExisting.id_TRBirthdayPray, pathPesanSuara, conn, tran);
+                        response.data = targetExisting.id_TRBirthdayPray;
+                    }
+                    else
+                    {
+                        response.data = repo.Create(
+                            new RequestSaveTRBirthdayPray
+                            {
+                                idDonatur = targetDonatur.id_donatur,
+                                idTRBirthdayPray = bodyRequest.idTRBirthdayPray,
+                                pesan = "",
+                                pesanSuaraFile = null,
+                                saveToAllSameBirthdayDate = bodyRequest.saveToAllSameBirthdayDate
+                            },
+                            targetDonatur,
+                            defaultPendoa,
+                            targetBirthdayDate,
+                            pathPesanSuara,
+                            conn,
+                            tran
+                        );
+                    }
+                }
+
+                response.message = bodyRequest.saveToAllSameBirthdayDate
+                    ? "Pesan suara berhasil disimpan untuk semua donatur dengan tanggal ulang tahun yang sama."
+                    : "Pesan suara berhasil disimpan.";
+
+                tran.Commit();
+                response.success = true;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                tran.Rollback();
+
+                return new ResponseData<long>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = 0
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+        }
+
         private DateTime BuildBirthdayDate(DateTime sourceBirthday, int targetYear)
         {
             int day = Math.Min(sourceBirthday.Day, DateTime.DaysInMonth(targetYear, sourceBirthday.Month));

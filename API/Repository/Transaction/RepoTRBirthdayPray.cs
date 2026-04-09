@@ -12,6 +12,7 @@ internal interface iRepoTRBirthdayPray
     long GetNextId(IDbConnection conn, IDbTransaction tran);
     long Create(RequestSaveTRBirthdayPray bodyRequest, ResponseModeMasterDonatur donatur, ResponseModelMasterPendoa defaultPendoa, DateTime birthdayDate, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
     void Update(long idTRBirthdayPray, string pesan, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
+    void UpdateVoicePath(long idTRBirthdayPray, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
 }
 
 public class RepoTRBirthdayPray : iRepoTRBirthdayPray
@@ -276,6 +277,20 @@ LEFT JOIN Pendoa p
         {
             idTRBirthdayPray,
             pesan,
+            pathPesanSuara
+        }, tran);
+    }
+
+    public void UpdateVoicePath(long idTRBirthdayPray, string pathPesanSuara, IDbConnection conn, IDbTransaction tran)
+    {
+        const string sql = @"
+            UPDATE TRBirthdayPray
+            SET PathPesanSuara = @pathPesanSuara
+            WHERE id_TRBirthdayPray = @idTRBirthdayPray";
+
+        conn.Execute(sql, new
+        {
+            idTRBirthdayPray,
             pathPesanSuara
         }, tran);
     }
