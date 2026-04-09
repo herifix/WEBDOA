@@ -77,7 +77,7 @@ export default function WhatsAppSchedulePage() {
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
               Saat fitur ini aktif, sistem akan memeriksa data <strong>Pesan Text dan Suara </strong>
-              setiap menit. Pada tanggal ulang tahun yang sama dengan <strong> Ulang Tahun </strong>
+              . Pada tanggal ulang tahun yang sama dengan <strong> Ulang Tahun </strong>
               dan setelah melewati jam yang dijadwalkan, sistem akan mencoba mengirim pesan doa
               dan file suara dari nomor pendoa ke nomor WhatsApp donatur melalui gateway yang
               sudah dikonfigurasi di server.  
