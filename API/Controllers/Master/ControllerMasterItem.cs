@@ -10,6 +10,7 @@ namespace API.Controllers
     [ApiExplorerSettings(IgnoreApi = true)]
     //[ApiExplorerSettings(IgnoreApi = true)] // Hide untuk swagger
     [ApiController]
+    [Route("")]
     [Route("api")]
     public class ControllerMasterItem : Controller
     {

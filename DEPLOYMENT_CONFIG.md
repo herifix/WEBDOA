@@ -80,6 +80,13 @@ Jika host/IP/domain berubah:
 - update [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
 - publish ulang frontend dan backend
 
+Khusus jika deploy dengan IIS satu domain dan API dipasang sebagai application `/api`:
+
+- `VITE_API_BASE_URL` frontend isi host root, misalnya `http://172.16.1.254`
+- `WhatsAppGateway:PublicBaseUrl` backend isi URL API publik penuh, misalnya `http://172.16.1.254/api`
+- folder [publish/production/client](/d:/KANTOR/Project%20VB/WEB%20DOA/publish/production/client) dipasang sebagai site utama
+- folder [publish/production/api](/d:/KANTOR/Project%20VB/WEB%20DOA/publish/production/api) dipasang sebagai IIS Application dengan alias `api`
+
 Bagian yang paling sering perlu diubah:
 
 - `VITE_API_BASE_URL`

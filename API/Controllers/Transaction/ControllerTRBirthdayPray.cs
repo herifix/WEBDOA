@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [ApiController]
+    [Route("")]
     [Route("api")]
     public class ControllerTRBirthdayPray : Controller
     {

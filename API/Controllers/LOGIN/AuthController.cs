@@ -11,6 +11,7 @@ using Claim = System.Security.Claims.Claim;
 namespace MyApp.Api.Controllers;
 
 [ApiController]
+[Route("[controller]")]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {

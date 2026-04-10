@@ -6,6 +6,7 @@ using System.Data;
 namespace API.Controllers
 {
     [ApiController]
+    [Route("")]
     [Route("api")]
     public class ControllerMasterUser : Controller
     {

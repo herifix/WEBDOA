@@ -3,6 +3,7 @@ using API.Repository.Master;
 using API.Service.Master;
 using API.Service.Transaction;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -120,9 +121,26 @@ builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
 var app = builder.Build();
 
+// Support running the API both directly (localhost:7125/api/...)
+// and behind an IIS application mounted at /api.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api", out var remaining))
+    {
+        context.Request.Path = remaining.HasValue ? remaining : "/";
+    }
+
+    await next();
+});
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseStaticFiles();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto
+});
 
 if (!app.Environment.IsDevelopment())
 {

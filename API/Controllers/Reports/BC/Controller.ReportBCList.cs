@@ -8,6 +8,7 @@ namespace API.Controllers.Reports.BC
 {
     [ApiExplorerSettings(IgnoreApi = true)]
     [ApiController]
+    [Route("")]
     [Route("api")]
     public class ControllerReportBC : Controller
     {

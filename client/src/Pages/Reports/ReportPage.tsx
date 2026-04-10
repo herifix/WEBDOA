@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { buildApiUrl } from "../../config/appConfig";
 
 interface Report {
     id: string | number;
@@ -9,7 +10,7 @@ export default function ReportsPage() {
     const [items, setItems] = useState<Report[]>([]);
 
     useEffect(() => {
-        fetch("https://localhost:7125/api/Reports")
+        fetch(buildApiUrl("/api/Reports"))
             .then(r => r.json())
             .then(setItems);
     }, []);

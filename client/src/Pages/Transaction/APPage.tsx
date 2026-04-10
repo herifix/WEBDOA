@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { buildApiUrl } from "../../config/appConfig";
 
 interface Item {
     id: number;
@@ -9,7 +10,7 @@ export default function ReportsPage() {
     const [items, setItems] = useState<Item[]>([]);
 
     useEffect(() => {
-        fetch("https://localhost:7125/api/AP")
+        fetch(buildApiUrl("/api/AP"))
             .then(r => r.json())
             .then(setItems);
     }, []);

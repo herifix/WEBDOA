@@ -290,6 +290,47 @@ Catatan:
 - `AspNetCoreUrls` adalah alamat bind server, bukan selalu alamat yang diketik user di browser
 - untuk mode domain/live, sering kali aplikasi tetap bind ke `0.0.0.0:5000`, lalu domain diarahkan ke sana lewat IIS, reverse proxy, atau port forwarding
 
+### 4. IIS satu domain dengan subpath API
+
+Jika UI dibuka dari `http://172.16.1.254/` dan API harus dibuka dari `http://172.16.1.254/api/swagger/index.html`:
+
+File [client/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production)
+```env
+VITE_API_BASE_URL=http://172.16.1.254
+VITE_API_PROXY_TARGET=http://172.16.1.254
+```
+
+File [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
+```json
+"Runtime": {
+  "AspNetCoreUrls": "http://0.0.0.0:5000"
+},
+"AppClient": {
+  "AllowedOrigins": [
+    "http://172.16.1.254"
+  ]
+},
+"WhatsAppGateway": {
+  "PublicBaseUrl": "http://172.16.1.254/api"
+}
+```
+
+Setup IIS:
+
+- Site utama arahkan ke folder `publish/production/client`
+- Buat `Application` baru dengan alias `api`
+- Alias `api` arahkan ke folder `publish/production/api`
+- App Pool untuk `api` gunakan `No Managed Code`
+- Install ASP.NET Core Hosting Bundle di server IIS
+- Setelah itu tes `http://172.16.1.254/api/swagger/index.html`
+
+Catatan:
+
+- `AllowedOrigins` harus berisi origin frontend saja, misalnya `http://172.16.1.254`, bukan `http://172.16.1.254/api`
+- frontend cukup mengarah ke `http://172.16.1.254` karena source code client sudah memanggil endpoint dengan prefix `"/api/..."`
+- jangan isi `VITE_API_BASE_URL=http://172.16.1.254/api` jika request di code masih memakai `"/api/..."`
+- `WhatsAppGateway:PublicBaseUrl` tetap harus `.../api` karena dipakai backend untuk membentuk link file/audio publik
+
 ## F. Tabel Ringkas Nilai Config
 
 | Skenario | `Runtime:AspNetCoreUrls` | `WhatsAppGateway:PublicBaseUrl` | `VITE_API_BASE_URL` | `AllowedOrigins` |

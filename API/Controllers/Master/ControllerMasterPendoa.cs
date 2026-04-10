@@ -9,6 +9,7 @@ namespace API.Controllers
 {
     //[ApiExplorerSettings(IgnoreApi = true)] // Hide untuk swagger
     [ApiController]
+    [Route("")]
     [Route("api")]
     public class ControllerMasterPendoa: Controller
     {
