@@ -20,6 +20,10 @@ export const findDataConfig: Record<JenisPencarian, FindDataConfigItem> = {
     Area: true,  
     
   },
+  "buletin": {
+    url: "/api/Transaction/TRBuletin/GetDataAll",
+    method: "GET",
+  },
   "customer": {
     url: "/api/Master/Customer/GetDataByName",
     method: "GET",

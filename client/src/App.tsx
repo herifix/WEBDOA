@@ -8,6 +8,7 @@ import MasterBarang from "./Pages/Master/MasterBarang";
 import MasterPendoa from "./Pages/Master/Pendoa";
 import MasterDonaturPage from "./Pages/Master/Donatur";
 import TRBirthdayPrayPage from "./Pages/Transaction/TRBirthdayPray";
+import TRBuletinPage from "./Pages/Transaction/TRBuletin";
 import MasterUserPage from "./Pages/Tools/MasterUser";
 import ChangePasswordPage from "./Pages/Tools/ChangePassword";
 import AboutPage from "./Pages/Tools/About";
@@ -52,6 +53,11 @@ export default function App() {
                     <Route path="/transaksi-birthday-pray/:idDonatur" element={
                         <RequirePasswordChange>
                             <TRBirthdayPrayPage/>
+                        </RequirePasswordChange>
+                    } />
+                    <Route path="/transaction-buletin" element={
+                        <RequirePasswordChange>
+                            <TRBuletinPage/>
                         </RequirePasswordChange>
                     } />
                     <Route path="/tools-master-user" element={

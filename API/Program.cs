@@ -1,5 +1,6 @@
 using API.Repository.global;
 using API.Repository.Master;
+using API.Repository.Transaction;
 using API.Service.Master;
 using API.Service.Transaction;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -113,7 +114,9 @@ builder.Services.AddScoped<RepoMasterUser>();
 builder.Services.AddScoped<RepoWhatsAppSchedule>();
 builder.Services.AddScoped<RepoApplicationSetting>();
 builder.Services.AddScoped<RepoTRBirthdayPray>();
+builder.Services.AddScoped<RepoTRBuletin>();
 builder.Services.AddScoped<ServiceTRBirthdayPray>();
+builder.Services.AddScoped<ServiceTRBuletin>();
 builder.Services.AddScoped<ServiceMasterUser>();
 builder.Services.AddScoped<ServiceWhatsAppSchedule>();
 builder.Services.AddScoped<ServiceApplicationSetting>();

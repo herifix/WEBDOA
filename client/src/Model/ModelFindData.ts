@@ -1,6 +1,7 @@
 export type JenisPencarian =
   | "data-item"
   | "item"
+  | "buletin"
   | "customer"
   | "supplier"
   | "class"

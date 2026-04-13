@@ -51,6 +51,14 @@ function mapRowByJenis(jenisPencarian: string) {
           extra: (r.classname as string) ?? "",
         };
 
+      case "buletin":
+        return {
+          id: (r.id_buletin ?? r.id) as bigint | number | undefined,
+          code: String(r.id_buletin ?? r.id ?? ""),
+          description: (r.description as string) ?? "",
+          extra: String(r.createdDate ?? r.createddate ?? ""),
+        };
+
       case "customer":
         return {
           id: (r.id_master_customer ?? r.id) as bigint | number | undefined,

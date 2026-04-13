@@ -196,6 +196,16 @@ public class ResponseModelTRBirthdayPrayHistory
     public DateTime? createdDate { get; set; }
 }
 
+public class ResponseModelTRBuletin
+{
+    public long id_buletin { get; set; }
+    public string description { get; set; } = "";
+    public string pesanText { get; set; } = "";
+    public string pathFile { get; set; } = "";
+    public DateTime? createdDate { get; set; }
+    public string defaultPendoaName { get; set; } = "";
+}
+
 public class ResponseModelTRBirthdayPrayDateStatus
 {
     public string date { get; set; } = "";

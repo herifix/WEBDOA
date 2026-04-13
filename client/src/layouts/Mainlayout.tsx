@@ -24,6 +24,8 @@ function getPageTitle(pathname: string) {
       return "Application Setting";
     case "/tools-change-password":
       return "Change Password";
+    case "/transaction-buletin":
+      return "Buletin";
     default:
       if (pathname.startsWith("/transaksi-birthday-pray")) {
         return "TR Birthday Pray";

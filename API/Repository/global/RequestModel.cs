@@ -162,6 +162,20 @@ public class RequestSaveTRBirthdayPrayVoice
     public bool saveToAllSameBirthdayDate { get; set; } = true;
 }
 
+public class RequestSaveTRBuletin
+{
+    public long? id_buletin { get; set; }
+    public string? description { get; set; }
+    public string? pesanText { get; set; }
+    public string? existingPathFile { get; set; }
+    public IFormFile? attachmentFile { get; set; }
+}
+
+public class RequestDeleteTRBuletin
+{
+    public long id_buletin { get; set; }
+}
+
 public class RequestUpdateWhatsAppSchedule
 {
     public string? sendTime { get; set; }

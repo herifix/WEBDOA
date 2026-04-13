@@ -34,6 +34,7 @@ const menuRouteMap: Record<string, string> = {
   "setting application": "/tools-application-setting",
   "application setting": "/tools-application-setting",
   "aplication setting": "/tools-application-setting",
+  buletin: "/transaction-buletin",
 };
 
 function normalizeMenuKey(value?: string | null) {
@@ -61,15 +62,24 @@ function hasPath(item: AppMenuItem) {
   return Boolean(getMenuPath(item));
 }
 
+function canRenderParentLabel(item: AppMenuItem) {
+  return item.asParent || item.lvl <= 1;
+}
+
 function filterVisibleMenus(items: AppMenuItem[]): AppMenuItem[] {
   const isSuperAdmin = isCurrentUserSuperAdmin();
 
   return items
     .map((item): AppMenuItem | null => {
+      const sourceChildren = item.children ?? [];
       const nextChildren: AppMenuItem[] = filterVisibleMenus(item.children ?? []);
       const isHome = normalizeMenuKey(item.formName) === "home";
       const showSelf = isSuperAdmin || item.canView || isHome;
-      const shouldShow = nextChildren.length > 0 || (hasPath(item) && showSelf);
+      const hasTreeChildren = sourceChildren.length > 0;
+      const shouldShow =
+        nextChildren.length > 0 ||
+        (hasPath(item) && showSelf) ||
+        (!hasPath(item) && hasTreeChildren && canRenderParentLabel(item));
 
       if (!shouldShow) return null;
 
@@ -159,6 +169,21 @@ export default function Sidebar({ hidden }: SidebarProps) {
             </button>
 
             {itemIsOpen ? renderMenuItems(children, depth + 1) : null}
+          </div>
+        );
+      }
+
+      if (!path && canRenderParentLabel(item)) {
+        return (
+          <div key={item.id_form} className={depth === 0 ? "" : containerClass}>
+            <div
+              className={`btnmenu cursor-default opacity-90 ${
+                depth > 0 ? "text-sm font-normal" : ""
+              }`}
+            >
+              {depth === 0 ? <img src={getMenuIcon(item)} className="menu-icon" alt="" /> : null}
+              {item.formName}
+            </div>
           </div>
         );
       }

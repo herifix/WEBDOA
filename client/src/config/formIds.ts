@@ -8,4 +8,5 @@ export const FORM_IDS = {
   whatsappSchedule: 13,
   transaksiBirthdayPray: 14,
   ApplicationSet: 15,
+  buletin: 17,
 } as const;
