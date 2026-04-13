@@ -7,6 +7,26 @@ import type {
 import { getAPIErrorMessage } from "../helper/httpRequestErrorHelper";
 import { findDataConfig } from "../utils/findDataConfig";
 
+function formatFindDateTime(value: unknown) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) {
+    return text;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 function normalizeResponse(
   jenisPencarian: string,
   raw: unknown
@@ -56,7 +76,7 @@ function mapRowByJenis(jenisPencarian: string) {
           id: (r.id_buletin ?? r.id) as bigint | number | undefined,
           code: String(r.id_buletin ?? r.id ?? ""),
           description: (r.description as string) ?? "",
-          extra: String(r.createdDate ?? r.createddate ?? ""),
+          extra: formatFindDateTime(r.createdDate ?? r.createddate ?? ""),
         };
 
       case "customer":

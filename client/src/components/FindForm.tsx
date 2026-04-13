@@ -40,6 +40,8 @@ export default function FindDataPopup({
   );
 
   const normalize = (value: string) => value.trim().toLowerCase();
+  const codeLabel = jenisPencarian === "buletin" ? "ID" : "Code";
+  const extraLabel = jenisPencarian === "buletin" ? "Created Date" : "Extra";
 
   const allRows = useMemo<FindDataRow[]>(() => {
     return query.data?.data ?? [];
@@ -283,9 +285,9 @@ export default function FindDataPopup({
             <table className="w-full border-collapse text-sm">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="border border-slate-700 px-3 py-2 text-left">Code</th>
+                  <th className="border border-slate-700 px-3 py-2 text-left">{codeLabel}</th>
                   <th className="border border-slate-700 px-3 py-2 text-left">Description</th>
-                  <th className="border border-slate-700 px-3 py-2 text-left">Extra</th>
+                  <th className="border border-slate-700 px-3 py-2 text-left">{extraLabel}</th>
                 </tr>
               </thead>
               <tbody>

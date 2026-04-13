@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, FileText, Paperclip, Search, Upload } from "lucide-react";
+import { Eye, FileText, Paperclip, Search, Trash2, Upload } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import FindDataPopup from "../../components/FindForm";
 import StatusBanner from "../../components/StatusBanner";
@@ -18,6 +18,7 @@ import {
 } from "../../hooks/react_query/useFetchTRBuletin";
 import { useERPFormMode } from "../../hooks/react_query/userERPFormMode";
 import { useFormMessage } from "../../hooks/useFormMessage";
+import { getTRBuletinById } from "../../service/trBuletinService";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
 
 function formatDateTime(value?: string | null) {
@@ -128,10 +129,27 @@ export default function TRBuletinPage() {
     [defaultPendoaName, pesanText]
   );
 
-  const previewParagraphs = useMemo(
-    () => previewMessage.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean),
-    [previewMessage]
-  );
+  const attachmentMeta = useMemo(() => {
+    const fileName = selectedFile?.name || pathFile.split("/").pop() || "Attachment";
+    const extension = fileName.includes(".") ? fileName.split(".").pop()?.toUpperCase() : "FILE";
+    const fileSizeMb = selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : "";
+    const extraParts = [extension, fileSizeMb].filter(Boolean);
+
+    return {
+      fileName,
+      extension: extension || "FILE",
+      extraText: extraParts.join(" • "),
+    };
+  }, [pathFile, selectedFile]);
+
+  const attachmentPreviewKind = useMemo(() => {
+    const fileName = (selectedFile?.name || pathFile || "").toLowerCase();
+    const mimeType = selectedFile?.type?.toLowerCase() || "";
+
+    if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) return "pdf";
+    if (mimeType.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(fileName)) return "image";
+    return "file";
+  }, [pathFile, selectedFile]);
 
   function applyDetailToForm(data: TRBuletinItem) {
     setIdBuletin(data.id_buletin ?? 0);
@@ -150,7 +168,14 @@ export default function TRBuletinPage() {
     setPathFile("");
     setCreatedDate("");
     setSelectedFile(null);
+    setSelectedFileUrl("");
     setDefaultPendoaName(detailQuery.data?.defaultPendoaName ?? defaultPendoaName);
+  }
+
+  function handleRemoveAttachment() {
+    setSelectedFile(null);
+    setSelectedFileUrl("");
+    setPathFile("");
   }
 
   async function handleRefresh() {
@@ -168,6 +193,10 @@ export default function TRBuletinPage() {
   }
 
   function openPopup(searchType: JenisPencarian) {
+    if (formMode.mode !== FORM_MODE.VIEW) {
+      return;
+    }
+
     setJenisFind(searchType);
     setOpenFind(true);
   }
@@ -220,18 +249,8 @@ export default function TRBuletinPage() {
   async function handleSave() {
     clearFormMessage();
 
-    if (!pesanText.trim()) {
-      setFormError("Pesan text wajib diisi.");
-      return;
-    }
-
     if (!description.trim()) {
       setFormError("Description wajib diisi.");
-      return;
-    }
-
-    if (!selectedFile && !pathFile.trim()) {
-      setFormError("Attachment wajib diisi.");
       return;
     }
 
@@ -241,7 +260,13 @@ export default function TRBuletinPage() {
     }
     formData.append("description", description);
     formData.append("pesanText", pesanText);
-    formData.append("existingPathFile", pathFile);
+    
+    // Kirim existingPathFile hanya jika ada value (tidak kosong)
+    // Jika kosong/null = signal untuk clear attachment
+    if (pathFile) {
+      formData.append("existingPathFile", pathFile);
+    }
+    
     if (selectedFile) {
       formData.append("attachmentFile", selectedFile);
     }
@@ -253,8 +278,13 @@ export default function TRBuletinPage() {
       await queryClient.invalidateQueries({ queryKey: ["tr-buletin-list"] });
       await queryClient.invalidateQueries({ queryKey: ["tr-buletin-detail"] });
       await listQuery.refetch();
+      const latestDetail = await queryClient.fetchQuery({
+        queryKey: ["tr-buletin-detail", savedId],
+        queryFn: () => getTRBuletinById(savedId),
+      });
 
       setSelectedId(savedId);
+      applyDetailToForm(latestDetail);
       formMode.toView();
 
       setFormSuccess(response.message || "TR Buletin berhasil disimpan.");
@@ -323,12 +353,17 @@ export default function TRBuletinPage() {
             loadingSave={saveMutation.isPending}
             showNew={permissions.canAdd}
             showEdit={permissions.canEdit}
+            showSave
+            showCancel
             showDelete={permissions.canDelete}
             showPrint={false}
             showApprove={false}
             showExport={false}
-            disableEdit={idBuletin <= 0}
-            disableDelete={idBuletin <= 0}
+            disableNew={formMode.isEditing}
+            disableEdit={formMode.isEditing || idBuletin <= 0}
+            disableSave={!formMode.isEditing}
+            disableCancel={!formMode.isEditing}
+            disableDelete={formMode.isEditing || idBuletin <= 0}
           />
         </div>
 
@@ -337,46 +372,50 @@ export default function TRBuletinPage() {
 
         <div className="grid min-h-0 flex-1 gap-3 p-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
           <section className="min-h-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-4 flex items-start justify-between gap-4 text-slate-800">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  <h2 className="text-lg font-semibold">Form Buletin</h2>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-                    Created Date
-                  </div>
-                  <div className="text-sm font-semibold text-slate-700">
-                    {formatDateTime(createdDate)}
-                  </div>
-                </div>
+            <div className="mb-4 flex items-start justify-between gap-4 text-slate-800">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                <h2 className="text-lg font-semibold">Form Buletin</h2>
               </div>
 
-              <div className="grid gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Description
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      readOnly={formMode.mode === FORM_MODE.VIEW}
-                      className="inputtextbox w-full"
-                      placeholder="Masukkan description buletin"
-                    />
+              <div className="text-right">
+                <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                  Created Date
+                </div>
+                <div className="text-sm font-semibold text-slate-700">
+                  {formatDateTime(createdDate)}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Description
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    readOnly={formMode.mode === FORM_MODE.VIEW}
+                    className="inputtextbox w-full"
+                    placeholder="Masukkan description buletin"
+                  />
                     <button
                       type="button"
                       className="btnfind"
                       onClick={() => openPopup("buletin")}
-                      disabled={saveMutation.isPending || deleteMutation.isPending}
+                      disabled={
+                        formMode.mode !== FORM_MODE.VIEW ||
+                        saveMutation.isPending ||
+                        deleteMutation.isPending
+                      }
                       title="Find Description"
                     >
-                      <Search className="h-4 w-4" />
-                    </button>
-                  </div>
+                    <Search className="h-4 w-4" />
+                  </button>
                 </div>
+              </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -402,16 +441,29 @@ export default function TRBuletinPage() {
                   File Attachment
                 </label>
 
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-600 transition hover:border-cyan-400 hover:bg-cyan-50">
-                  <Upload className="h-4 w-4" />
-                  <span>{selectedFile ? selectedFile.name : "Pilih file attachment"}</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-                    disabled={formMode.mode === FORM_MODE.VIEW}
-                  />
-                </label>
+                <div className="flex gap-2">
+                  <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-600 transition hover:border-cyan-400 hover:bg-cyan-50">
+                    <Upload className="h-4 w-4" />
+                    <span>{selectedFile ? selectedFile.name : "Pilih file attachment"}</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                      disabled={formMode.mode === FORM_MODE.VIEW}
+                    />
+                  </label>
+
+                  {formMode.mode !== FORM_MODE.VIEW && (selectedFile || pathFile) ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAttachment}
+                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 text-rose-600 transition hover:bg-rose-100"
+                      title="Hapus attachment"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
 
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <Paperclip className="h-4 w-4" />
@@ -427,38 +479,81 @@ export default function TRBuletinPage() {
               <h2 className="text-lg font-semibold">Preview Pesan</h2>
             </div>
 
-            <div className="mb-3 flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
-                Simulasi WhatsApp
-              </div>
-              <div className="min-h-0 flex-1 overflow-auto rounded-2xl bg-emerald-50 p-4 text-sm leading-7 text-slate-700">
-                {previewParagraphs.length > 0 ? (
-                  previewParagraphs.map((paragraph, index) => (
-                    <p key={`${index}-${paragraph.slice(0, 20)}`} className={index > 0 ? "mt-3" : ""}>
-                      {paragraph}
-                    </p>
-                  ))
-                ) : (
-                  <p className="text-slate-400">Preview pesan akan muncul di sini.</p>
-                )}
-              </div>
-            </div>
+            <div className="mb-3 flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-800 bg-[#111b21] p-4 shadow-sm">
+              <div className="min-h-0 flex-1 overflow-auto rounded-2xl bg-[#0b141a] p-4">
+                <div className="mx-auto max-w-[420px]">
+                  <div className="rounded-2xl bg-[#202c33] px-4 py-3 text-[15px] leading-7 text-[#e9edef] shadow-[0_12px_24px_rgba(0,0,0,0.25)]">
+                    {previewMessage.trim() ? (
+                      <div className="whitespace-pre-wrap break-words">
+                        {previewMessage}
+                      </div>
+                    ) : (
+                      <p className="text-[#8696a0]">Preview pesan akan muncul di sini.</p>
+                    )}
+                  </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-2 text-sm font-semibold text-slate-800">Attachment</div>
-              {attachmentUrl ? (
-                <a
-                  href={attachmentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-100"
-                >
-                  <Paperclip className="h-4 w-4" />
-                  Buka attachment
-                </a>
-              ) : (
-                <div className="text-sm text-slate-400">Belum ada attachment untuk dipreview.</div>
-              )}
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-[#2a3942] bg-[#202c33] shadow-[0_12px_24px_rgba(0,0,0,0.25)]">
+                    <div className="border-b border-[#2a3942] bg-[#111b21]">
+                      {attachmentUrl ? (
+                        attachmentPreviewKind === "pdf" ? (
+                          <div className="relative h-[170px] overflow-hidden bg-white">
+                            <iframe
+                              title="Preview PDF Buletin"
+                              src={`${attachmentUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`}
+                              scrolling="no"
+                              className="pointer-events-none absolute left-0 top-0 h-[420px] w-full bg-white"
+                            />
+                          </div>
+                        ) : attachmentPreviewKind === "image" ? (
+                          <img
+                            src={attachmentUrl}
+                            alt={attachmentMeta.fileName}
+                            className="block h-[170px] w-full object-cover object-top"
+                          />
+                        ) : (
+                          <div className="flex h-[180px] items-center justify-center px-6 py-5 text-center text-sm text-[#8696a0]">
+                            Preview file tidak tersedia untuk tipe ini.
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex h-[180px] items-center justify-center px-6 py-5 text-center text-sm text-[#8696a0]">
+                          Belum ada attachment untuk dipreview.
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-start gap-3 px-4 py-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f02849] text-[11px] font-bold text-white">
+                        {attachmentMeta.extension}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-2 text-[15px] font-semibold leading-5 text-[#e9edef]">
+                          {attachmentMeta.fileName}
+                        </div>
+                        <div className="mt-1 text-sm text-[#8696a0]">
+                          {attachmentMeta.extraText || "Attachment siap dikirim"}
+                        </div>
+                      </div>
+                      <div className="shrink-0 self-end text-xs text-[#8696a0]">9:18 am</div>
+                    </div>
+
+                    <div className="border-t border-[#2a3942] bg-[#202c33] px-4 py-2 text-center">
+                      {attachmentUrl ? (
+                        <a
+                          href={attachmentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block text-base font-extrabold tracking-wide !text-white no-underline hover:!text-white/90 visited:!text-white"
+                        >
+                          Download
+                        </a>
+                      ) : (
+                        <span className="inline-block text-base font-extrabold tracking-wide text-[#c7d1d8]">Download</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </div>

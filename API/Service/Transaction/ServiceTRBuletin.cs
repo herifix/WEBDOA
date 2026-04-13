@@ -116,6 +116,7 @@ namespace API.Service.Transaction
                 conn.Open();
 
             using var tran = conn.BeginTransaction();
+            string uploadedPathFile = "";
 
             try
             {
@@ -131,17 +132,6 @@ namespace API.Service.Transaction
                     {
                         success = false,
                         message = "Description wajib diisi.",
-                        data = 0
-                    };
-                }
-
-                if (string.IsNullOrWhiteSpace(pesanText))
-                {
-                    tran.Rollback();
-                    return new ResponseData<long>
-                    {
-                        success = false,
-                        message = "Pesan text wajib diisi.",
                         data = 0
                     };
                 }
@@ -163,22 +153,31 @@ namespace API.Service.Transaction
                     };
                 }
 
-                string nextPathFile = existing.pathFile ?? request.existingPathFile ?? "";
+                // Logic:
+                // 1. Jika existingPathFile = null → Clear attachment (pathFile = ""), hapus file lama
+                // 2. Jika existingPathFile != null → Gunakan nilai itu
+                //    - Jika ada attachmentFile baru → timpa dengan file baru, hapus file lama
+                //    - Jika tanpa attachmentFile → tetap gunakan existingPathFile
 
+                string nextPathFile = "";
+                string oldPathFile = existing.pathFile ?? "";
+
+                if (request.existingPathFile == null)
+                {
+                    // User clear attachment atau tidak ada file dikirim
+                    nextPathFile = "";
+                }
+                else
+                {
+                    // existingPathFile dikirim (bisa empty string atau ada path)
+                    nextPathFile = request.existingPathFile;
+                }
+
+                // Jika ada file baru, simpan dan replace pathFile
                 if (request.attachmentFile != null && request.attachmentFile.Length > 0)
                 {
                     nextPathFile = SaveAttachmentFile(request.attachmentFile);
-                }
-
-                if (string.IsNullOrWhiteSpace(nextPathFile))
-                {
-                    tran.Rollback();
-                    return new ResponseData<long>
-                    {
-                        success = false,
-                        message = "File attachment wajib diisi.",
-                        data = 0
-                    };
+                    uploadedPathFile = nextPathFile;
                 }
 
                 if (isNew)
@@ -192,10 +191,13 @@ namespace API.Service.Transaction
 
                 tran.Commit();
 
-                if (!string.IsNullOrWhiteSpace(existing.pathFile) &&
-                    !string.Equals(existing.pathFile, nextPathFile, StringComparison.OrdinalIgnoreCase))
+                // Hapus file lama jika:
+                // 1. Ada file lama
+                // 2. File lama berbeda dengan file baru
+                if (!string.IsNullOrWhiteSpace(oldPathFile) &&
+                    !string.Equals(oldPathFile, nextPathFile, StringComparison.OrdinalIgnoreCase))
                 {
-                    DeletePhysicalFile(existing.pathFile);
+                    DeletePhysicalFile(oldPathFile);
                 }
 
                 return new ResponseData<long>
@@ -208,6 +210,12 @@ namespace API.Service.Transaction
             catch (Exception ex)
             {
                 tran.Rollback();
+
+                if (!string.IsNullOrWhiteSpace(uploadedPathFile))
+                {
+                    DeletePhysicalFile(uploadedPathFile);
+                }
+
                 return new ResponseData<long>
                 {
                     success = false,
