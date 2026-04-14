@@ -8,6 +8,8 @@ export default function ERPDatePicker({
   className = "inputtextbox w-full",
   wrapperClassName = "w-full",
   popperClassName = "z-50",
+  portalId = "erp-datepicker-portal",
+  popperPlacement = "bottom-start",
   showMonthDropdown = true,
   showYearDropdown = true,
   dropdownMode = "select",
@@ -21,6 +23,8 @@ export default function ERPDatePicker({
       className={className}
       wrapperClassName={wrapperClassName}
       popperClassName={popperClassName}
+      portalId={portalId}
+      popperPlacement={popperPlacement}
       showMonthDropdown={showMonthDropdown}
       showYearDropdown={showYearDropdown}
       dropdownMode={dropdownMode}

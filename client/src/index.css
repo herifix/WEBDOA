@@ -60,6 +60,11 @@ button:focus-visible {
   z-index: 9999 !important;
 }
 
+#erp-datepicker-portal {
+  position: relative;
+  z-index: 9999;
+}
+
 /* =========================
    CUSTOM EFFECT
 ========================= */
