@@ -1,7 +1,7 @@
-import DatePicker, { type ReactDatePickerProps } from "react-datepicker";
+import DatePicker, { type DatePickerProps } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-type ERPDatePickerProps = ReactDatePickerProps;
+type ERPDatePickerProps = DatePickerProps;
 
 export default function ERPDatePicker({
   dateFormat = "dd-MMM-yyyy",
