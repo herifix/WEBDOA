@@ -381,7 +381,7 @@ export default function TRBuletinPage() {
             onRefresh={handleRefresh}
             loadingSave={saveMutation.isPending}
             showSave
-            showCancel
+            showCancel={false}
             showPrint={false}
             showApprove={false}
             showExport={false}
