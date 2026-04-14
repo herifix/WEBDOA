@@ -8,7 +8,7 @@ interface AuthClaims {
   Userlvl?: string;
   sub?: string;
   name?: string;
-  role?: string;
+  role?: string | string[];
   gantiKunci?: string;
   GantiKunci?: string;
   [key: string]: string | number | string[] | undefined;

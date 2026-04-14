@@ -106,9 +106,9 @@ function getDefaultVisibilityByMode(mode: FormMode): ToolbarVisibility {
     case "new":
       return {
         new: false,
-        edit: false,
+        edit: true,
         save: true,
-        cancel: true,
+        cancel: false,
         print: false,
         approve: false,
         unapprove: false,
@@ -119,9 +119,9 @@ function getDefaultVisibilityByMode(mode: FormMode): ToolbarVisibility {
     case "edit":
       return {
         new: false,
-        edit: false,
+        edit: true,
         save: true,
-        cancel: true,
+        cancel: false,
         print: false,
         approve: false,
         unapprove: false,
@@ -177,7 +177,7 @@ function isToolbarEditingMode(mode: FormMode) {
 }
 
 function isLockedWhileEditing(actionKey: ToolbarActionKey) {
-  return actionKey !== "save" && actionKey !== "cancel";
+  return actionKey !== "save" && actionKey !== "edit";
 }
 
 export default function ERPToolbar({
@@ -229,6 +229,7 @@ export default function ERPToolbar({
 }: ERPToolbarProps) {
   const visibleByMode = getDefaultVisibilityByMode(mode);
   const lockNonSaveActions = isToolbarEditingMode(mode);
+  const useEditAsCancel = isToolbarEditingMode(mode);
   const resolvedVisibility: ToolbarVisibility = {
     new: resolvePermissionVisible(permissions?.canAdd, showNew, visibleByMode.new),
     edit: resolvePermissionVisible(permissions?.canEdit, showEdit, visibleByMode.edit),
@@ -257,11 +258,13 @@ export default function ERPToolbar({
     },
     {
       key: "edit",
-      label: "Edit",
-      icon: <Pencil className="h-4 w-4" />,
-      onClick: onEdit,
-      visible: resolvedVisibility.edit,
-      disabled: disableEdit || (lockNonSaveActions && isLockedWhileEditing("edit")),
+      label: useEditAsCancel ? "Cancel" : "Edit",
+      icon: useEditAsCancel ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />,
+      onClick: useEditAsCancel ? onCancel : onEdit,
+      visible: useEditAsCancel ? Boolean(onCancel) : resolvedVisibility.edit,
+      disabled: useEditAsCancel
+        ? disableCancel
+        : disableEdit || (lockNonSaveActions && isLockedWhileEditing("edit")),
     },
     {
       key: "save",
@@ -277,7 +280,7 @@ export default function ERPToolbar({
       label: "Cancel",
       icon: <X className="h-4 w-4" />,
       onClick: onCancel,
-      visible: resolvedVisibility.cancel,
+      visible: !useEditAsCancel && resolvedVisibility.cancel,
       disabled: disableCancel,
     },
     {
