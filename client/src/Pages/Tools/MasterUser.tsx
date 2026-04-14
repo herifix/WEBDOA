@@ -264,14 +264,6 @@ export default function MasterUserPage() {
         <div className="form2col min-h-0 flex-1">
           <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
             <div className="shrink-0 grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-2 gap-y-1">
-              <label className="text-sm text-slate-700">PT</label>
-              <input
-                value={vm.pt}
-                onChange={(e) => vm.setPt(e.target.value)}
-                className="inputtextbox w-full"
-                readOnly={vm.mode !== vm.FORM_MODE.NEW}
-              />
-
               <label className="text-sm text-slate-700">User ID</label>
               <input
                 value={vm.userid}

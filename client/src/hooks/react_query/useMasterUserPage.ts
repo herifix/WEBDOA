@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useERPFormMode } from "./userERPFormMode";
 import { FORM_MODE } from "../../TypeData/forMode";
@@ -7,9 +7,11 @@ import { useFormMessage } from "../useFormMessage";
 import { handleMutationError, handleMutationSuccess } from "./masterCrudHelpers";
 import type { MasterUserPermissionRow } from "../../Model/ModelMasterUser";
 import { getMasterUserMenuPermissions } from "../../service/masterUserService";
+import { useAuthClaims } from "../../hooks/useAuthClaims";
 
 export function useMasterUserPage() {
   const queryClient = useQueryClient();
+  const claims = useAuthClaims();
   const { mode, toNew, toEdit, toView } = useERPFormMode();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -71,7 +73,7 @@ export function useMasterUserPage() {
     return true;
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setPt("");
     setUserid("");
     setNama("");
@@ -79,9 +81,9 @@ export function useMasterUserPage() {
     setKunci("");
     setGantiKunci(false);
     setPermissions([]);
-  };
+  }, []);
 
-  const loadPermissions = async (nextPt = "", nextUserid = "") => {
+  const loadPermissions = useCallback(async (nextPt = "", nextUserid = "") => {
     try {
       setIsLoadingPermissions(true);
       const response = await getMasterUserMenuPermissions(nextPt.trim(), nextUserid.trim());
@@ -93,7 +95,7 @@ export function useMasterUserPage() {
     } finally {
       setIsLoadingPermissions(false);
     }
-  };
+  }, [setFormError]);
 
   const updatePermission = (
     idForm: number,
@@ -208,12 +210,30 @@ export function useMasterUserPage() {
     }
   };
 
-  const handleNew = () => {
-    resetForm();
+const handleNew = useCallback(() => {
+    // Set defaults from claims first
+    if (claims.pt?.trim()) {
+      setPt(claims.pt);
+    } else {
+      setPt("");
+    }
+    if (claims.userlvl?.trim()) {
+      setLvl(claims.userlvl);
+    } else {
+      setLvl("1");
+    }
+    
+    // Then reset other fields, preserving PT/level defaults
+    setUserid("");
+    setNama("");
+    setKunci("");
+    setGantiKunci(false);
+    setPermissions([]);
+    
     clearFormMessage();
     toNew();
-    void loadPermissions("", "");
-  };
+    void loadPermissions(claims.pt || "", "");
+  }, [claims, clearFormMessage, loadPermissions, toNew]);
 
   const handleSave = async () => {
     try {
