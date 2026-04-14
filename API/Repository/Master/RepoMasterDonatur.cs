@@ -12,6 +12,7 @@ internal interface iRepoMasterDonatur
     void Delete(long idDonatur, IDbConnection conn, IDbTransaction tran);
     ResponseData<ResponseModeMasterDonatur> GetDataById(long idDonatur, IDbConnection conn, IDbTransaction? tran = null);
     PagedResponse<ResponseModeMasterDonatur> GetAll(RequestGetAllMasterDonatur request, IDbConnection conn);
+    List<ResponseModeMasterDonatur> GetActiveDonatursWithPhone(IDbConnection conn, IDbTransaction? tran = null);
 }
 
 public class RepoMasterDonatur : iRepoMasterDonatur
@@ -216,5 +217,17 @@ public class RepoMasterDonatur : iRepoMasterDonatur
         resp.totalPages = totalRecords == 0 ? 0 : (int)Math.Ceiling((double)totalRecords / pageSize);
 
         return resp;
+    }
+
+    public List<ResponseModeMasterDonatur> GetActiveDonatursWithPhone(IDbConnection conn, IDbTransaction? tran = null)
+    {
+        const string sql = @"
+            SELECT id_donatur, Nama, TglLahir, CreatedDate, NoHP, Status, LastDonation
+            FROM Donatur
+            WHERE Status = 1
+              AND LTRIM(RTRIM(ISNULL(NoHP, ''))) <> ''
+            ORDER BY Nama;";
+
+        return conn.Query<ResponseModeMasterDonatur>(sql, transaction: tran).ToList();
     }
 }

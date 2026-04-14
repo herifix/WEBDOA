@@ -17,6 +17,7 @@ function normalizeMenuKey(value?: string | null) {
 
 export default function MasterUserPage() {
   const vm = useMasterUserPage();
+  const { searchInput, setPage, setSearch, loadPermissions } = vm;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [copySearchInput, setCopySearchInput] = useState("");
@@ -37,16 +38,16 @@ export default function MasterUserPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      vm.setPage(1);
-      vm.setSearch(vm.searchInput.trim());
+      setPage(1);
+      setSearch(searchInput.trim());
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [vm.searchInput]);
+  }, [searchInput, setPage, setSearch]);
 
   useEffect(() => {
-    void vm.loadPermissions("", "");
-  }, []);
+    void loadPermissions("", "");
+  }, [loadPermissions]);
 
   useEffect(() => {
     if (!showCopyDialog) return;
@@ -63,14 +64,6 @@ export default function MasterUserPage() {
     vm.setPage(1);
     vm.setSearch(vm.searchInput.trim());
   };
-
-  if (!permissions.canView) {
-    return (
-      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
-        Anda tidak memiliki akses untuk membuka form ini.
-      </div>
-    );
-  }
 
   const handleRefreshGrid = () => {
     vm.setSearchInput("");
@@ -231,12 +224,26 @@ export default function MasterUserPage() {
     [copyUserQuery.data?.data, vm.pt, vm.userid]
   );
 
+  if (!permissions.canView) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
+        Anda tidak memiliki akses untuk membuka form ini.
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-70px)] w-full flex-col bg-slate-50 p-1 md:p-2 lg:p-0">
       <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         <div className="mb-1 mt-1 shrink-0 p-0">
           <ERPToolbar
             mode={vm.mode}
+            permissions={{
+              canAdd: permissions.canAdd,
+              canEdit: permissions.canEdit,
+              canDelete: permissions.canDelete,
+              canPrint: permissions.canPrint,
+            }}
             onNew={vm.handleNew}
             onEdit={vm.toEdit}
             onSave={() => {
@@ -245,10 +252,6 @@ export default function MasterUserPage() {
             onCancel={vm.toView}
             onDelete={handleDeleteClick}
             onRefresh={handleRefreshGrid}
-            showNew={permissions.canAdd}
-            showEdit={permissions.canEdit}
-            showDelete={permissions.canDelete}
-            showPrint={permissions.canPrint}
             showExport={false}
             showApprove={false}
             loadingSave={vm.isSaving}

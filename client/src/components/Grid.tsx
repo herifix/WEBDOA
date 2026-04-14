@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, {
   useEffect,
   useMemo,
@@ -201,7 +202,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
       clearSelection,
       getSelectedRowIndex: () => currentSelectedRowIndex,
     }),
-    [currentSelectedRowIndex, rows]
+    [clearSelection, currentSelectedRowIndex, selectFirstRow, selectLastRow]
   );
 
   function handleRowClick(row: T, rowIndex: number) {
@@ -315,7 +316,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
   });
 
   return () => cancelAnimationFrame(id);
-  }, [rows, loading, autoSelectFirstRow, currentSelectedRowIndex]);
+  }, [rows, loading, autoSelectFirstRow, currentSelectedRowIndex, setSelectedIndex]);
 
   useEffect(() => {
     if (

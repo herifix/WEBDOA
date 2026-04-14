@@ -1,9 +1,9 @@
+/* eslint-disable react-hooks/refs */
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Search } from "lucide-react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
+import ERPDatePicker from "../../components/ERPDatePicker";
 import ERPGridTable from "../../components/Grid";
 import ERPToolbar from "../../components/ToolbarHR";
 import TextBoxMst from "../../components/TextBoxMaster";
@@ -19,6 +19,7 @@ import { buildMediaUrl } from "../../config/appConfig";
 
 export default function MasterBarangPage() {
   const vm = useMasterItemPage();
+  const { search, setPage } = vm;
 
   const [openFind, setOpenFind] = useState(false);
   const [jenis, setJenis] = useState<JenisPencarian>("item");
@@ -30,8 +31,8 @@ export default function MasterBarangPage() {
   });
 
   useEffect(() => {
-    vm.setPage(1);
-  }, [vm.search]);
+    setPage(1);
+  }, [search, setPage]);
 
   const openPopup = (searchType: JenisPencarian) => {
     setJenis(searchType);
@@ -259,7 +260,7 @@ export default function MasterBarangPage() {
               />
 
               <label className="text-sm text-slate-700">Active Date</label>
-              <DatePicker
+              <ERPDatePicker
                 selected={vm.activeDate}
                 onChange={(date: Date | null) => vm.setactiveDate(date)}
                 dateFormat="dd-MMM-yyyy"
@@ -338,7 +339,7 @@ export default function MasterBarangPage() {
                     </div>
 
                     <label className="text-sm text-slate-700">Active Date 2</label>
-                    <DatePicker
+                    <ERPDatePicker
                       selected={vm.activeDate}
                       onChange={(date: Date | null) => vm.setactiveDate(date)}
                       dateFormat="dd-MMM-yyyy"

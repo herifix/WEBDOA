@@ -25,6 +25,7 @@ export default function ApplicationSettingPage() {
   useEffect(() => {
     if (!settingQuery.data) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMsgTemplate(settingQuery.data.msgTemplate || "");
     setMsgLink(settingQuery.data.msgLink || "");
     setMsgImage(settingQuery.data.msgImage || "");
@@ -34,6 +35,7 @@ export default function ApplicationSettingPage() {
 
   useEffect(() => {
     if (!msgImageFile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMsgImagePreviewUrl("");
       return undefined;
     }

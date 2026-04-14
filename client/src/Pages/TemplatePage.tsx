@@ -1,8 +1,9 @@
-import { useMemo, useState,useRef } from "react";
-import { Search, Check, Trash2, Plus,Printer,Pencil,CircleX, Save } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
 //import { Search, CalendarDays, Send, Check, X, Trash2, Plus,Printer,Pencil,RefreshCw,CircleX, Save } from "lucide-react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import ERPDatePicker from "../components/ERPDatePicker";
+import ERPToolbar from "../components/ToolbarHR";
+import { FORM_MODE } from "../TypeData/forMode";
 
 type ItemRow = {
   id: number;
@@ -146,27 +147,18 @@ export default function MasterBarangPage() {
       <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         {/* TOOLBAR */}
         <div className="mb-4 flex flex-wrap gap-1">
-          <button className="btntoolbar">
-            New <Plus className="h-4 w-4" />
-          </button>
-          <button className="btntoolbar">
-            Edit <Pencil className="h-4 w-4" />
-          </button>
-          <button className="btntoolbar">
-            Save <Save className="h-4 w-4" />
-          </button>
-          <button className="btntoolbar">
-            Print <Printer className="h-4 w-4" />
-          </button>
-          <button className="btntoolbar">
-            Approve <Check className="h-4 w-4" />
-          </button>
-          <button className="btntoolbar">
-            UN Approve <CircleX className="h-4 w-4" />
-          </button>
-          <button className="btntoolbar">
-            Delete <Trash2 className="h-4 w-4" />
-          </button>
+          <ERPToolbar
+            mode={FORM_MODE.VIEW}
+            onNew={() => console.log("new")}
+            onEdit={() => console.log("edit")}
+            onSave={() => console.log("save")}
+            onPrint={() => console.log("print")}
+            onApprove={() => console.log("approve")}
+            onUnapprove={() => console.log("unapprove")}
+            onDelete={() => console.log("delete")}
+            onRefresh={() => console.log("refresh")}
+            showExport={false}
+          />
         </div>
 
         {/* FORM ERP */}
@@ -204,7 +196,7 @@ export default function MasterBarangPage() {
               </div>
 
               <label className="text-sm text-slate-700">Active Date</label>
-              <DatePicker
+              <ERPDatePicker
                 selected={activeDate}
                 onChange={(date: Date | null) => setactiveDate(date)}
                 dateFormat="dd-MMM-yyyy"
@@ -248,7 +240,7 @@ export default function MasterBarangPage() {
               </div>
 
               <label className="text-sm text-slate-700">Active Date 2</label>
-              <DatePicker
+              <ERPDatePicker
                 selected={activeDate}
                 onChange={(date: Date | null) => setactiveDate(date)}
                 dateFormat="dd-MMM-yyyy"

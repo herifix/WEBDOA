@@ -26,3 +26,11 @@ export async function deleteTRBuletin(id_buletin: number) {
 
   return response.data;
 }
+
+export async function publishTRBuletin(id_buletin: number) {
+  const response = await http.post("api/Transaction/TRBuletin/Publish", {
+    id_buletin,
+  });
+
+  return response.data;
+}

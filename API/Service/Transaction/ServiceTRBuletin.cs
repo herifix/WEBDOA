@@ -2,6 +2,9 @@ using API.Repository.Transaction;
 using API.Repository.global;
 using Microsoft.AspNetCore.Hosting;
 using System.Data;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace API.Service.Transaction
 {
@@ -9,12 +12,21 @@ namespace API.Service.Transaction
     {
         private readonly IDbConnection conn;
         private readonly RepoTRBuletin repo;
+        private readonly RepoMasterDonatur donaturRepo;
+        private readonly IConfiguration configuration;
         private readonly IWebHostEnvironment env;
 
-        public ServiceTRBuletin(IDbConnection conn, RepoTRBuletin repo, IWebHostEnvironment env)
+        public ServiceTRBuletin(
+            IDbConnection conn,
+            RepoTRBuletin repo,
+            RepoMasterDonatur donaturRepo,
+            IConfiguration configuration,
+            IWebHostEnvironment env)
         {
             this.conn = conn;
             this.repo = repo;
+            this.donaturRepo = donaturRepo;
+            this.configuration = configuration;
             this.env = env;
         }
 
@@ -282,6 +294,154 @@ namespace API.Service.Transaction
             }
         }
 
+        public async Task<ResponseData<int>> Publish(long idTRBuletin, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                    conn.Open();
+
+                repo.EnsureTable(conn);
+
+                if (idTRBuletin <= 0)
+                {
+                    return new ResponseData<int>
+                    {
+                        success = false,
+                        message = "Data buletin tidak valid.",
+                        data = 0
+                    };
+                }
+
+                var buletin = repo.GetDataById(idTRBuletin, conn);
+                if (buletin.id_buletin <= 0)
+                {
+                    return new ResponseData<int>
+                    {
+                        success = false,
+                        message = "Data buletin tidak ditemukan.",
+                        data = 0
+                    };
+                }
+
+                var defaultPendoa = repo.GetDefaultPendoa(conn);
+                if (defaultPendoa.id_pendoa <= 0)
+                {
+                    return new ResponseData<int>
+                    {
+                        success = false,
+                        message = "Pendoa default belum tersedia.",
+                        data = 0
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(defaultPendoa.nohp))
+                {
+                    return new ResponseData<int>
+                    {
+                        success = false,
+                        message = "Nomor HP pendoa default belum diisi.",
+                        data = 0
+                    };
+                }
+
+                string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
+                string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
+                string publicBaseUrl = configuration["WhatsAppGateway:PublicBaseUrl"] ?? "";
+
+                if (string.IsNullOrWhiteSpace(gatewayUrl))
+                {
+                    return new ResponseData<int>
+                    {
+                        success = false,
+                        message = "WhatsApp gateway URL belum diatur.",
+                        data = 0
+                    };
+                }
+
+                var donaturs = donaturRepo.GetActiveDonatursWithPhone(conn);
+                if (donaturs.Count == 0)
+                {
+                    return new ResponseData<int>
+                    {
+                        success = false,
+                        message = "Tidak ada donatur aktif dengan nomor HP.",
+                        data = 0
+                    };
+                }
+
+                string attachmentUrl = BuildAbsoluteFileUrl(publicBaseUrl, buletin.pathFile);
+                int successCount = 0;
+                var failedNames = new List<string>();
+
+                using var httpClient = new HttpClient();
+                if (!string.IsNullOrWhiteSpace(gatewayToken))
+                {
+                    httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", gatewayToken);
+                }
+
+                foreach (var donatur in donaturs)
+                {
+                    string message = (buletin.pesanText ?? "")
+                        .Replace("<donatur>", donatur.Nama ?? "", StringComparison.OrdinalIgnoreCase)
+                        .Replace("<pendoa>", defaultPendoa.nama ?? "", StringComparison.OrdinalIgnoreCase);
+
+                    var payload = new
+                    {
+                        fromPhone = defaultPendoa.nohp,
+                        toPhone = donatur.NoHP,
+                        donorName = donatur.Nama,
+                        prayerBy = defaultPendoa.nama,
+                        message,
+                        attachmentUrl,
+                        attachmentName = buletin.description
+                    };
+
+                    using var content = new StringContent(
+                        JsonSerializer.Serialize(payload),
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    using var response = await httpClient.PostAsync(gatewayUrl, content, cancellationToken);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        successCount++;
+                    }
+                    else
+                    {
+                        failedNames.Add(donatur.Nama);
+                    }
+                }
+
+                string responseMessage = failedNames.Count == 0
+                    ? $"Publish berhasil dikirim ke {successCount} donatur."
+                    : $"Publish berhasil ke {successCount} donatur. Gagal: {string.Join(", ", failedNames.Take(5))}{(failedNames.Count > 5 ? "..." : "")}";
+
+                return new ResponseData<int>
+                {
+                    success = successCount > 0,
+                    message = responseMessage,
+                    data = successCount
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<int>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = 0
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+        }
+
         private string SaveAttachmentFile(IFormFile file)
         {
             string extension = Path.GetExtension(file.FileName);
@@ -325,6 +485,20 @@ namespace API.Service.Transaction
             var invalidChars = Path.GetInvalidFileNameChars();
             string safe = new string(value.Where(c => !invalidChars.Contains(c)).ToArray()).Trim();
             return string.IsNullOrWhiteSpace(safe) ? "attachment" : safe.Replace(" ", "_");
+        }
+
+        private string BuildAbsoluteFileUrl(string publicBaseUrl, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+                return "";
+
+            if (Uri.TryCreate(relativePath, UriKind.Absolute, out var absoluteUri))
+                return absoluteUri.ToString();
+
+            if (string.IsNullOrWhiteSpace(publicBaseUrl))
+                return relativePath.Replace("\\", "/");
+
+            return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
         }
     }
 }

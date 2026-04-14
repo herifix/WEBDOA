@@ -105,6 +105,23 @@ ORDER BY id_pendoa;";
             return conn.ExecuteScalar<string?>(sql, transaction: tran) ?? "";
         }
 
+        public ResponseModelMasterPendoa GetDefaultPendoa(IDbConnection conn, IDbTransaction? tran = null)
+        {
+            const string sql = @"
+SELECT TOP 1
+    id_pendoa,
+    ISNULL(nama, '') AS nama,
+    ISNULL(nohp, '') AS nohp,
+    ISNULL(dfl, 0) AS dfl,
+    ISNULL(createddate, GETDATE()) AS createddate
+FROM dbo.Pendoa
+WHERE dfl = 1
+ORDER BY id_pendoa;";
+
+            return conn.QuerySingleOrDefault<ResponseModelMasterPendoa>(sql, transaction: tran)
+                ?? new ResponseModelMasterPendoa();
+        }
+
         public long GetNextId(IDbConnection conn, IDbTransaction tran)
         {
             EnsureTable(conn, tran);

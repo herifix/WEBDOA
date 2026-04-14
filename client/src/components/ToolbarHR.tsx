@@ -2,6 +2,32 @@ import type { ReactNode } from "react";
 import { type FormMode,type ToolbarActionKey } from "../TypeData/forMode";
 import { Plus, Pencil, Save, Printer, Check, CircleX, Trash2, RefreshCw, X, FileDown, } from "lucide-react";
 
+type ToolbarVisibility = {
+  new: boolean;
+  edit: boolean;
+  save: boolean;
+  cancel: boolean;
+  print: boolean;
+  approve: boolean;
+  unapprove: boolean;
+  delete: boolean;
+  refresh: boolean;
+  export: boolean;
+};
+
+type ToolbarPermissionConfig = Partial<{
+  canAdd: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canPrint: boolean;
+  canApprove: boolean;
+  canUnapprove: boolean;
+  canExport: boolean;
+  canSave: boolean;
+  canCancel: boolean;
+  canRefresh: boolean;
+}>;
+
 type ToolbarButtonConfig = {
   key: ToolbarActionKey | string;
   label: string;
@@ -15,6 +41,7 @@ type ToolbarButtonConfig = {
 
 type ERPToolbarProps = {
   mode?: FormMode;
+  permissions?: ToolbarPermissionConfig;
 
   onNew?: () => void;
   onEdit?: () => void;
@@ -74,9 +101,21 @@ function Spinner() {
   return <RefreshCw className="h-4 w-4 animate-spin" />;
 }
 
-function getDefaultVisibilityByMode(mode: FormMode) {
+function getDefaultVisibilityByMode(mode: FormMode): ToolbarVisibility {
   switch (mode) {
     case "new":
+      return {
+        new: false,
+        edit: false,
+        save: true,
+        cancel: true,
+        print: false,
+        approve: false,
+        unapprove: false,
+        delete: false,
+        refresh: false,
+        export: false,
+      };
     case "edit":
       return {
         new: false,
@@ -87,7 +126,7 @@ function getDefaultVisibilityByMode(mode: FormMode) {
         approve: false,
         unapprove: false,
         delete: false,
-        refresh: true,
+        refresh: false,
         export: false,
       };
 
@@ -119,18 +158,31 @@ function getDefaultVisibilityByMode(mode: FormMode) {
         refresh: true,
         export: true,
       };
-  }
+
+    }
 }
 
-function mergeVisible(
+function resolvePermissionVisible(
+  permissionValue: boolean | undefined,
+  override: boolean | undefined,
   defaultVisible: boolean,
-  override?: boolean,
 ): boolean {
-  return override ?? defaultVisible;
+  if (override !== undefined) return override;
+  if (permissionValue !== undefined) return permissionValue;
+  return defaultVisible;
+}
+
+function isToolbarEditingMode(mode: FormMode) {
+  return mode === "new" || mode === "edit";
+}
+
+function isLockedWhileEditing(actionKey: ToolbarActionKey) {
+  return actionKey !== "save" && actionKey !== "cancel";
 }
 
 export default function ERPToolbar({
   mode = "view",
+  permissions,
 
   onNew,
   onEdit,
@@ -176,6 +228,23 @@ export default function ERPToolbar({
   className = "",
 }: ERPToolbarProps) {
   const visibleByMode = getDefaultVisibilityByMode(mode);
+  const lockNonSaveActions = isToolbarEditingMode(mode);
+  const resolvedVisibility: ToolbarVisibility = {
+    new: resolvePermissionVisible(permissions?.canAdd, showNew, visibleByMode.new),
+    edit: resolvePermissionVisible(permissions?.canEdit, showEdit, visibleByMode.edit),
+    save: resolvePermissionVisible(permissions?.canSave, showSave, visibleByMode.save),
+    cancel: resolvePermissionVisible(permissions?.canCancel, showCancel, visibleByMode.cancel),
+    print: resolvePermissionVisible(permissions?.canPrint, showPrint, visibleByMode.print),
+    approve: resolvePermissionVisible(permissions?.canApprove, showApprove, visibleByMode.approve),
+    unapprove: resolvePermissionVisible(
+      permissions?.canUnapprove,
+      showUnapprove,
+      visibleByMode.unapprove,
+    ),
+    delete: resolvePermissionVisible(permissions?.canDelete, showDelete, visibleByMode.delete),
+    refresh: resolvePermissionVisible(permissions?.canRefresh, showRefresh, visibleByMode.refresh),
+    export: resolvePermissionVisible(permissions?.canExport, showExport, visibleByMode.export),
+  };
 
   const builtInButtons: BuiltInButton[] = [
     {
@@ -183,23 +252,23 @@ export default function ERPToolbar({
       label: "New",
       icon: <Plus className="h-4 w-4" />,
       onClick: onNew,
-      visible: mergeVisible(visibleByMode.new, showNew),
-      disabled: disableNew,
+      visible: resolvedVisibility.new,
+      disabled: disableNew || (lockNonSaveActions && isLockedWhileEditing("new")),
     },
     {
       key: "edit",
       label: "Edit",
       icon: <Pencil className="h-4 w-4" />,
       onClick: onEdit,
-      visible: mergeVisible(visibleByMode.edit, showEdit),
-      disabled: disableEdit,
+      visible: resolvedVisibility.edit,
+      disabled: disableEdit || (lockNonSaveActions && isLockedWhileEditing("edit")),
     },
     {
       key: "save",
       label: "Save",
       icon: loadingSave ? <Spinner /> : <Save className="h-4 w-4" />,
       onClick: onSave,
-      visible: mergeVisible(visibleByMode.save, showSave),
+      visible: resolvedVisibility.save,
       disabled: disableSave || loadingSave,
       loading: loadingSave,
     },
@@ -208,7 +277,7 @@ export default function ERPToolbar({
       label: "Cancel",
       icon: <X className="h-4 w-4" />,
       onClick: onCancel,
-      visible: mergeVisible(visibleByMode.cancel, showCancel),
+      visible: resolvedVisibility.cancel,
       disabled: disableCancel,
     },
     {
@@ -216,16 +285,17 @@ export default function ERPToolbar({
       label: "Print",
       icon: <Printer className="h-4 w-4" />,
       onClick: onPrint,
-      visible: mergeVisible(visibleByMode.print, showPrint),
-      disabled: disablePrint,
+      visible: resolvedVisibility.print,
+      disabled: disablePrint || (lockNonSaveActions && isLockedWhileEditing("print")),
     },
     {
       key: "approve",
       label: "Approve",
       icon: loadingApprove ? <Spinner /> : <Check className="h-4 w-4" />,
       onClick: onApprove,
-      visible: mergeVisible(visibleByMode.approve, showApprove),
-      disabled: disableApprove || loadingApprove,
+      visible: resolvedVisibility.approve,
+      disabled:
+        disableApprove || loadingApprove || (lockNonSaveActions && isLockedWhileEditing("approve")),
       loading: loadingApprove,
     },
     {
@@ -233,8 +303,11 @@ export default function ERPToolbar({
       label: "UN Approve",
       icon: loadingUnapprove ? <Spinner /> : <CircleX className="h-4 w-4" />,
       onClick: onUnapprove,
-      visible: mergeVisible(visibleByMode.unapprove, showUnapprove),
-      disabled: disableUnapprove || loadingUnapprove,
+      visible: resolvedVisibility.unapprove,
+      disabled:
+        disableUnapprove ||
+        loadingUnapprove ||
+        (lockNonSaveActions && isLockedWhileEditing("unapprove")),
       loading: loadingUnapprove,
     },
     {
@@ -242,8 +315,8 @@ export default function ERPToolbar({
       label: "Delete",
       icon: loadingDelete ? <Spinner /> : <Trash2 className="h-4 w-4" />,
       onClick: onDelete,
-      visible: mergeVisible(visibleByMode.delete, showDelete),
-      disabled: disableDelete || loadingDelete,
+      visible: resolvedVisibility.delete,
+      disabled: disableDelete || loadingDelete || (lockNonSaveActions && isLockedWhileEditing("delete")),
       loading: loadingDelete,
     },
     {
@@ -251,8 +324,9 @@ export default function ERPToolbar({
       label: "Refresh",
       icon: loadingRefresh ? <Spinner /> : <RefreshCw className="h-4 w-4" />,
       onClick: onRefresh,
-      visible: mergeVisible(visibleByMode.refresh, showRefresh),
-      disabled: disableRefresh || loadingRefresh,
+      visible: resolvedVisibility.refresh,
+      disabled:
+        disableRefresh || loadingRefresh || (lockNonSaveActions && isLockedWhileEditing("refresh")),
       loading: loadingRefresh,
     },
     {
@@ -260,8 +334,8 @@ export default function ERPToolbar({
       label: "Export",
       icon: <FileDown className="h-4 w-4" />,
       onClick: onExport,
-      visible: mergeVisible(visibleByMode.export, showExport),
-      disabled: disableExport,
+      visible: resolvedVisibility.export,
+      disabled: disableExport || (lockNonSaveActions && isLockedWhileEditing("export")),
     },
   ];
 
@@ -276,7 +350,9 @@ export default function ERPToolbar({
             key={button.key}
             type="button"
             className={`btntoolbar ${
-              button.disabled ? "pointer-events-none opacity-50" : ""
+              button.disabled
+                ? "pointer-events-none border-slate-300 bg-slate-200 text-slate-400 shadow-none grayscale"
+                : ""
             }`}
             onClick={button.onClick}
             disabled={button.disabled}
@@ -293,7 +369,9 @@ export default function ERPToolbar({
             key={button.key}
             type="button"
             className={`btntoolbar ${
-              button.disabled ? "pointer-events-none opacity-50" : ""
+              button.disabled
+                ? "pointer-events-none border-slate-300 bg-slate-200 text-slate-400 shadow-none grayscale"
+                : ""
             } ${button.className ?? ""}`}
             onClick={button.onClick}
             disabled={button.disabled || button.loading}

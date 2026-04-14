@@ -33,6 +33,7 @@ export default function WhatsAppSchedulePage() {
   useEffect(() => {
     if (!settingQuery.data) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSendTime(settingQuery.data.sendTime || "08:00");
     setIsActive(settingQuery.data.isActive ?? false);
   }, [settingQuery.data]);

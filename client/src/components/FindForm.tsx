@@ -227,8 +227,8 @@ export default function FindDataPopup({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-6">
-      <div className="w-full max-w-4xl rounded-xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="max-h-[min(88vh,760px)] w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-xl font-semibold">{title}</h2>
           <button

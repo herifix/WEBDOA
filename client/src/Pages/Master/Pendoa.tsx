@@ -9,6 +9,8 @@ import StatusBanner from "../../components/StatusBanner";
 import ERPToolbar from "../../components/ToolbarHR";
 import type { Column } from "../../components/GridFullParent";
 
+import { FORM_IDS } from "../../config/formIds";
+import { useFormMenuPermissions } from "../../utils/menuAccess";
 import type { MasterPendoaRow } from "../../Model/ModelMasterPendoa";
 import {
   normalizeInternationalPhoneNumber,
@@ -20,7 +22,9 @@ import { useMasterPendoaPage } from "../../hooks/react_query/useMasterPendoaPage
 
 export default function MasterPendoaPage() {
   const vm = useMasterPendoaPage();
+  const { searchInput, setPage, setSearch } = vm;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { permissions } = useFormMenuPermissions(FORM_IDS.masterPendoa);
 
   const { data, isLoading, isFetching, refetch } = useFetchMasterPendoa({
     pageNumber: vm.page,
@@ -30,12 +34,12 @@ export default function MasterPendoaPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      vm.setPage(1);
-      vm.setSearch(vm.searchInput.trim());
+      setPage(1);
+      setSearch(searchInput.trim());
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [vm.searchInput]);
+  }, [searchInput, setPage, setSearch]);
 
   const handleSearchGrid = () => {
     vm.setPage(1);
@@ -139,6 +143,12 @@ export default function MasterPendoaPage() {
         <div className="mb-1 mt-1 shrink-0 p-0">
           <ERPToolbar
             mode={vm.mode}
+            permissions={{
+              canAdd: permissions.canAdd,
+              canEdit: permissions.canEdit,
+              canDelete: permissions.canDelete,
+              canPrint: permissions.canPrint,
+            }}
             onNew={vm.handleNew}
             onEdit={vm.toEdit}
             onSave={vm.handleSave}

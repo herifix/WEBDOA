@@ -3,6 +3,7 @@ import {
   deleteTRBuletin,
   getTRBuletinById,
   getTRBuletinList,
+  publishTRBuletin,
   saveTRBuletin,
 } from "../../service/trBuletinService";
 
@@ -29,5 +30,11 @@ export function useSaveTRBuletin() {
 export function useDeleteTRBuletin() {
   return useMutation({
     mutationFn: (id_buletin: number) => deleteTRBuletin(id_buletin),
+  });
+}
+
+export function usePublishTRBuletin() {
+  return useMutation({
+    mutationFn: (id_buletin: number) => publishTRBuletin(id_buletin),
   });
 }

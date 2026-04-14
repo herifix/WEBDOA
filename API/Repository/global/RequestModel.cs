@@ -176,6 +176,11 @@ public class RequestDeleteTRBuletin
     public long id_buletin { get; set; }
 }
 
+public class RequestPublishTRBuletin
+{
+    public long id_buletin { get; set; }
+}
+
 public class RequestUpdateWhatsAppSchedule
 {
     public string? sendTime { get; set; }

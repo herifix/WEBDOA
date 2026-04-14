@@ -94,7 +94,10 @@ export default function DashboardPage() {
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
 
-  const sourceRows: DashboardBirthdayItem[] = dashboardQuery.data ?? [];
+  const sourceRows = useMemo<DashboardBirthdayItem[]>(
+    () => dashboardQuery.data ?? [],
+    [dashboardQuery.data]
+  );
   const totalUpcoming = sourceRows.length;
   const totalCompleted = sourceRows.filter((item) => item.sudahDidoakan).length;
   const totalWithText = sourceRows.filter((item) => item.sudahAdaPesanDoa).length;
@@ -213,6 +216,7 @@ export default function DashboardPage() {
     const dateKey = getDatePart(target.birthdayDate);
 
     if (monthKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExpandedMonths((prev) => ({
         ...prev,
         [monthKey]: true,
@@ -235,6 +239,7 @@ export default function DashboardPage() {
     );
 
     if (nextIndex >= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedRowIndex(nextIndex);
       navigate(location.pathname, { replace: true, state: null });
     }

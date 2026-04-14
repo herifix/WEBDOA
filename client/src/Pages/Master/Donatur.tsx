@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-
 import ConfirmDialog from "../../components/ConfirmDialog";
 import CountryPhoneInput from "../../components/CountryPhoneInput";
+import ERPDatePicker from "../../components/ERPDatePicker";
 import ERPGridTable from "../../components/GridFullParent";
 import StatusBanner from "../../components/StatusBanner";
 import ERPToolbar from "../../components/ToolbarHR";
@@ -23,12 +21,17 @@ import { useMasterDonaturPage } from "../../hooks/react_query/useMasterDonaturPa
 
 export default function MasterDonaturPage() {
   const vm = useMasterDonaturPage();
+  const { searchInput, setPage, setSearch } = vm;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const gridDateFormatter = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const gridDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+    []
+  );
 
   const parseInputDate = (value: string) => {
     if (!value) return null;
@@ -49,14 +52,14 @@ export default function MasterDonaturPage() {
     return `${year}-${month}-${day}`;
   };
 
-  const formatGridDate = (value: string | null | undefined) => {
+  const formatGridDate = useCallback((value: string | null | undefined) => {
     if (!value) return "";
 
     const parsedDate = new Date(value);
     if (Number.isNaN(parsedDate.getTime())) return value;
 
     return gridDateFormatter.format(parsedDate);
-  };
+  }, [gridDateFormatter]);
 
   const { data, isLoading, isFetching, refetch } = useFetchMasterDonatur({
     pageNumber: vm.page,
@@ -68,25 +71,17 @@ export default function MasterDonaturPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      vm.setPage(1);
-      vm.setSearch(vm.searchInput.trim());
+      setPage(1);
+      setSearch(searchInput.trim());
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [vm.searchInput]);
+  }, [searchInput, setPage, setSearch]);
 
   const handleSearchGrid = () => {
     vm.setPage(1);
     vm.setSearch(vm.searchInput.trim());
   };
-
-  if (!permissions.canView) {
-    return (
-      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
-        Anda tidak memiliki akses untuk membuka form ini.
-      </div>
-    );
-  }
 
   const handleRefreshGrid = () => {
     vm.setSearchInput("");
@@ -192,8 +187,16 @@ export default function MasterDonaturPage() {
       hidden: true,
     },
   ],
-  [vm.page, vm.pageSize]
+  [formatGridDate, vm.page, vm.pageSize]
 );
+
+  if (!permissions.canView) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-center text-base font-semibold text-rose-700">
+        Anda tidak memiliki akses untuk membuka form ini.
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-70px)] w-full flex-col bg-slate-50 p-1 md:p-2 lg:p-0">
@@ -201,6 +204,12 @@ export default function MasterDonaturPage() {
         <div className="mb-1 mt-1 shrink-0 p-0">
           <ERPToolbar
             mode={vm.mode}
+            permissions={{
+              canAdd: permissions.canAdd,
+              canEdit: permissions.canEdit,
+              canDelete: permissions.canDelete,
+              canPrint: permissions.canPrint,
+            }}
             onNew={vm.handleNew}
             onEdit={vm.toEdit}
             onSave={vm.handleSave}
@@ -221,10 +230,6 @@ export default function MasterDonaturPage() {
                 visible: false,
               },
             ]}
-            showNew={permissions.canAdd}
-            showEdit={permissions.canEdit}
-            showPrint={permissions.canPrint}
-            showDelete={permissions.canDelete}
             showExport={false}
             showApprove={false}
           />
@@ -245,7 +250,7 @@ export default function MasterDonaturPage() {
               />
 
               <label className="text-sm text-slate-700">Tgl Lahir</label>
-              <DatePicker
+              <ERPDatePicker
                 selected={parseInputDate(vm.tglLahir)}
                 onChange={(date: Date | null) =>
                   vm.setTglLahir(formatInputDate(date))
@@ -285,7 +290,7 @@ export default function MasterDonaturPage() {
               </div>
 
               <label className="text-sm text-slate-700">Last Donation</label>
-              <DatePicker
+              <ERPDatePicker
                 selected={parseInputDate(vm.lastDonation)}
                 onChange={(date: Date | null) =>
                   vm.setLastDonationWithAutoStatus(formatInputDate(date))

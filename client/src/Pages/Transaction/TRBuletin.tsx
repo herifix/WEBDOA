@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, FileText, Paperclip, Search, Trash2, Upload } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -14,6 +14,7 @@ import {
   useDeleteTRBuletin,
   useFetchTRBuletinById,
   useFetchTRBuletinList,
+  usePublishTRBuletin,
   useSaveTRBuletin,
 } from "../../hooks/react_query/useFetchTRBuletin";
 import { useERPFormMode } from "../../hooks/react_query/userERPFormMode";
@@ -62,6 +63,7 @@ export default function TRBuletinPage() {
   const detailQuery = useFetchTRBuletinById(selectedId);
   const saveMutation = useSaveTRBuletin();
   const deleteMutation = useDeleteTRBuletin();
+  const publishMutation = usePublishTRBuletin();
 
   const [idBuletin, setIdBuletin] = useState(0);
   const [description, setDescription] = useState("");
@@ -75,11 +77,33 @@ export default function TRBuletinPage() {
   const [openFind, setOpenFind] = useState(false);
   const [jenisFind, setJenisFind] = useState<JenisPencarian>("buletin");
 
-  const rows = listQuery.data ?? [];
+  const rows = useMemo(() => listQuery.data ?? [], [listQuery.data]);
+
+  const applyDetailToForm = useCallback((data: TRBuletinItem) => {
+    setIdBuletin(data.id_buletin ?? 0);
+    setDescription(data.description ?? "");
+    setPesanText(data.pesanText ?? "");
+    setPathFile(data.pathFile ?? "");
+    setCreatedDate(data.createdDate ?? "");
+    setDefaultPendoaName(data.defaultPendoaName ?? "");
+    setSelectedFile(null);
+  }, []);
+
+  const resetToNewForm = useCallback(() => {
+    setIdBuletin(0);
+    setDescription("");
+    setPesanText("");
+    setPathFile("");
+    setCreatedDate("");
+    setSelectedFile(null);
+    setSelectedFileUrl("");
+    setDefaultPendoaName(detailQuery.data?.defaultPendoaName ?? defaultPendoaName);
+  }, [defaultPendoaName, detailQuery.data?.defaultPendoaName]);
 
   useEffect(() => {
     if (!rows.length) {
       if (!formMode.isEditing) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedId(0);
         resetToNewForm();
       }
@@ -94,10 +118,11 @@ export default function TRBuletinPage() {
     if (!formMode.isEditing) {
       setSelectedId(rows[0].id_buletin);
     }
-  }, [formMode.isEditing, rows, selectedId]);
+  }, [formMode.isEditing, resetToNewForm, rows, selectedId]);
 
   useEffect(() => {
     if (!selectedFile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedFileUrl("");
       return;
     }
@@ -115,8 +140,9 @@ export default function TRBuletinPage() {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     applyDetailToForm(detailQuery.data);
-  }, [detailQuery.data, formMode.isEditing]);
+  }, [applyDetailToForm, detailQuery.data, formMode.isEditing]);
 
   const attachmentUrl = useMemo(() => {
     if (selectedFileUrl) return selectedFileUrl;
@@ -151,27 +177,6 @@ export default function TRBuletinPage() {
     return "file";
   }, [pathFile, selectedFile]);
 
-  function applyDetailToForm(data: TRBuletinItem) {
-    setIdBuletin(data.id_buletin ?? 0);
-    setDescription(data.description ?? "");
-    setPesanText(data.pesanText ?? "");
-    setPathFile(data.pathFile ?? "");
-    setCreatedDate(data.createdDate ?? "");
-    setDefaultPendoaName(data.defaultPendoaName ?? "");
-    setSelectedFile(null);
-  }
-
-  function resetToNewForm() {
-    setIdBuletin(0);
-    setDescription("");
-    setPesanText("");
-    setPathFile("");
-    setCreatedDate("");
-    setSelectedFile(null);
-    setSelectedFileUrl("");
-    setDefaultPendoaName(detailQuery.data?.defaultPendoaName ?? defaultPendoaName);
-  }
-
   function handleRemoveAttachment() {
     setSelectedFile(null);
     setSelectedFileUrl("");
@@ -183,6 +188,23 @@ export default function TRBuletinPage() {
     await queryClient.invalidateQueries({ queryKey: ["tr-buletin-list"] });
     await listQuery.refetch();
     await detailQuery.refetch();
+  }
+
+  async function handlePublish() {
+    clearFormMessage();
+
+    if (idBuletin <= 0) {
+      setFormError("Buka data buletin dulu sebelum publish.");
+      return;
+    }
+
+    try {
+      const response = await publishMutation.mutateAsync(idBuletin);
+      setFormSuccess(response.message || "Publish buletin berhasil dijalankan.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal publish buletin.";
+      setFormError(message);
+    }
   }
 
   function handleNew() {
@@ -344,6 +366,13 @@ export default function TRBuletinPage() {
         <div className="mb-1 mt-1 shrink-0 p-0">
           <ERPToolbar
             mode={formMode.mode}
+            permissions={{
+              canAdd: permissions.canAdd,
+              canEdit: permissions.canEdit,
+              canDelete: permissions.canDelete,
+              canSave: true,
+              canCancel: true,
+            }}
             onNew={handleNew}
             onEdit={handleEdit}
             onSave={handleSave}
@@ -351,11 +380,8 @@ export default function TRBuletinPage() {
             onDelete={handleDeleteClick}
             onRefresh={handleRefresh}
             loadingSave={saveMutation.isPending}
-            showNew={permissions.canAdd}
-            showEdit={permissions.canEdit}
             showSave
             showCancel
-            showDelete={permissions.canDelete}
             showPrint={false}
             showApprove={false}
             showExport={false}
@@ -364,6 +390,21 @@ export default function TRBuletinPage() {
             disableSave={!formMode.isEditing}
             disableCancel={!formMode.isEditing}
             disableDelete={formMode.isEditing || idBuletin <= 0}
+            customButtons={[
+              {
+                key: "publish",
+                label: "Publish",
+                onClick: () => {
+                  void handlePublish();
+                },
+                visible: true,
+                disabled:
+                  formMode.mode !== FORM_MODE.VIEW ||
+                  idBuletin <= 0 ||
+                  publishMutation.isPending,
+                loading: publishMutation.isPending,
+              },
+            ]}
           />
         </div>
 

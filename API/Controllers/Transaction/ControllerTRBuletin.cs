@@ -43,5 +43,12 @@ namespace API.Controllers
         {
             return service.Delete(request.id_buletin);
         }
+
+        [HttpPost]
+        [Route("Transaction/TRBuletin/Publish")]
+        public async Task<ResponseData<int>> Publish([FromBody] RequestPublishTRBuletin request, CancellationToken cancellationToken)
+        {
+            return await service.Publish(request.id_buletin, cancellationToken);
+        }
     }
 }
