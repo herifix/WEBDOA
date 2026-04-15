@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import "../styles/dashboard.css";
+import logoIntersoft from "../assets/intlogo.png";
 
 import icoHome from "../assets/iconplate/platehome.png";
 import icoMaster from "../assets/iconplate/flatmaster.png";
@@ -22,6 +23,9 @@ type SidebarProps = {
 const menuRouteMap: Record<string, string> = {
   home: "/dashboard",
   "master barang": "/master-barang",
+  currency: "/master-currency",
+  "master currency": "/master-currency",
+  coa: "/master-accountcoa",
   pendoa: "/master-pendoa",
   donatur: "/master-donatur",
   "master user": "/tools-master-user",
@@ -34,7 +38,7 @@ const menuRouteMap: Record<string, string> = {
   "setting application": "/tools-application-setting",
   "application setting": "/tools-application-setting",
   "aplication setting": "/tools-application-setting",
-  buletin: "/transaction-buletin",
+  "account coa": "/master-accountcoa",
 };
 
 function normalizeMenuKey(value?: string | null) {
@@ -134,79 +138,104 @@ export default function Sidebar({ hidden }: SidebarProps) {
   }
 
   function renderMenuItems(items: AppMenuItem[], depth = 0): ReactNode {
-    return items.map((item) => {
-      const children = item.children ?? [];
-      const path = getMenuPath(item);
-      const itemIsOpen = isOpen(item);
-      const containerClass =
-        depth === 0
-          ? ""
-          : "ml-4 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/10 p-2";
+  return items.map((item) => {
+    const children = item.children ?? [];
+    const path = getMenuPath(item);
+    const itemIsOpen = isOpen(item);
 
-      if (children.length > 0) {
-        return (
-          <div key={item.id_form} className={containerClass}>
-            <button
-              className={`btnmenu ${
-                hasActiveDescendant(item) ? "bg-white/30" : ""
-              } ${depth > 0 ? "text-sm font-normal" : ""}`}
-              onClick={() =>
-                setOpenMenus((prev) => ({
-                  ...prev,
-                  [item.id_form]: !itemIsOpen,
-                }))
-              }
+    const containerClass =
+      depth === 0
+        ? ""
+        : depth === 1
+          ? "ml-4 flex flex-col gap-0.5"
+          : "ml-6 flex flex-col gap-0.5";
+
+    if (children.length > 0) {
+      return (
+        <div key={item.id_form} className={containerClass}>
+          <button
+            className={
+              depth === 0
+                ? `btnmenu ${hasActiveDescendant(item) ? "bg-white/30" : ""}`
+                : `flex w-full items-center px-1 py-1.5 text-sm font-normal transition-colors
+                   ${hasActiveDescendant(item)
+                     ? "text-white"
+                     : "text-white/85 hover:text-white"}
+                   focus:outline-none focus:text-white`
+            }
+            onClick={() =>
+              setOpenMenus((prev) => ({
+                ...prev,
+                [item.id_form]: !itemIsOpen,
+              }))
+            }
+          >
+            {depth === 0 ? (
+              <img src={getMenuIcon(item)} className="menu-icon" alt="" />
+            ) : null}
+            {item.formName}
+            <span
+              className={`ml-auto inline-flex transform transition-transform duration-200 ${
+                itemIsOpen ? "rotate-90" : "rotate-0"
+              }`}
             >
-              {depth === 0 ? <img src={getMenuIcon(item)} className="menu-icon" alt="" /> : null}
-              {item.formName}
-              <span
-                className={`ml-auto inline-flex transform transition-transform duration-200 ${
-                  itemIsOpen ? "rotate-90" : "rotate-0"
-                }`}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </span>
-            </button>
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          </button>
 
-            {itemIsOpen ? renderMenuItems(children, depth + 1) : null}
-          </div>
-        );
-      }
+          {itemIsOpen ? renderMenuItems(children, depth + 1) : null}
+        </div>
+      );
+    }
 
-      if (!path && canRenderParentLabel(item)) {
+    if (!path) {
+      if (canRenderParentLabel(item)) {
         return (
           <div key={item.id_form} className={depth === 0 ? "" : containerClass}>
             <div
-              className={`btnmenu cursor-default opacity-90 ${
-                depth > 0 ? "text-sm font-normal" : ""
-              }`}
+              className={
+                depth === 0
+                  ? "btnmenu cursor-default opacity-90"
+                  : "px-1 py-1 text-sm font-normal text-white/80"
+              }
             >
-              {depth === 0 ? <img src={getMenuIcon(item)} className="menu-icon" alt="" /> : null}
+              {depth === 0 ? (
+                <img src={getMenuIcon(item)} className="menu-icon" alt="" />
+              ) : null}
               {item.formName}
             </div>
           </div>
         );
       }
 
-      if (!path) {
-        return null;
-      }
+      return null;
+    }
 
-      return (
-        <div key={item.id_form} className={depth === 0 ? "" : containerClass}>
-          <button
-            className={`btnmenu ${
-              isActive(path) ? "bg-white/40 text-black" : ""
-            } ${depth > 0 ? "text-sm font-normal" : ""}`}
-            onClick={() => navigate(path)}
-          >
-            {depth === 0 ? <img src={getMenuIcon(item)} className="menu-icon" alt="" /> : null}
-            {item.formName}
-          </button>
-        </div>
-      );
-    });
-  }
+    return (
+      <div key={item.id_form} className={depth === 0 ? "" : containerClass}>
+        <button
+          className={
+            depth === 0
+              ? `btnmenu ${isActive(path) ? "bg-white/40 text-black" : ""}`
+              : `w-full px-1 py-1.5 text-left text-sm font-normal transition-colors
+                ${
+                  isActive(path)
+                    ? "text-base font-bold text-yellow-300"
+                    : "text-white/85 hover:text-white"
+                }
+                focus:outline-none`
+          }
+          onClick={() => navigate(path)}
+        >
+          {depth === 0 ? (
+            <img src={getMenuIcon(item)} className="menu-icon" alt="" />
+          ) : null}
+          {item.formName}
+        </button>
+      </div>
+    );
+  });
+}
 
   return (
     <aside
@@ -218,8 +247,26 @@ export default function Sidebar({ hidden }: SidebarProps) {
       {!hidden && (
         <>
           <div className="mb-4 shrink-0">
-            <h2 className="text-2xl font-extrabold tracking-wide text-white">MENU</h2>
-            <p className="mt-1 text-sm text-cyan-100/80">Navigation</p>
+            <div className="flex items-center justify-between">
+              {/* LEFT: TEXT */}
+              <div>
+                <h2 className="text-2xl font-extrabold leading-none tracking-wide text-white">
+                  MENU
+                </h2>
+                <p className="mt-1 text-sm leading-none text-cyan-100/80">
+                  Navigation
+                </p>
+              </div>
+
+              {/* RIGHT: LOGO */}
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-[3px] border-white/80 bg-[radial-gradient(circle_at_top,_#ffffff,_#dbeafe_55%,_#bfdbfe)] p-[2px] shadow-[0_6px_16px_rgba(59,130,246,0.16)]">
+                <img
+                  src={logoIntersoft}
+                  alt="Intersoft Logo"
+                  className="h-full w-full rounded-full object-cover"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
