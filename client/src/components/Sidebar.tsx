@@ -25,6 +25,16 @@ const menuRouteMap: Record<string, string> = {
   "master barang": "/master-barang",
   currency: "/master-currency",
   "master currency": "/master-currency",
+  area: "/master-area",
+  "master area": "/master-area",
+  divisi: "/master-divisi",
+  "master divisi": "/master-divisi",
+  unit: "/master-unit",
+  msunit: "/master-unit",
+  jurnal: "/transaction-jurnal",
+  "transaction jurnal": "/transaction-jurnal",
+  "transaction buletin": "/transaction-buletin",
+  buletin: "/transaction-buletin",
   coa: "/master-accountcoa",
   pendoa: "/master-pendoa",
   donatur: "/master-donatur",
@@ -42,7 +52,11 @@ const menuRouteMap: Record<string, string> = {
 };
 
 function normalizeMenuKey(value?: string | null) {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 function getMenuPath(item: AppMenuItem) {
@@ -55,6 +69,7 @@ function getMenuIcon(item: AppMenuItem) {
 
   if (iconType === "home" || formName === "home") return icoHome;
   if (iconType === "master" || formName === "master data") return icoMaster;
+  if (iconType === "inventory" || formName === "inventory") return icoMaster;
   if (iconType === "tools" || formName === "tools") return icoTools;
   if (iconType === "trans" || formName === "transaction") return icoTR;
   if (iconType === "report" || formName === "report") return icoReport;
