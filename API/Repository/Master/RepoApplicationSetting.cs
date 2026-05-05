@@ -15,17 +15,18 @@ BEGIN
     (
         MsgTemplate NVARCHAR(MAX) NOT NULL CONSTRAINT DF_MsProg_MsgTemplate DEFAULT (''),
         MsgLink NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgLink DEFAULT (''),
-        MsgImage NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgImage DEFAULT ('')
+        MsgImage NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgImage DEFAULT (''),
+        MsgWA_TemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_TemplateName DEFAULT ('')
     );
 
     INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage)
     VALUES ('', '', '');
 END;
 
-IF COL_LENGTH('dbo.MsProg', 'MsgImage') IS NULL
+IF COL_LENGTH('dbo.MsProg', 'MsgWA_TemplateName') IS NULL
 BEGIN
     ALTER TABLE dbo.MsProg
-    ADD MsgImage NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgImage_Alter DEFAULT ('');
+    ADD MsgWA_TemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_TemplateName_Alter DEFAULT ('');
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.MsProg)
@@ -45,7 +46,8 @@ END;";
 SELECT TOP 1
     ISNULL(MsgTemplate, '') AS msgTemplate,
     ISNULL(MsgLink, '') AS msgLink,
-    ISNULL(MsgImage, '') AS msgImage
+    ISNULL(MsgImage, '') AS msgImage,
+    ISNULL(MsgWA_TemplateName, '') AS whatsappTemplateName
 FROM dbo.MsProg";
 
             return conn.QueryFirst<ResponseModelApplicationSetting>(sql, transaction: tran);
@@ -60,19 +62,21 @@ UPDATE dbo.MsProg
 SET
     MsgTemplate = @MsgTemplate,
     MsgLink = @MsgLink,
-    MsgImage = @MsgImage;
+    MsgImage = @MsgImage,
+    MsgWA_TemplateName = @MsgWA_TemplateName;
 
 IF @@ROWCOUNT = 0
 BEGIN
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage)
-    VALUES (@MsgTemplate, @MsgLink, @MsgImage);
+    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName)
+    VALUES (@MsgTemplate, @MsgLink, @MsgImage, @MsgWA_TemplateName);
 END";
 
             conn.Execute(sql, new
             {
                 MsgTemplate = request.msgTemplate ?? "",
                 MsgLink = request.msgLink ?? "",
-                MsgImage = request.existingMsgImage ?? ""
+                MsgImage = request.existingMsgImage ?? "",
+                MsgWA_TemplateName = request.whatsappTemplateName ?? ""
             }, tran);
         }
     }

@@ -1,6 +1,10 @@
 using API.Repository.global;
+using API.Repository.Master;
 using Microsoft.AspNetCore.Hosting;
 using System.Data;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace API.Service.Transaction
 {
@@ -9,18 +13,24 @@ namespace API.Service.Transaction
         private readonly IDbConnection conn;
         private readonly RepoTRBirthdayPray repo;
         private readonly RepoMasterDonatur donaturRepo;
+        private readonly RepoApplicationSetting settingRepo;
         private readonly IWebHostEnvironment env;
+        private readonly IConfiguration configuration;
 
         public ServiceTRBirthdayPray(
             IDbConnection conn,
             RepoTRBirthdayPray repo,
             RepoMasterDonatur donaturRepo,
-            IWebHostEnvironment env)
+            RepoApplicationSetting settingRepo,
+            IWebHostEnvironment env,
+            IConfiguration configuration)
         {
             this.conn = conn;
             this.repo = repo;
             this.donaturRepo = donaturRepo;
+            this.settingRepo = settingRepo;
             this.env = env;
+            this.configuration = configuration;
         }
 
         public ResponseData<List<ResponseModelDashboardBirthday>> GetUpcomingBirthdayDashboard(DateTime currentDate)
@@ -435,6 +445,151 @@ namespace API.Service.Transaction
                 if (conn.State == ConnectionState.Open)
                     conn.Close();
             }
+        }
+
+        public async Task<ResponseData<string>> SendWhatsApp(long idDonatur, int? year = null)
+        {
+            int targetYear = year ?? DateTime.Today.Year;
+
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                    conn.Open();
+
+                var setting = settingRepo.GetSetting(conn);
+                var prayData = repo.GetDataByDonaturId(idDonatur, targetYear, conn).data;
+
+                if (prayData == null || prayData.id_donatur <= 0)
+                {
+                    return new ResponseData<string> { success = false, message = "Data birthday pray tidak ditemukan." };
+                }
+
+                if (string.IsNullOrWhiteSpace(prayData.noHPDonatur))
+                {
+                    return new ResponseData<string> { success = false, message = "Nomor HP donatur tidak tersedia." };
+                }
+
+                string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
+                string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
+                string publicBaseUrl = configuration["WhatsAppGateway:PublicBaseUrl"] ?? "";
+
+                if (string.IsNullOrWhiteSpace(gatewayUrl))
+                {
+                    return new ResponseData<string> { success = false, message = "WhatsApp gateway URL belum diatur." };
+                }
+
+                string templateName = setting.whatsappTemplateName;
+                if (string.IsNullOrWhiteSpace(templateName))
+                {
+                    templateName = "birthday_pray"; // Default fallback
+                }
+
+                // Format phone number to E.164 (remove +, -, spaces, ensure starts with 62)
+                string phoneNumber = prayData.noHPDonatur.Replace("+", "").Replace("-", "").Replace(" ", "");
+                if (phoneNumber.StartsWith("0"))
+                {
+                    phoneNumber = "62" + phoneNumber.Substring(1);
+                }
+                else if (!phoneNumber.StartsWith("62"))
+                {
+                    phoneNumber = "62" + phoneNumber;
+                }
+
+                string headerImageUrl = "";
+                if (!string.IsNullOrWhiteSpace(setting.msgImage))
+                {
+                    headerImageUrl = BuildAbsoluteUrl(publicBaseUrl, setting.msgImage);
+                }
+
+                var payload = new
+                {
+                    phone_number = phoneNumber,
+                    channel = "whatsapp",
+                    message_type = "template",
+                    template = new
+                    {
+                        name = templateName,
+                        language = new { code = "id" },
+                        components = new List<object>()
+                    }
+                };
+
+                // Add Header Component if image exists
+                if (!string.IsNullOrWhiteSpace(headerImageUrl))
+                {
+                    payload.template.components.Add(new
+                    {
+                        type = "header",
+                        parameters = new[]
+                        {
+                            new { type = "image", image = new { link = headerImageUrl } }
+                        }
+                    });
+                }
+
+                // Add Body Component with 4 parameters: donatur, pendoa, link, pesandoa
+                payload.template.components.Add(new
+                {
+                    type = "body",
+                    parameters = new[]
+                    {
+                        new { type = "text", text = prayData.namaDonatur },
+                        new { type = "text", text = prayData.namaPendoa },
+                        new { type = "text", text = setting.msgLink },
+                        new { type = "text", text = prayData.pesan ?? "" }
+                    }
+                });
+
+                using var httpClient = new HttpClient();
+                if (!string.IsNullOrWhiteSpace(gatewayToken))
+                {
+                    httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", gatewayToken);
+                }
+
+                using var content = new StringContent(
+                    JsonSerializer.Serialize(payload),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                using var response = await httpClient.PostAsync(gatewayUrl, content);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return new ResponseData<string>
+                    {
+                        success = true,
+                        message = "Pesan WhatsApp berhasil dikirim.",
+                        data = responseBody
+                    };
+                }
+
+                return new ResponseData<string>
+                {
+                    success = false,
+                    message = $"Gagal mengirim WhatsApp: {response.StatusCode}",
+                    data = responseBody
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<string> { success = false, message = ex.Message };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+        }
+
+        private string BuildAbsoluteUrl(string publicBaseUrl, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath)) return "";
+            if (Uri.TryCreate(relativePath, UriKind.Absolute, out var absoluteUri)) return absoluteUri.ToString();
+            if (string.IsNullOrWhiteSpace(publicBaseUrl)) return relativePath.Replace("\\", "/");
+            return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
         }
 
         private DateTime BuildBirthdayDate(DateTime sourceBirthday, int targetYear)

@@ -19,6 +19,7 @@ export default function ApplicationSettingPage() {
   const [msgImage, setMsgImage] = useState("");
   const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
   const [msgImagePreviewUrl, setMsgImagePreviewUrl] = useState("");
+  const [whatsappTemplateName, setWhatsappTemplateName] = useState("");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
@@ -29,6 +30,7 @@ export default function ApplicationSettingPage() {
     setMsgTemplate(settingQuery.data.msgTemplate || "");
     setMsgLink(settingQuery.data.msgLink || "");
     setMsgImage(settingQuery.data.msgImage || "");
+    setWhatsappTemplateName(settingQuery.data.whatsappTemplateName || "");
     setMsgImageFile(null);
     setMsgImagePreviewUrl("");
   }, [settingQuery.data]);
@@ -57,6 +59,7 @@ export default function ApplicationSettingPage() {
       (settingQuery.data.msgTemplate || "") !== msgTemplate ||
       (settingQuery.data.msgLink || "") !== msgLink ||
       (settingQuery.data.msgImage || "") !== msgImage ||
+      (settingQuery.data.whatsappTemplateName || "") !== whatsappTemplateName ||
       msgImageFile !== null
     );
   }, [msgImage, msgImageFile, msgLink, msgTemplate, settingQuery.data]);
@@ -84,6 +87,7 @@ export default function ApplicationSettingPage() {
         msgLink: msgLink.trim(),
         existingMsgImage: msgImage,
         msgImageFile,
+        whatsappTemplateName: whatsappTemplateName.trim(),
       });
       setFormSuccess(response.message || "Application setting berhasil disimpan.");
       await settingQuery.refetch();
@@ -167,6 +171,23 @@ export default function ApplicationSettingPage() {
                 </div>
                 <p className="text-xs text-slate-500">
                   Kosongkan bila aplikasi tidak membutuhkan link tambahan.
+                </p>
+              </div>
+
+              <label className="pt-3 text-sm font-semibold text-slate-700">WA Template Name</label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <MessageSquareText className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+                  <input
+                    type="text"
+                    value={whatsappTemplateName}
+                    onChange={(e) => setWhatsappTemplateName(e.target.value)}
+                    className="h-12 w-full rounded-2xl border border-amber-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    placeholder="e.g. birthday_pray"
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  Nama template WhatsApp yang sudah didaftarkan di Meta.
                 </p>
               </div>
 

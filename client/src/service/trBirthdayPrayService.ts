@@ -38,3 +38,8 @@ export async function saveTRBirthdayPray(formData: FormData) {
   const response = await http.put("api/Transaction/TRBirthdayPray/Save", formData);
   return response.data;
 }
+
+export async function sendWhatsAppBirthdayPray(payload: { idDonatur: number; year?: number }) {
+  const response = await http.post("api/Transaction/TRBirthdayPray/SendWhatsApp", payload);
+  return response.data;
+}

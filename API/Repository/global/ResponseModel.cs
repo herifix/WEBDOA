@@ -1,4 +1,4 @@
-﻿
+
 #region Common *************************************************
 public class ResponseData<T>
 {   public bool success { get; set; }
@@ -87,6 +87,7 @@ public class ResponseModelApplicationSetting
     public string msgTemplate { get; set; } = "";
     public string msgLink { get; set; } = "";
     public string msgImage { get; set; } = "";
+    public string whatsappTemplateName { get; set; } = "";
 }
 
 #endregion LOGIN

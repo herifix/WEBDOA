@@ -1,4 +1,4 @@
-﻿using Swashbuckle.AspNetCore.Annotations;
+using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel;
 
 #region Common  *************************************************
@@ -193,6 +193,13 @@ public class RequestUpdateApplicationSetting
     public string? msgLink { get; set; }
     public string? existingMsgImage { get; set; }
     public IFormFile? msgImageFile { get; set; }
+    public string? whatsappTemplateName { get; set; }
+}
+
+public class RequestSendWhatsApp
+{
+    public long idDonatur { get; set; }
+    public int? year { get; set; }
 }
 
 # endregion

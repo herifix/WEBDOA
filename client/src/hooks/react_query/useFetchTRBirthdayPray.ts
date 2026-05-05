@@ -34,3 +34,10 @@ export function useSaveTRBirthdayPray() {
     mutationFn: (formData: FormData) => saveTRBirthdayPray(formData),
   });
 }
+
+export function useSendWhatsAppBirthdayPray() {
+  return useMutation({
+    mutationFn: (payload: { idDonatur: number; year?: number }) =>
+      sendWhatsAppBirthdayPray(payload),
+  });
+}

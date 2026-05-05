@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Mic, Pause, Play, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mic, Pause, Play, RefreshCcw, Send, Square, Trash2 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import ERPToolbar from "../../components/ToolbarHR";
 import StatusBanner from "../../components/StatusBanner";
@@ -10,6 +10,7 @@ import {
   useFetchTRBirthdayPrayHistoryByDonatur,
   useFetchTRBirthdayPrayByDonatur,
   useSaveTRBirthdayPray,
+  useSendWhatsAppBirthdayPray,
 } from "../../hooks/react_query/useFetchTRBirthdayPray";
 import { FORM_IDS } from "../../config/formIds";
 import { buildMediaUrl } from "../../config/appConfig";
@@ -107,6 +108,7 @@ export default function TRBirthdayPrayPage() {
   const historyQuery = useFetchTRBirthdayPrayHistoryByDonatur(idDonatur);
   const applicationSettingQuery = useFetchApplicationSetting();
   const { mutateAsync: saveAsync, isPending: isSaving } = useSaveTRBirthdayPray();
+  const { mutateAsync: sendWAAsync, isPending: isSendingWA } = useSendWhatsAppBirthdayPray();
   const { permissions } = useFormMenuPermissions(FORM_IDS.transaksiBirthdayPray);
 
   const [pesan, setPesan] = useState("");
@@ -422,6 +424,34 @@ export default function TRBirthdayPrayPage() {
     }
   }
 
+  async function handleSendWhatsApp() {
+    clearFormMessage();
+
+    if (idDonatur <= 0) {
+      setFormError("Data donatur tidak valid.");
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      setFormError("Silakan simpan perubahan terlebih dahulu sebelum mengirim WhatsApp.");
+      return;
+    }
+
+    try {
+      const result = await sendWAAsync({ idDonatur, year: currentYear });
+
+      if (!result?.success) {
+        throw new Error(result?.message || "Gagal mengirim WhatsApp.");
+      }
+
+      setFormSuccess(result.message || "Pesan WhatsApp berhasil dikirim.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Gagal mengirim WhatsApp.";
+      setFormError(message);
+    }
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-slate-50 p-2">
       <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
@@ -531,6 +561,22 @@ export default function TRBirthdayPrayPage() {
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSendWhatsApp();
+                    }}
+                    disabled={isSendingWA || !pageData || pageData.id_donatur <= 0}
+                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 hover:shadow-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSendingWA ? (
+                      <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Send to WhatsApp
+                  </button>
                 </div>
 
                 <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-900/80 bg-[#0b141a] shadow-[0_22px_60px_rgba(15,23,42,0.25)]">

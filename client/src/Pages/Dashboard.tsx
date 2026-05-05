@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { RefreshCcw, Send } from "lucide-react";
 import ERPGridTable, { type Column } from "../components/GridFullParent";
-import { useFetchBirthdayDashboard } from "../hooks/react_query/useFetchTRBirthdayPray";
+import {
+  useFetchBirthdayDashboard,
+  useSendWhatsAppBirthdayPray,
+} from "../hooks/react_query/useFetchTRBirthdayPray";
 import type { DashboardBirthdayItem } from "../Model/ModelTRBirthdayPray";
+import StatusBanner from "../components/StatusBanner";
 
 type DashboardRow =
   | {
@@ -89,6 +94,15 @@ export default function DashboardPage() {
   const location = useLocation();
   const today = getTodayLocalDate();
   const dashboardQuery = useFetchBirthdayDashboard(today);
+  const { mutateAsync: sendWAAsync, isPending: isSendingWA } = useSendWhatsAppBirthdayPray();
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const clearFormMessage = () => {
+    setFormError(null);
+    setFormSuccess(null);
+  };
 
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
@@ -377,6 +391,51 @@ export default function DashboardPage() {
       cellClassName: "text-center",
       headerClassName: "text-center",
     },
+    {
+      key: "whatsapp",
+      label: "WhatsApp",
+      width: "160px",
+      render: (row) => {
+        if (row.rowType !== "detail") return null;
+        if (!row.sudahDidoakan) return null;
+
+        const currentYear = row.birthdayDate ? new Date(row.birthdayDate).getFullYear() : undefined;
+
+        return (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            disabled={isSendingWA}
+            onClick={async (e) => {
+              e.stopPropagation();
+              clearFormMessage();
+              try {
+                const result = await sendWAAsync({
+                  idDonatur: row.id_donatur,
+                  year: currentYear,
+                });
+                if (result.success) {
+                  setFormSuccess(`Berhasil kirim WA ke ${row.nama}`);
+                } else {
+                  setFormError(result.message || "Gagal kirim WhatsApp");
+                }
+              } catch (err) {
+                setFormError(err instanceof Error ? err.message : "Gagal kirim WhatsApp");
+              }
+            }}
+          >
+            {isSendingWA ? (
+              <RefreshCcw className="h-3 w-3 animate-spin" />
+            ) : (
+              <Send className="h-3 w-3" />
+            )}
+            Send WA
+          </button>
+        );
+      },
+      cellClassName: "text-center",
+      headerClassName: "text-center",
+    },
   ];
 
   function handleRowClick(row: DashboardRow) {
@@ -454,6 +513,13 @@ export default function DashboardPage() {
           Menampilkan donatur dengan ulang tahun berikutnya dalam 6 bulan ke depan.
         </p>
       </div>
+
+      <StatusBanner
+        error={formError}
+        success={formSuccess}
+        onClearError={() => setFormError(null)}
+        onClearSuccess={() => setFormSuccess(null)}
+      />
 
       <div className="min-h-0 flex-1">
         <ERPGridTable<DashboardRow>

@@ -64,5 +64,12 @@ namespace API.Controllers
         {
             return service.SaveVoice(bodyRequest);
         }
+ 
+        [HttpPost]
+        [Route("Transaction/TRBirthdayPray/SendWhatsApp")]
+        public async Task<ResponseData<string>> SendWhatsApp([FromBody] RequestSendWhatsApp bodyRequest)
+        {
+            return await service.SendWhatsApp(bodyRequest.idDonatur, bodyRequest.year);
+        }
     }
 }
