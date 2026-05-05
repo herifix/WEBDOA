@@ -569,7 +569,7 @@ namespace API.Service.Transaction
                 return new ResponseData<string>
                 {
                     success = false,
-                    message = $"Gagal mengirim WhatsApp: {response.StatusCode}",
+                    message = $"Gagal mengirim WhatsApp ({response.StatusCode}): {responseBody}",
                     data = responseBody
                 };
             }

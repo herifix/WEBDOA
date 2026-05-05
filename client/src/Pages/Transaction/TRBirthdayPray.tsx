@@ -441,7 +441,18 @@ export default function TRBirthdayPrayPage() {
       const result = await sendWAAsync({ idDonatur, year: currentYear });
 
       if (!result?.success) {
-        throw new Error(result?.message || "Gagal mengirim WhatsApp.");
+        let friendlyMsg = "Gagal mengirim WhatsApp. ";
+        const errMsg = result?.message || "";
+
+        if (errMsg.includes("BadRequest")) {
+          friendlyMsg += "Data tidak diterima sistem. Mohon periksa nama Template WA di Pengaturan.";
+        } else if (errMsg.includes("401") || errMsg.includes("Unauthorized")) {
+          friendlyMsg += "Token API tidak valid atau kadaluarsa.";
+        } else {
+          friendlyMsg += "Terjadi kesalahan pada koneksi ke Gateway.";
+        }
+        
+        throw new Error(friendlyMsg + (errMsg ? ` (${errMsg})` : ""));
       }
 
       setFormSuccess(result.message || "Pesan WhatsApp berhasil dikirim.");

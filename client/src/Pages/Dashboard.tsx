@@ -408,6 +408,7 @@ export default function DashboardPage() {
             disabled={isSendingWA}
             onClick={async (e) => {
               e.stopPropagation();
+              console.log("Sending WA to:", row.nama, "ID:", row.id_donatur, "Year:", currentYear);
               clearFormMessage();
               try {
                 const result = await sendWAAsync({
@@ -415,12 +416,28 @@ export default function DashboardPage() {
                   year: currentYear,
                 });
                 if (result.success) {
-                  setFormSuccess(`Berhasil kirim WA ke ${row.nama}`);
+                  const msg = result.message || `Berhasil kirim WA ke ${row.nama}`;
+                  setFormSuccess(msg);
+                  alert(msg);
                 } else {
-                  setFormError(result.message || "Gagal kirim WhatsApp");
+                  const errMsg = result.message || "";
+                  let friendlyMsg = "Gagal mengirim WhatsApp. ";
+                  
+                  if (errMsg.includes("BadRequest")) {
+                    friendlyMsg += "Data tidak diterima oleh sistem (BadRequest). Mohon periksa nama Template WA di Pengaturan.";
+                  } else if (errMsg.includes("401") || errMsg.includes("Unauthorized")) {
+                    friendlyMsg += "Token API tidak valid atau kadaluarsa.";
+                  } else {
+                    friendlyMsg += "Terjadi kesalahan pada koneksi ke Gateway.";
+                  }
+
+                  setFormError(friendlyMsg);
+                  alert(friendlyMsg + "\n\nDetail: " + errMsg);
                 }
               } catch (err) {
-                setFormError(err instanceof Error ? err.message : "Gagal kirim WhatsApp");
+                const errMsg = err instanceof Error ? err.message : "Gagal kirim WhatsApp";
+                setFormError(errMsg);
+                alert("Fatal Error: " + errMsg);
               }
             }}
           >
