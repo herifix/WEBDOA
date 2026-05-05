@@ -3,10 +3,12 @@ using API.Repository.Master;
 using API.Repository.Transaction;
 using API.Service.Master;
 using API.Service.Transaction;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Data;
@@ -123,6 +125,7 @@ builder.Services.AddScoped<ServiceApplicationSetting>();
 builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
 var app = builder.Build();
+var voiceStorageRootPath = (builder.Configuration["VoiceStorage:RootPath"] ?? "").Trim();
 
 // Support running the API both directly (localhost:7125/api/...)
 // and behind an IIS application mounted at /api.
@@ -138,6 +141,22 @@ app.Use(async (context, next) =>
 
 app.UseSwagger();
 app.UseSwaggerUI();
+if (!string.IsNullOrWhiteSpace(voiceStorageRootPath))
+{
+    Directory.CreateDirectory(voiceStorageRootPath);
+    var contentTypeProvider = new FileExtensionContentTypeProvider();
+    contentTypeProvider.Mappings[".webm"] = "video/webm";
+    contentTypeProvider.Mappings[".m4a"] = "audio/mp4";
+    contentTypeProvider.Mappings[".mp3"] = "audio/mpeg";
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(voiceStorageRootPath),
+        RequestPath = "/uploads/birthday-pray",
+        ContentTypeProvider = contentTypeProvider
+    });
+}
+
 app.UseStaticFiles();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions

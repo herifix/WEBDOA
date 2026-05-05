@@ -42,6 +42,7 @@ type DashboardRow =
       noHP: string;
       birthdayDate: string | null;
       sudahDidoakan: boolean;
+      isWASent: boolean;
     };
 
 function getDatePart(dateString?: string | null) {
@@ -212,6 +213,7 @@ export default function DashboardPage() {
             noHP: item.noHP,
             birthdayDate: item.birthdayDate,
             sudahDidoakan: item.sudahDidoakan,
+            isWASent: item.isWASent,
           });
         }
       }
@@ -404,7 +406,11 @@ export default function DashboardPage() {
         return (
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            className={`inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold text-white transition-colors disabled:opacity-50 ${
+              row.isWASent 
+                ? "bg-amber-500 hover:bg-amber-600" 
+                : "bg-emerald-600 hover:bg-emerald-700"
+            }`}
             disabled={isSendingWA}
             onClick={async (e) => {
               e.stopPropagation();
@@ -419,6 +425,8 @@ export default function DashboardPage() {
                   const msg = result.message || `Berhasil kirim WA ke ${row.nama}`;
                   setFormSuccess(msg);
                   alert(msg);
+                  // Refresh data dashboard to update the UI status
+                  dashboardQuery.refetch();
                 } else {
                   const errMsg = result.message || "";
                   let friendlyMsg = "Gagal mengirim WhatsApp. ";
@@ -443,10 +451,12 @@ export default function DashboardPage() {
           >
             {isSendingWA ? (
               <RefreshCcw className="h-3 w-3 animate-spin" />
+            ) : row.isWASent ? (
+              <RefreshCcw className="h-3 w-3" />
             ) : (
               <Send className="h-3 w-3" />
             )}
-            Send WA
+            {row.isWASent ? "Resend WA" : "Send WA"}
           </button>
         );
       },
@@ -531,12 +541,8 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <StatusBanner
-        error={formError}
-        success={formSuccess}
-        onClearError={() => setFormError(null)}
-        onClearSuccess={() => setFormSuccess(null)}
-      />
+      {formError && <StatusBanner tone="error" message={formError} />}
+      {formSuccess && <StatusBanner tone="success" message={formSuccess} />}
 
       <div className="min-h-0 flex-1">
         <ERPGridTable<DashboardRow>

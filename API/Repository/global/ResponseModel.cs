@@ -167,6 +167,7 @@ public class ResponseModelDashboardBirthday
     public bool sudahAdaPesanSuara { get; set; }
     public long? id_TRBirthdayPray { get; set; }
     public DateTime? prayCreatedDate { get; set; }
+    public bool isWASent { get; set; }
 }
 
 public class ResponseModelTRBirthdayPray
@@ -182,7 +183,10 @@ public class ResponseModelTRBirthdayPray
     public string noHPPendoa { get; set; } = "";
     public string pesan { get; set; } = "";
     public string pathPesanSuara { get; set; } = "";
+    public string pathPesanSuaraUrl { get; set; } = "";
     public DateTime? createdDate { get; set; }
+    public bool isWASent { get; set; }
+    public DateTime? waSentDate { get; set; }
 }
 
 public class ResponseModelTRBirthdayPrayHistory
@@ -194,7 +198,25 @@ public class ResponseModelTRBirthdayPrayHistory
     public DateTime? birthdayDate { get; set; }
     public string pesan { get; set; } = "";
     public string pathPesanSuara { get; set; } = "";
+    public string pathPesanSuaraUrl { get; set; } = "";
     public DateTime? createdDate { get; set; }
+}
+
+public class ResponseModelTRBirthdayPrayMediaDebug
+{
+    public long id_donatur { get; set; }
+    public int targetYear { get; set; }
+    public string publicBaseUrl { get; set; } = "";
+    public string gatewayUrl { get; set; } = "";
+    public string voiceStorageRootPath { get; set; } = "";
+    public string voiceStorageEnvironmentFolder { get; set; } = "";
+    public string pathPesanSuara { get; set; } = "";
+    public string pathPesanSuaraUrl { get; set; } = "";
+    public string audioUrl { get; set; } = "";
+    public bool hasAudioFile { get; set; }
+    public bool isPublicBaseUrlConfigured { get; set; }
+    public bool isPublicBaseUrlLikelyPublic { get; set; }
+    public string publicBaseUrlValidationMessage { get; set; } = "";
 }
 
 public class ResponseModelTRBuletin

@@ -347,7 +347,7 @@ namespace API.Service.Transaction
 
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
-                string publicBaseUrl = configuration["WhatsAppGateway:PublicBaseUrl"] ?? "";
+                string publicBaseUrl = configuration["Runtime:PublicBaseUrl"] ?? "";
 
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
                 {

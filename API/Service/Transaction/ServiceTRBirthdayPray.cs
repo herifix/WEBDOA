@@ -2,6 +2,7 @@ using API.Repository.global;
 using API.Repository.Master;
 using Microsoft.AspNetCore.Hosting;
 using System.Data;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -132,7 +133,13 @@ namespace API.Service.Transaction
                 if (conn.State == ConnectionState.Closed)
                     conn.Open();
 
-                return repo.GetDataByDonaturId(idDonatur, targetYear, conn);
+                var response = repo.GetDataByDonaturId(idDonatur, targetYear, conn);
+                if (response.success && response.data != null)
+                {
+                    response.data.pathPesanSuaraUrl = BuildPublicAssetUrl(response.data.pathPesanSuara);
+                }
+
+                return response;
             }
             catch (Exception ex)
             {
@@ -157,11 +164,17 @@ namespace API.Service.Transaction
                 if (conn.State == ConnectionState.Closed)
                     conn.Open();
 
+                var history = repo.GetHistoryByDonaturId(idDonatur, conn);
+                foreach (var item in history)
+                {
+                    item.pathPesanSuaraUrl = BuildPublicAssetUrl(item.pathPesanSuara);
+                }
+
                 return new ResponseData<List<ResponseModelTRBirthdayPrayHistory>>
                 {
                     success = true,
                     message = "OK",
-                    data = repo.GetHistoryByDonaturId(idDonatur, conn)
+                    data = history
                 };
             }
             catch (Exception ex)
@@ -171,6 +184,69 @@ namespace API.Service.Transaction
                     success = false,
                     message = ex.Message,
                     data = new List<ResponseModelTRBirthdayPrayHistory>()
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+        }
+
+        public ResponseData<ResponseModelTRBirthdayPrayMediaDebug> GetMediaDebugInfo(long idDonatur, int? year = null)
+        {
+            int targetYear = year ?? DateTime.Today.Year;
+
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                    conn.Open();
+
+                var prayData = repo.GetDataByDonaturId(idDonatur, targetYear, conn).data;
+                if (prayData == null || prayData.id_donatur <= 0)
+                {
+                    return new ResponseData<ResponseModelTRBirthdayPrayMediaDebug>
+                    {
+                        success = false,
+                        message = "Data birthday pray tidak ditemukan.",
+                        data = new ResponseModelTRBirthdayPrayMediaDebug()
+                    };
+                }
+
+                string publicBaseUrl = GetPublicBaseUrl();
+                string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
+                string resolvedUrl = BuildAbsoluteUrl(publicBaseUrl, prayData.pathPesanSuara);
+                var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
+
+                return new ResponseData<ResponseModelTRBirthdayPrayMediaDebug>
+                {
+                    success = true,
+                    message = "OK",
+                    data = new ResponseModelTRBirthdayPrayMediaDebug
+                    {
+                        id_donatur = prayData.id_donatur,
+                        targetYear = targetYear,
+                        publicBaseUrl = publicBaseUrl,
+                        gatewayUrl = gatewayUrl,
+                        voiceStorageRootPath = GetVoiceStorageRootPath(),
+                        voiceStorageEnvironmentFolder = GetVoiceStorageEnvironmentFolder(),
+                        pathPesanSuara = prayData.pathPesanSuara ?? "",
+                        pathPesanSuaraUrl = BuildPublicAssetUrl(prayData.pathPesanSuara),
+                        audioUrl = resolvedUrl,
+                        hasAudioFile = !string.IsNullOrWhiteSpace(prayData.pathPesanSuara),
+                        isPublicBaseUrlConfigured = !string.IsNullOrWhiteSpace(publicBaseUrl),
+                        isPublicBaseUrlLikelyPublic = publicBaseUrlValidation.isValid,
+                        publicBaseUrlValidationMessage = publicBaseUrlValidation.message
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<ResponseModelTRBirthdayPrayMediaDebug>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = new ResponseModelTRBirthdayPrayMediaDebug()
                 };
             }
             finally
@@ -245,6 +321,17 @@ namespace API.Service.Transaction
                 string pathPesanSuara = existing?.pathPesanSuara ?? "";
                 if (bodyRequest.pesanSuaraFile != null && bodyRequest.pesanSuaraFile.Length > 0)
                 {
+                    if (!IsSupportedAudioFile(bodyRequest.pesanSuaraFile))
+                    {
+                        tran.Rollback();
+                        return new ResponseData<long>
+                        {
+                            success = false,
+                            message = "File pesan suara harus berformat MP3 atau WAV.",
+                            data = 0
+                        };
+                    }
+
                     pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile, donatur.Nama, birthdayDate);
                 }
 
@@ -342,6 +429,17 @@ namespace API.Service.Transaction
                     {
                         success = false,
                         message = "File pesan suara wajib diisi.",
+                        data = 0
+                    };
+                }
+
+                if (!IsSupportedAudioFile(bodyRequest.pesanSuaraFile))
+                {
+                    tran.Rollback();
+                    return new ResponseData<long>
+                    {
+                        success = false,
+                        message = "File pesan suara harus berformat MP3 atau WAV.",
                         data = 0
                     };
                 }
@@ -471,11 +569,33 @@ namespace API.Service.Transaction
 
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
-                string publicBaseUrl = configuration["WhatsAppGateway:PublicBaseUrl"] ?? "";
+                string publicBaseUrl = GetPublicBaseUrl();
 
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
                 {
                     return new ResponseData<string> { success = false, message = "WhatsApp gateway URL belum diatur." };
+                }
+
+                if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara) && string.IsNullOrWhiteSpace(publicBaseUrl))
+                {
+                    return new ResponseData<string>
+                    {
+                        success = false,
+                        message = "Runtime.PublicBaseUrl belum diatur untuk mengirim pesan suara."
+                    };
+                }
+
+                if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
+                {
+                    var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
+                    if (!publicBaseUrlValidation.isValid)
+                    {
+                        return new ResponseData<string>
+                        {
+                            success = false,
+                            message = $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}"
+                        };
+                    }
                 }
 
                 string templateName = setting.whatsappTemplateName;
@@ -558,6 +678,42 @@ namespace API.Service.Transaction
 
                 if (response.IsSuccessStatusCode)
                 {
+                    if (prayData.id_TRBirthdayPray > 0)
+                    {
+                        repo.MarkWASent(prayData.id_TRBirthdayPray, conn);
+                    }
+
+                    // --- KIRIM PESAN SUARA (Jika ada) ---
+                    if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
+                    {
+                        try
+                        {
+                            string audioUrl = BuildAbsoluteUrl(publicBaseUrl, prayData.pathPesanSuara);
+                            var audioPayload = new
+                            {
+                                phone_number = phoneNumber,
+                                channel = "whatsapp",
+                                message_type = "audio",
+                                audio = new { link = audioUrl }
+                            };
+
+                            using var audioContent = new StringContent(
+                                JsonSerializer.Serialize(audioPayload),
+                                Encoding.UTF8,
+                                "application/json"
+                            );
+
+                            // Kirim pesan suara (fire and forget atau ditunggu sebentar)
+                            await httpClient.PostAsync(gatewayUrl, audioContent);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Jika suara gagal, kita tetap anggap sukses kirim teksnya saja
+                            // tapi log errornya (bisa ditambahkan logging di sini)
+                        }
+                    }
+                    // ------------------------------------
+
                     return new ResponseData<string>
                     {
                         success = true,
@@ -584,12 +740,238 @@ namespace API.Service.Transaction
             }
         }
 
+        public async Task<ResponseData<string>> SendTestWhatsAppText(long idDonatur, int? year = null)
+        {
+            int targetYear = year ?? DateTime.Today.Year;
+            try
+            {
+                if (conn.State == ConnectionState.Closed) conn.Open();
+                var prayData = repo.GetDataByDonaturId(idDonatur, targetYear, conn).data;
+                if (prayData == null || prayData.id_donatur <= 0)
+                    return new ResponseData<string> { success = false, message = "Data tidak ditemukan." };
+
+                string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
+                string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
+                string phoneNumber = FormatPhoneNumber(prayData.noHPDonatur);
+
+                var payload = new
+                {
+                    phone_number = phoneNumber,
+                    channel = "whatsapp",
+                    message_type = "text",
+                    content = prayData.pesan ?? "Test Message" 
+                };
+
+                return await PostToGateway(gatewayUrl, gatewayToken, payload);
+            }
+            catch (Exception ex) { return new ResponseData<string> { success = false, message = ex.Message }; }
+            finally { if (conn.State == ConnectionState.Open) conn.Close(); }
+        }
+
+        public async Task<ResponseData<string>> SendTestWhatsAppVoice(long idDonatur, int? year = null)
+        {
+            int targetYear = year ?? DateTime.Today.Year;
+            try
+            {
+                if (conn.State == ConnectionState.Closed) conn.Open();
+                var prayData = repo.GetDataByDonaturId(idDonatur, targetYear, conn).data;
+                if (prayData == null || string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
+                    return new ResponseData<string> { success = false, message = "Data suara tidak ditemukan." };
+
+                string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
+                string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
+                string publicBaseUrl = GetPublicBaseUrl();
+                if (string.IsNullOrWhiteSpace(publicBaseUrl))
+                    return new ResponseData<string> { success = false, message = "Runtime.PublicBaseUrl belum diatur untuk test pesan suara." };
+                var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
+                if (!publicBaseUrlValidation.isValid)
+                    return new ResponseData<string> { success = false, message = $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}" };
+                string phoneNumber = FormatPhoneNumber(prayData.noHPDonatur);
+                string audioUrl = BuildAbsoluteUrl(publicBaseUrl, prayData.pathPesanSuara);
+
+                var payload = new
+                {
+                    phone_number = phoneNumber,
+                    channel = "whatsapp",
+                    message_type = "audio",
+                    media_url = audioUrl
+                };
+
+                return await PostToGateway(gatewayUrl, gatewayToken, payload);
+            }
+            catch (Exception ex) { return new ResponseData<string> { success = false, message = ex.Message }; }
+            finally { if (conn.State == ConnectionState.Open) conn.Close(); }
+        }
+
+        public async Task<ResponseData<string>> GetWhatsAppPhoneNumbers()
+        {
+            try
+            {
+                string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
+                string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
+
+                // Derive phone-numbers URL from the main send URL
+                // main: https://chat.api.co.id/api/v1/public/messages/send
+                // target: https://chat.api.co.id/api/v1/public/phone-numbers
+                string phoneNumbersUrl = gatewayUrl.Replace("/messages/send", "/phone-numbers");
+
+                using var client = new HttpClient();
+                if (!string.IsNullOrWhiteSpace(gatewayToken))
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", gatewayToken);
+
+                using var response = await client.GetAsync(phoneNumbersUrl);
+                string body = await response.Content.ReadAsStringAsync();
+
+                return new ResponseData<string>
+                {
+                    success = response.IsSuccessStatusCode,
+                    message = response.IsSuccessStatusCode ? "Berhasil mengambil data nomor" : $"Gateway Error: {response.StatusCode}",
+                    data = body
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<string> { success = false, message = ex.Message };
+            }
+        }
+
+        private string FormatPhoneNumber(string raw)
+        {
+            string cleaned = raw.Replace("+", "").Replace("-", "").Replace(" ", "");
+            if (cleaned.StartsWith("0")) return "62" + cleaned.Substring(1);
+            if (!cleaned.StartsWith("62")) return "62" + cleaned;
+            return cleaned;
+        }
+
+        private async Task<ResponseData<string>> PostToGateway(string url, string token, object payload)
+        {
+            using var client = new HttpClient();
+            if (!string.IsNullOrWhiteSpace(token))
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var response = await client.PostAsync(url, content);
+            string body = await response.Content.ReadAsStringAsync();
+
+            return new ResponseData<string>
+            {
+                success = response.IsSuccessStatusCode,
+                message = response.IsSuccessStatusCode ? "Test Berhasil Terkirim" : $"Gateway Error: {response.StatusCode}",
+                data = body
+            };
+        }
+
+        private string GetPublicBaseUrl()
+        {
+            return (configuration["Runtime:PublicBaseUrl"] ?? "").Trim();
+        }
+
+        private string GetVoiceStorageRootPath()
+        {
+            return (configuration["VoiceStorage:RootPath"] ?? "").Trim();
+        }
+
+        private string GetVoiceStorageEnvironmentFolder()
+        {
+            string configured = (configuration["VoiceStorage:EnvironmentFolder"] ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return SanitizeFileName(configured);
+            }
+
+            return env.EnvironmentName.Equals("Production", StringComparison.OrdinalIgnoreCase)
+                ? "prod"
+                : "dev";
+        }
+
+        private string GetVoiceStoragePhysicalFolder()
+        {
+            string sharedRootPath = GetVoiceStorageRootPath();
+            string environmentFolder = GetVoiceStorageEnvironmentFolder();
+
+            if (!string.IsNullOrWhiteSpace(sharedRootPath))
+            {
+                return Path.Combine(sharedRootPath, environmentFolder);
+            }
+
+            return Path.Combine(env.WebRootPath, "uploads", "birthday-pray", environmentFolder);
+        }
+
+        private string BuildStoredVoiceRelativePath(string fileName)
+        {
+            string environmentFolder = GetVoiceStorageEnvironmentFolder();
+            return Path.Combine("uploads", "birthday-pray", environmentFolder, fileName).Replace("\\", "/");
+        }
+
+        private (bool isValid, string message) ValidatePublicBaseUrl(string publicBaseUrl)
+        {
+            if (string.IsNullOrWhiteSpace(publicBaseUrl))
+            {
+                return (false, "Isi dengan URL tunnel/domain public yang bisa diakses internet.");
+            }
+
+            if (!Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var uri))
+            {
+                return (false, "Nilai bukan URL absolut yang valid.");
+            }
+
+            string host = (uri.Host ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return (false, "Host pada URL kosong.");
+            }
+
+            if (host == "localhost" || host == "0.0.0.0" || host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Host masih lokal dan tidak dapat diakses gateway pihak ketiga.");
+            }
+
+            if (IPAddress.TryParse(host, out var ipAddress))
+            {
+                if (IPAddress.IsLoopback(ipAddress))
+                {
+                    return (false, "Host masih loopback dan tidak dapat diakses gateway pihak ketiga.");
+                }
+
+                if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    byte[] bytes = ipAddress.GetAddressBytes();
+                    bool isPrivate =
+                        bytes[0] == 10 ||
+                        (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                        (bytes[0] == 192 && bytes[1] == 168);
+
+                    if (isPrivate)
+                    {
+                        return (false, "Host masih private/internal IP dan biasanya tidak bisa diakses internet.");
+                    }
+                }
+            }
+
+            return (true, "OK");
+        }
+
+        private string BuildPublicAssetUrl(string relativePath)
+        {
+            return BuildAbsoluteUrl(GetPublicBaseUrl(), relativePath);
+        }
+
         private string BuildAbsoluteUrl(string publicBaseUrl, string relativePath)
         {
-            if (string.IsNullOrWhiteSpace(relativePath)) return "";
-            if (Uri.TryCreate(relativePath, UriKind.Absolute, out var absoluteUri)) return absoluteUri.ToString();
-            if (string.IsNullOrWhiteSpace(publicBaseUrl)) return relativePath.Replace("\\", "/");
-            return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
+            if (string.IsNullOrWhiteSpace(relativePath))
+                return "";
+
+            if (Uri.TryCreate(relativePath, UriKind.Absolute, out var absoluteUri))
+                return absoluteUri.ToString();
+
+            var normalizedPath = relativePath
+                .Replace("\\", "/")
+                .TrimStart('/');
+
+            if (string.IsNullOrWhiteSpace(publicBaseUrl))
+                return normalizedPath;
+
+            return $"{publicBaseUrl.TrimEnd('/')}/{normalizedPath}";
         }
 
         private DateTime BuildBirthdayDate(DateTime sourceBirthday, int targetYear)
@@ -600,11 +982,13 @@ namespace API.Service.Transaction
 
         private string SaveVoiceFile(IFormFile file, string donaturName, DateTime birthdayDate)
         {
-            string extension = Path.GetExtension(file.FileName);
+            string extension = Path.GetExtension(file.FileName ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(extension)) extension = ".mp3";
+
             string safeName = SanitizeFileName(donaturName);
             string fileName = $"{birthdayDate:yyyyMMdd}_{safeName}_{DateTime.Now:HHmmssfff}{extension}";
 
-            string folder = Path.Combine(env.WebRootPath, "uploads", "birthday-pray");
+            string folder = GetVoiceStoragePhysicalFolder();
             if (!Directory.Exists(folder))
             {
                 Directory.CreateDirectory(folder);
@@ -616,7 +1000,13 @@ namespace API.Service.Transaction
                 file.CopyTo(stream);
             }
 
-            return Path.Combine("uploads", "birthday-pray", fileName).Replace("\\", "/");
+            return BuildStoredVoiceRelativePath(fileName);
+        }
+
+        private bool IsSupportedAudioFile(IFormFile file)
+        {
+            string extension = Path.GetExtension(file.FileName ?? "").Trim().ToLowerInvariant();
+            return extension == ".mp3" || extension == ".wav";
         }
 
         private string SanitizeFileName(string value)

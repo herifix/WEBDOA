@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Data;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -99,7 +100,7 @@ namespace API.Service.Transaction
         {
             string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
             string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
-            string publicBaseUrl = configuration["WhatsAppGateway:PublicBaseUrl"] ?? "";
+            string publicBaseUrl = (configuration["Runtime:PublicBaseUrl"] ?? "").Trim();
 
             if (string.IsNullOrWhiteSpace(gatewayUrl))
             {
@@ -109,6 +110,17 @@ namespace API.Service.Transaction
             string audioUrl = "";
             if (!string.IsNullOrWhiteSpace(item.pathPesanSuara))
             {
+                if (string.IsNullOrWhiteSpace(publicBaseUrl))
+                {
+                    return (false, "Runtime.PublicBaseUrl belum diatur untuk mengirim pesan suara.");
+                }
+
+                var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
+                if (!publicBaseUrlValidation.isValid)
+                {
+                    return (false, $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}");
+                }
+
                 audioUrl = BuildAbsoluteAudioUrl(publicBaseUrl, item.pathPesanSuara);
             }
 
@@ -161,6 +173,54 @@ namespace API.Service.Transaction
                 return relativePath.Replace("\\", "/");
 
             return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
+        }
+
+        private (bool isValid, string message) ValidatePublicBaseUrl(string publicBaseUrl)
+        {
+            if (string.IsNullOrWhiteSpace(publicBaseUrl))
+            {
+                return (false, "Isi dengan URL tunnel/domain public yang bisa diakses internet.");
+            }
+
+            if (!Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var uri))
+            {
+                return (false, "Nilai bukan URL absolut yang valid.");
+            }
+
+            string host = (uri.Host ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return (false, "Host pada URL kosong.");
+            }
+
+            if (host == "localhost" || host == "0.0.0.0" || host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Host masih lokal dan tidak dapat diakses gateway pihak ketiga.");
+            }
+
+            if (IPAddress.TryParse(host, out var ipAddress))
+            {
+                if (IPAddress.IsLoopback(ipAddress))
+                {
+                    return (false, "Host masih loopback dan tidak dapat diakses gateway pihak ketiga.");
+                }
+
+                if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    byte[] bytes = ipAddress.GetAddressBytes();
+                    bool isPrivate =
+                        bytes[0] == 10 ||
+                        (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                        (bytes[0] == 192 && bytes[1] == 168);
+
+                    if (isPrivate)
+                    {
+                        return (false, "Host masih private/internal IP dan biasanya tidak bisa diakses internet.");
+                    }
+                }
+            }
+
+            return (true, "OK");
         }
     }
 }

@@ -15,6 +15,7 @@ internal interface iRepoTRBirthdayPray
     long Create(RequestSaveTRBirthdayPray bodyRequest, ResponseModeMasterDonatur donatur, ResponseModelMasterPendoa defaultPendoa, DateTime birthdayDate, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
     void Update(long idTRBirthdayPray, string pesan, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
     void UpdateVoicePath(long idTRBirthdayPray, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
+    void MarkWASent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null);
 }
 
 public class RepoTRBirthdayPray : iRepoTRBirthdayPray
@@ -86,10 +87,11 @@ SELECT
         END AS bit
     ) AS sudahAdaPesanSuara,
     pray.id_TRBirthdayPray,
-    pray.CreatedDate AS prayCreatedDate
+    pray.CreatedDate AS prayCreatedDate,
+    ISNULL(pray.IsWASent, 0) AS isWASent
 FROM UpcomingBirthday b
 OUTER APPLY (
-    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara
+    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent
     FROM TRBirthdayPray t
     WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(b.Nama))
       AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
@@ -291,7 +293,9 @@ SELECT
     ISNULL(p.nohp, '') AS noHPPendoa,
     ISNULL(t.Pesan, '') AS pesan,
     ISNULL(t.PathPesanSuara, '') AS pathPesanSuara,
-    t.CreatedDate
+    t.CreatedDate,
+    ISNULL(t.IsWASent, 0) AS isWASent,
+    t.WASentDate AS waSentDate
 FROM DonaturBirthday d
 OUTER APPLY (
     SELECT TOP 1 *
@@ -450,5 +454,17 @@ LEFT JOIN Pendoa p
             idTRBirthdayPray,
             pathPesanSuara
         }, tran);
+    }
+
+    public void MarkWASent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null)
+    {
+        const string sql = @"
+            UPDATE TRBirthdayPray
+            SET 
+                IsWASent = 1,
+                WASentDate = GETDATE()
+            WHERE id_TRBirthdayPray = @idTRBirthdayPray";
+
+        conn.Execute(sql, new { idTRBirthdayPray }, transaction: tran);
     }
 }

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Mic, Pause, Play, RefreshCcw, Send, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mic, RefreshCcw, Send, Trash2 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import ERPToolbar from "../../components/ToolbarHR";
 import StatusBanner from "../../components/StatusBanner";
@@ -11,6 +11,10 @@ import {
   useFetchTRBirthdayPrayByDonatur,
   useSaveTRBirthdayPray,
   useSendWhatsAppBirthdayPray,
+  useSendTestWhatsAppText,
+  useSendTestWhatsAppVoice,
+  useFetchPhoneNumbers,
+  useFetchTRBirthdayPrayMediaDebugInfo,
 } from "../../hooks/react_query/useFetchTRBirthdayPray";
 import { FORM_IDS } from "../../config/formIds";
 import { buildMediaUrl } from "../../config/appConfig";
@@ -46,13 +50,6 @@ function formatDateTime(value?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function formatRecordingTime(totalSeconds: number) {
-  const safeSeconds = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safeSeconds / 60);
-  const seconds = safeSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatShortDate(value?: string | null) {
@@ -109,67 +106,26 @@ export default function TRBirthdayPrayPage() {
   const applicationSettingQuery = useFetchApplicationSetting();
   const { mutateAsync: saveAsync, isPending: isSaving } = useSaveTRBirthdayPray();
   const { mutateAsync: sendWAAsync, isPending: isSendingWA } = useSendWhatsAppBirthdayPray();
+  const { mutateAsync: sendTestTextAsync, isPending: isSendingTestText } = useSendTestWhatsAppText();
+  const { mutateAsync: sendTestVoiceAsync, isPending: isSendingTestVoice } = useSendTestWhatsAppVoice();
+  const { mutateAsync: fetchPhoneNumbersAsync, isPending: isFetchingPhones } = useFetchPhoneNumbers();
+  const { mutateAsync: fetchMediaDebugInfoAsync, isPending: isFetchingMediaDebug } = useFetchTRBirthdayPrayMediaDebugInfo();
   const { permissions } = useFormMenuPermissions(FORM_IDS.transaksiBirthdayPray);
+  const currentUserId = localStorage.getItem("userid") ?? "";
 
   const [pesan, setPesan] = useState("");
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [saveToAllSameBirthdayDate, setSaveToAllSameBirthdayDate] = useState(true);
-  const [recordingSupported, setRecordingSupported] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setRecordingSupported(
-      typeof window !== "undefined" &&
-        typeof navigator !== "undefined" &&
-        !!navigator.mediaDevices?.getUserMedia &&
-        typeof MediaRecorder !== "undefined"
-    );
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      mediaRecorderRef.current?.stop();
-      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-      if (recordingIntervalRef.current !== null) {
-        window.clearInterval(recordingIntervalRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isRecording || isPaused) {
-      if (recordingIntervalRef.current !== null) {
-        window.clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-      return;
-    }
-
-    recordingIntervalRef.current = window.setInterval(() => {
-      setRecordingSeconds((prev) => prev + 1);
-    }, 1000);
-
-    return () => {
-      if (recordingIntervalRef.current !== null) {
-        window.clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-    };
-  }, [isPaused, isRecording]);
 
   useEffect(() => {
     if (!detailQuery.data) return;
 
     setPesan(detailQuery.data.pesan ?? "");
-    setAudioPreviewUrl(buildMediaUrl(detailQuery.data.pathPesanSuara ?? ""));
+    setAudioPreviewUrl(
+      buildMediaUrl(detailQuery.data.pathPesanSuaraUrl || detailQuery.data.pathPesanSuara || "")
+    );
     setSelectedAudioFile(null);
     setSaveToAllSameBirthdayDate(true);
   }, [detailQuery.data]);
@@ -249,8 +205,8 @@ export default function TRBirthdayPrayPage() {
     const currentPesan = pesan.trim();
     const hasNewAudio = selectedAudioFile !== null;
 
-    return originalPesan !== currentPesan || hasNewAudio || isRecording;
-  }, [isRecording, pageData, pesan, selectedAudioFile]);
+    return originalPesan !== currentPesan || hasNewAudio;
+  }, [pageData, pesan, selectedAudioFile]);
 
   function handleBackToDashboard() {
     if (hasUnsavedChanges) {
@@ -263,101 +219,28 @@ export default function TRBirthdayPrayPage() {
     });
   }
 
-  async function startRecording() {
-    clearFormMessage();
-
-    if (!recordingSupported) {
-      setFormError("Browser ini belum mendukung rekaman microphone.");
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "";
-      const mediaRecorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
-
-      recordedChunksRef.current = [];
-      mediaStreamRef.current = stream;
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, {
-          type: mediaRecorder.mimeType || "audio/webm",
-        });
-
-        if (blob.size > 0) {
-          const extension = blob.type.includes("mpeg") ? "mp3" : "webm";
-          const file = new File(
-            [blob],
-            `birthday-pray-${idDonatur}-${Date.now()}.${extension}`,
-            { type: blob.type || "audio/webm" }
-          );
-
-          setSelectedAudioFile(file);
-        }
-
-        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-        mediaStreamRef.current = null;
-        mediaRecorderRef.current = null;
-        recordedChunksRef.current = [];
-        setIsRecording(false);
-        setIsPaused(false);
-      };
-
-      mediaRecorder.start();
-      setSelectedAudioFile(null);
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingSeconds(0);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Gagal mengakses microphone.";
-      setFormError(`Gagal mengakses microphone. ${message}`);
-      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-      mediaRecorderRef.current = null;
-      recordedChunksRef.current = [];
-      setIsRecording(false);
-      setIsPaused(false);
-    }
-  }
-
-  function stopRecording() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-  }
-
-  function togglePauseRecording() {
-    const recorder = mediaRecorderRef.current;
-    if (!recorder) return;
-
-    if (recorder.state === "recording") {
-      recorder.pause();
-      setIsPaused(true);
-      return;
-    }
-
-    if (recorder.state === "paused") {
-      recorder.resume();
-      setIsPaused(false);
-    }
-  }
-
   function clearSelectedAudio() {
     setSelectedAudioFile(null);
-    setAudioPreviewUrl(buildMediaUrl(pageData?.pathPesanSuara ?? ""));
-    setRecordingSeconds(0);
+    setAudioPreviewUrl(
+      buildMediaUrl(pageData?.pathPesanSuaraUrl || pageData?.pathPesanSuara || "")
+    );
+  }
+
+  function handleAudioFileChange(file: File | null) {
+    clearFormMessage();
+
+    if (!file) {
+      setSelectedAudioFile(null);
+      return;
+    }
+
+    const fileName = (file.name || "").toLowerCase();
+    if (!fileName.endsWith(".mp3") && !fileName.endsWith(".wav")) {
+      setFormError("File pesan suara harus berformat MP3 atau WAV.");
+      return;
+    }
+
+    setSelectedAudioFile(file);
   }
 
   if (!permissions.canView) {
@@ -456,12 +339,69 @@ export default function TRBirthdayPrayPage() {
       }
 
       setFormSuccess(result.message || "Pesan WhatsApp berhasil dikirim.");
+      // Refresh data to update IsWASent status
+      void detailQuery.refetch();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Gagal mengirim WhatsApp.";
       setFormError(message);
+      alert("Error: " + message);
     }
   }
+
+  const handleSendTestText = async () => {
+    try {
+      clearFormMessage();
+      const result = await sendTestTextAsync({ idDonatur, year: currentYear });
+      if (result.success) {
+        setFormSuccess("Test Teks Berhasil: " + result.message);
+      } else {
+        setFormError("Test Teks Gagal: " + result.message);
+      }
+    } catch (error) {
+      setFormError("Error Test Teks: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const handleSendTestVoice = async () => {
+    try {
+      clearFormMessage();
+      const result = await sendTestVoiceAsync({ idDonatur, year: currentYear });
+      if (result.success) {
+        setFormSuccess("Test Suara Berhasil: " + result.message);
+      } else {
+        setFormError("Test Suara Gagal: " + result.message);
+      }
+    } catch (error) {
+      setFormError("Error Test Suara: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const handleGetPhoneNumbers = async () => {
+    try {
+      clearFormMessage();
+      const result = await fetchPhoneNumbersAsync();
+      if (result.success) {
+        console.log("Phone Numbers Data:", result.data);
+        alert("Data Nomor Telepon (cek console untuk detail):\n\n" + JSON.stringify(result.data, null, 2));
+      } else {
+        alert("Gagal ambil nomor: " + result.message);
+      }
+    } catch (error) {
+      alert("Error: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const handleGetMediaDebugInfo = async () => {
+    try {
+      clearFormMessage();
+      const result = await fetchMediaDebugInfoAsync({ idDonatur, year: currentYear });
+      console.log("TRBirthdayPray Media Debug:", result);
+      alert("Debug Voice URL (cek console untuk detail):\n\n" + JSON.stringify(result, null, 2));
+    } catch (error) {
+      alert("Error Debug Voice URL: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50 p-2">
@@ -579,15 +519,66 @@ export default function TRBirthdayPrayPage() {
                       void handleSendWhatsApp();
                     }}
                     disabled={isSendingWA || !pageData || pageData.id_donatur <= 0}
-                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 hover:shadow-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      pageData.isWASent
+                        ? "bg-amber-500 shadow-amber-200 hover:bg-amber-600 hover:shadow-amber-300"
+                        : "bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300"
+                    }`}
                   >
                     {isSendingWA ? (
                       <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+                    ) : pageData.isWASent ? (
+                      <RefreshCcw className="h-3.5 w-3.5" />
                     ) : (
                       <Send className="h-3.5 w-3.5" />
                     )}
-                    Send to WhatsApp
+                    {pageData.isWASent ? "Resend to WhatsApp" : "Send to WhatsApp"}
                   </button>
+
+                  {currentUserId === "1" && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleSendTestText()}
+                        disabled={isSendingTestText || !pageData || pageData.id_donatur <= 0}
+                        className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:opacity-60"
+                        title="Test Kirim Teks Saja (User 1 Only)"
+                      >
+                        {isSendingTestText ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                        Test Text
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleSendTestVoice()}
+                        disabled={isSendingTestVoice || !pageData || pageData.id_donatur <= 0 || !pageData.pathPesanSuara}
+                        className="inline-flex items-center gap-2 rounded-full bg-fuchsia-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-fuchsia-200 transition hover:bg-fuchsia-700 disabled:opacity-60"
+                        title="Test Kirim Suara Saja (User 1 Only)"
+                      >
+                        {isSendingTestVoice ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <Mic className="h-3 w-3" />}
+                        Test Voice
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleGetPhoneNumbers()}
+                        disabled={isFetchingPhones}
+                        className="inline-flex items-center gap-2 rounded-full bg-slate-700 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-slate-200 transition hover:bg-slate-800 disabled:opacity-60"
+                        title="Ambil Data Phone Numbers (User 1 Only)"
+                      >
+                        {isFetchingPhones ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <RefreshCcw className="h-3 w-3" />}
+                        Get Phones
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleGetMediaDebugInfo()}
+                        disabled={isFetchingMediaDebug || !pageData || pageData.id_donatur <= 0}
+                        className="inline-flex items-center gap-2 rounded-full bg-cyan-700 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-cyan-200 transition hover:bg-cyan-800 disabled:opacity-60"
+                        title="Lihat URL final file suara (User 1 Only)"
+                      >
+                        {isFetchingMediaDebug ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                        Debug Voice URL
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-900/80 bg-[#0b141a] shadow-[0_22px_60px_rgba(15,23,42,0.25)]">
@@ -688,48 +679,12 @@ export default function TRBirthdayPrayPage() {
                 <h2 className="text-base font-semibold text-slate-800">Pesan Suara</h2>
                 <input
                   type="file"
-                  accept="audio/*"
+                  accept=".mp3,audio/mpeg,.wav,audio/wav"
                   className="mt-3 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-700"
-                  onChange={(e) => setSelectedAudioFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => handleAudioFileChange(e.target.files?.[0] ?? null)}
                 />
 
                 <div className="mt-3 flex flex-nowrap gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex shrink-0 items-center gap-1 rounded bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() => {
-                      void startRecording();
-                    }}
-                    disabled={!recordingSupported || isRecording}
-                  >
-                    <Mic className="h-3.5 w-3.5" />
-                    Mulai
-                  </button>
-
-                  <button
-                    type="button"
-                    className="inline-flex shrink-0 items-center gap-1 rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={togglePauseRecording}
-                    disabled={!isRecording}
-                  >
-                    {isPaused ? (
-                      <Play className="h-3.5 w-3.5" />
-                    ) : (
-                      <Pause className="h-3.5 w-3.5" />
-                    )}
-                    {isPaused ? "Resume" : "Pause"}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-500 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={stopRecording}
-                    disabled={!isRecording}
-                  >
-                    <Square className="h-3.5 w-3.5" />
-                    Stop
-                  </button>
-
                   <button
                     type="button"
                     className="inline-flex shrink-0 items-center gap-1 rounded bg-slate-500 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -742,13 +697,7 @@ export default function TRBirthdayPrayPage() {
                 </div>
 
                 <div className="mt-2 text-xs text-slate-500">
-                  {isRecording
-                    ? isPaused
-                      ? `Rekaman dijeda di ${formatRecordingTime(recordingSeconds)}`
-                      : `Microphone sedang merekam... ${formatRecordingTime(recordingSeconds)}`
-                    : recordingSupported
-                    ? "Anda bisa upload file audio atau rekam langsung dari microphone."
-                    : "Browser ini belum mendukung rekaman microphone."}
+                  Upload file suara mendukung format MP3 dan WAV. Rekaman langsung dari browser dinonaktifkan agar format file tetap konsisten.
                 </div>
 
                 {audioFileName ? (
@@ -762,9 +711,20 @@ export default function TRBirthdayPrayPage() {
                 )}
 
                 {audioPreviewUrl ? (
-                  <audio className="mt-3 w-full" controls src={audioPreviewUrl}>
-                    Browser tidak mendukung audio playback.
-                  </audio>
+                  <div className="mt-3 space-y-2">
+                    <audio className="w-full" controls src={audioPreviewUrl}>
+                      Browser tidak mendukung audio playback.
+                    </audio>
+
+                    <a
+                      href={audioPreviewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded bg-cyan-600 px-3 py-1 text-xs font-semibold text-white hover:bg-cyan-700"
+                    >
+                      Buka URL File Suara
+                    </a>
+                  </div>
                 ) : null}
               </div>
 
@@ -780,7 +740,9 @@ export default function TRBirthdayPrayPage() {
                 ) : (
                   <div className="mt-3 space-y-3">
                     {historyQuery.data.map((item) => {
-                      const historyAudioUrl = buildMediaUrl(item.pathPesanSuara ?? "");
+                      const historyAudioUrl = buildMediaUrl(
+                        item.pathPesanSuaraUrl || item.pathPesanSuara || ""
+                      );
 
                       return (
                         <div

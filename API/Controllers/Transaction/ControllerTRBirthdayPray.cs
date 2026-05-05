@@ -71,5 +71,33 @@ namespace API.Controllers
         {
             return await service.SendWhatsApp(bodyRequest.idDonatur, bodyRequest.year);
         }
+
+        [HttpPost]
+        [Route("Transaction/TRBirthdayPray/SendTestWhatsAppText")]
+        public async Task<ResponseData<string>> SendTestWhatsAppText([FromBody] RequestSendWhatsApp bodyRequest)
+        {
+            return await service.SendTestWhatsAppText(bodyRequest.idDonatur, bodyRequest.year);
+        }
+
+        [HttpPost]
+        [Route("Transaction/TRBirthdayPray/SendTestWhatsAppVoice")]
+        public async Task<ResponseData<string>> SendTestWhatsAppVoice([FromBody] RequestSendWhatsApp bodyRequest)
+        {
+            return await service.SendTestWhatsAppVoice(bodyRequest.idDonatur, bodyRequest.year);
+        }
+
+        [HttpGet]
+        [Route("Transaction/TRBirthdayPray/GetPhoneNumbers")]
+        public async Task<ResponseData<string>> GetPhoneNumbers()
+        {
+            return await service.GetWhatsAppPhoneNumbers();
+        }
+
+        [HttpGet]
+        [Route("Transaction/TRBirthdayPray/GetMediaDebugInfo")]
+        public ResponseData<ResponseModelTRBirthdayPrayMediaDebug> GetMediaDebugInfo([FromQuery] long idDonatur, [FromQuery] int? year = null)
+        {
+            return service.GetMediaDebugInfo(idDonatur, year);
+        }
     }
 }

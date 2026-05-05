@@ -11,6 +11,7 @@ export interface DashboardBirthdayItem {
   sudahAdaPesanSuara: boolean;
   id_TRBirthdayPray: number | null;
   prayCreatedDate: string | null;
+  isWASent: boolean;
 }
 
 export interface TRBirthdayPrayDetail {
@@ -25,7 +26,10 @@ export interface TRBirthdayPrayDetail {
   noHPPendoa: string;
   pesan: string;
   pathPesanSuara: string;
+  pathPesanSuaraUrl: string;
   createdDate: string | null;
+  isWASent: boolean;
+  waSentDate: string | null;
 }
 
 export interface TRBirthdayPrayHistoryItem {
@@ -36,5 +40,19 @@ export interface TRBirthdayPrayHistoryItem {
   birthdayDate: string | null;
   pesan: string;
   pathPesanSuara: string;
+  pathPesanSuaraUrl: string;
   createdDate: string | null;
+}
+
+export interface TRBirthdayPrayMediaDebugInfo {
+  id_donatur: number;
+  targetYear: number;
+  publicBaseUrl: string;
+  gatewayUrl: string;
+  voiceStorageRootPath: string;
+  voiceStorageEnvironmentFolder: string;
+  pathPesanSuara: string;
+  pathPesanSuaraUrl: string;
+  audioUrl: string;
+  hasAudioFile: boolean;
 }
