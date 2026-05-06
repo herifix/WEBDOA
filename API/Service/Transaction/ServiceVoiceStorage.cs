@@ -35,13 +35,17 @@ namespace API.Service.Transaction
             this.env = env;
         }
 
-        public ResponseData<ResponseModelVoiceRecording> UploadMp3(RequestUploadVoiceMp3 request)
+        public ResponseData<ResponseModelVoiceRecording> UploadMp3(RequestUploadVoiceMp3 request, IDbTransaction? tran = null)
         {
+            bool shouldClose = false;
+            var activeConn = tran?.Connection ?? conn;
+
             try
             {
-                if (conn.State == ConnectionState.Closed)
+                if (activeConn.State == ConnectionState.Closed)
                 {
-                    conn.Open();
+                    activeConn.Open();
+                    shouldClose = tran == null;
                 }
 
                 if (request.audio == null || request.audio.Length <= 0)
@@ -56,8 +60,9 @@ namespace API.Service.Transaction
                 }
 
                 var metadata = CreateAndStoreVoiceRecording(request.audio);
+                var activeConnForInsert = tran?.Connection ?? conn;
 
-                metadata.id = repo.Insert(metadata, conn);
+                metadata.id = repo.Insert(metadata, activeConnForInsert, tran);
                 metadata.createdAt = DateTime.Now;
                 metadata.playbackUrl = BuildBackendPlaybackUrl(metadata.id);
 
@@ -74,9 +79,9 @@ namespace API.Service.Transaction
             }
             finally
             {
-                if (conn.State == ConnectionState.Open)
+                if (shouldClose && activeConn.State == ConnectionState.Open)
                 {
-                    conn.Close();
+                    activeConn.Close();
                 }
             }
         }

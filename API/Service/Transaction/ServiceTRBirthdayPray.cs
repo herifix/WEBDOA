@@ -330,7 +330,7 @@ namespace API.Service.Transaction
                 string pathPesanSuara = existing?.pathPesanSuara ?? "";
                 if (bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0)
                 {
-                    pathPesanSuara = BuildVoiceRecordingReference(bodyRequest.voiceRecordingId.Value);
+                    pathPesanSuara = voiceStorageService.ResolvePlaybackUrl(bodyRequest.voiceRecordingId.Value, conn, tran).url;
                 }
 
                 if (bodyRequest.pesanSuaraFile != null && bodyRequest.pesanSuaraFile.Length > 0)
@@ -346,7 +346,7 @@ namespace API.Service.Transaction
                         };
                     }
 
-                    pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile);
+                    pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile ,tran);
                 }
 
                 foreach (var targetDonatur in targetDonaturs)
@@ -505,9 +505,15 @@ namespace API.Service.Transaction
                     targetDonaturs.Add(donatur);
                 }
 
-                string pathPesanSuara = bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0
-                    ? BuildVoiceRecordingReference(bodyRequest.voiceRecordingId.Value)
-                    : SaveVoiceFile(bodyRequest.pesanSuaraFile!);
+                string pathPesanSuara = "";
+                if (bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0)
+                {
+                    pathPesanSuara = voiceStorageService.ResolvePlaybackUrl(bodyRequest.voiceRecordingId.Value, conn, tran).url;
+                }
+                else
+                {
+                    pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile!, tran);
+                }
 
                 foreach (var targetDonatur in targetDonaturs)
                 {
@@ -1027,19 +1033,19 @@ namespace API.Service.Transaction
             return new DateTime(targetYear, sourceBirthday.Month, day);
         }
 
-        private string SaveVoiceFile(IFormFile file)
+        private string SaveVoiceFile(IFormFile file, IDbTransaction tran)
         {
             var uploadResponse = voiceStorageService.UploadMp3(new RequestUploadVoiceMp3
             {
                 audio = file
-            });
+            }, tran);
 
             if (!uploadResponse.success || uploadResponse.data == null || uploadResponse.data.id <= 0)
             {
                 throw new InvalidOperationException(uploadResponse.message ?? "Gagal upload file suara ke storage.");
             }
 
-            return BuildVoiceRecordingReference(uploadResponse.data.id);
+            return uploadResponse.data.fileUrl ?? "";
         }
 
         private bool IsSupportedAudioFile(IFormFile file)

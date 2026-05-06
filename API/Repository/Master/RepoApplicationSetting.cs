@@ -50,13 +50,13 @@ END;";
             EnsureTable(conn, tran);
 
             const string sql = @"
-SELECT TOP 1
-    ISNULL(MsgTemplate, '') AS msgTemplate,
-    ISNULL(MsgLink, '') AS msgLink,
-    ISNULL(MsgImage, '') AS msgImage,
-    ISNULL(MsgWA_TemplateName, '') AS whatsappTemplateName,
-    ISNULL(StorageType, 'LocalServer') AS storageType
-FROM dbo.MsProg";
+            SELECT TOP 1
+                ISNULL(MsgTemplate, '') AS msgTemplate,
+                ISNULL(MsgLink, '') AS msgLink,
+                ISNULL(MsgImage, '') AS msgImage,
+                ISNULL(MsgWA_TemplateName, '') AS whatsappTemplateName,
+                ISNULL(StorageType, 'LocalServer') AS storageType
+            FROM dbo.MsProg";
 
             return conn.QueryFirstOrDefault<ResponseModelApplicationSetting>(sql, transaction: tran) 
                    ?? new ResponseModelApplicationSetting();
