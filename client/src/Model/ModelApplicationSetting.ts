@@ -3,4 +3,5 @@ export type ApplicationSetting = {
   msgLink: string;
   msgImage: string;
   whatsappTemplateName: string;
+  storageType: string;
 };

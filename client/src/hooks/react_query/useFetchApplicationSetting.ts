@@ -19,6 +19,7 @@ export function useUpdateApplicationSetting() {
       existingMsgImage: string;
       msgImageFile?: File | null;
       whatsappTemplateName: string;
+      storageType: string;
     }) => updateApplicationSetting(payload),
   });
 }

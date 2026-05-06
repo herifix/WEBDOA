@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import CountryPhoneInput from "../../components/CountryPhoneInput";
@@ -20,6 +21,7 @@ import { getDataById } from "../../service/masterDonaturService";
 import { useMasterDonaturPage } from "../../hooks/react_query/useMasterDonaturPage";
 
 export default function MasterDonaturPage() {
+  const location = useLocation();
   const vm = useMasterDonaturPage();
   const { searchInput, setPage, setSearch } = vm;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -68,6 +70,14 @@ export default function MasterDonaturPage() {
   });
 
   const { permissions } = useFormMenuPermissions(FORM_IDS.masterDonatur);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const focusId = params.get("focusDonaturId");
+    if (focusId && !isLoading && data) {
+      void showData(Number(focusId));
+    }
+  }, [location.search, isLoading, data]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

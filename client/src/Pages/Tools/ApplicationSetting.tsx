@@ -1,4 +1,4 @@
-import { ImagePlus, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
+import { Database, ImagePlus, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import StatusBanner from "../../components/StatusBanner";
 import { FORM_IDS } from "../../config/formIds";
@@ -20,6 +20,7 @@ export default function ApplicationSettingPage() {
   const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
   const [msgImagePreviewUrl, setMsgImagePreviewUrl] = useState("");
   const [whatsappTemplateName, setWhatsappTemplateName] = useState("");
+  const [storageType, setStorageType] = useState("LocalServer");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
@@ -31,6 +32,7 @@ export default function ApplicationSettingPage() {
     setMsgLink(settingQuery.data.msgLink || "");
     setMsgImage(settingQuery.data.msgImage || "");
     setWhatsappTemplateName(settingQuery.data.whatsappTemplateName || "");
+    setStorageType(settingQuery.data.storageType || "LocalServer");
     setMsgImageFile(null);
     setMsgImagePreviewUrl("");
   }, [settingQuery.data]);
@@ -60,9 +62,10 @@ export default function ApplicationSettingPage() {
       (settingQuery.data.msgLink || "") !== msgLink ||
       (settingQuery.data.msgImage || "") !== msgImage ||
       (settingQuery.data.whatsappTemplateName || "") !== whatsappTemplateName ||
+      (settingQuery.data.storageType || "LocalServer") !== storageType ||
       msgImageFile !== null
     );
-  }, [msgImage, msgImageFile, msgLink, msgTemplate, settingQuery.data]);
+  }, [msgImage, msgImageFile, msgLink, msgTemplate, settingQuery.data, storageType, whatsappTemplateName]);
 
   if (!permissions.canView) {
     return (
@@ -88,6 +91,7 @@ export default function ApplicationSettingPage() {
         existingMsgImage: msgImage,
         msgImageFile,
         whatsappTemplateName: whatsappTemplateName.trim(),
+        storageType,
       });
       setFormSuccess(response.message || "Application setting berhasil disimpan.");
       await settingQuery.refetch();
@@ -97,7 +101,7 @@ export default function ApplicationSettingPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,_#fefce8,_#fef3c7_35%,_#fffbeb_70%,_#ffffff)] p-3 md:p-5">
+    <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,#fefce8,#fef3c7_35%,#fffbeb_70%,#ffffff)] p-3 md:p-5">
       <div className="flex min-h-0 flex-1 flex-col rounded-[28px] border border-amber-100 bg-white/85 p-4 shadow-[0_24px_70px_rgba(245,158,11,0.12)] backdrop-blur-sm md:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
@@ -136,7 +140,7 @@ export default function ApplicationSettingPage() {
         <div className="mt-4 grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
           <section className="rounded-[28px] border border-amber-100 bg-[linear-gradient(135deg,rgba(255,251,235,0.96),rgba(254,243,199,0.8))] p-5 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-300/30">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-300/30">
                 <MessageSquareText className="h-6 w-6" />
               </div>
               <div>
@@ -188,6 +192,24 @@ export default function ApplicationSettingPage() {
                 </div>
                 <p className="text-xs text-slate-500">
                   Nama template WhatsApp yang sudah didaftarkan di Meta.
+                </p>
+              </div>
+
+              <label className="pt-3 text-sm font-semibold text-slate-700">Storage Type</label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Database className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+                  <select
+                    value={storageType}
+                    onChange={(e) => setStorageType(e.target.value)}
+                    className="h-12 w-full rounded-2xl border border-amber-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                  >
+                    <option value="LocalServer">LocalServer</option>
+                    <option value="GoogleCloud">GoogleCloud</option>
+                  </select>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Dipakai untuk menentukan lokasi penyimpanan rekaman suara pada environment ini.
                 </p>
               </div>
 
@@ -248,7 +270,7 @@ export default function ApplicationSettingPage() {
                   void handleSave();
                 }}
                 disabled={updateMutation.isPending || settingQuery.isLoading || !dirty || !permissions.canEdit}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(245,158,11,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-linear-to-r from-amber-500 to-orange-500 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(245,158,11,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
                 Simpan Setting
@@ -284,6 +306,10 @@ export default function ApplicationSettingPage() {
               <p>
                 `MsgImage` dipakai sebagai gambar kartu preview pesan dan disimpan sebagai path file
                 upload pada server.
+              </p>
+              <p>
+                `StorageType` disimpan ke field `MsProg.StorageType` dan dibaca backend sebagai
+                provider efektif rekaman suara untuk environment/database yang sedang aktif.
               </p>
               <p>
                 Bila tabel `dbo.MsProg` belum ada, backend akan membuatnya otomatis saat halaman

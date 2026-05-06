@@ -151,6 +151,7 @@ public class RequestSaveTRBirthdayPray
     public long? idTRBirthdayPray { get; set; }
     public string? pesan { get; set; }
     public IFormFile? pesanSuaraFile { get; set; }
+    public long? voiceRecordingId { get; set; }
     public bool saveToAllSameBirthdayDate { get; set; } = true;
 }
 
@@ -159,7 +160,13 @@ public class RequestSaveTRBirthdayPrayVoice
     public long idDonatur { get; set; }
     public long? idTRBirthdayPray { get; set; }
     public IFormFile? pesanSuaraFile { get; set; }
+    public long? voiceRecordingId { get; set; }
     public bool saveToAllSameBirthdayDate { get; set; } = true;
+}
+
+public class RequestUploadVoiceMp3
+{
+    public IFormFile? audio { get; set; }
 }
 
 public class RequestSaveTRBuletin
@@ -194,6 +201,7 @@ public class RequestUpdateApplicationSetting
     public string? existingMsgImage { get; set; }
     public IFormFile? msgImageFile { get; set; }
     public string? whatsappTemplateName { get; set; }
+    public string? storageType { get; set; }
 }
 
 public class RequestSendWhatsApp

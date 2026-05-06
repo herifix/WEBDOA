@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Mic, RefreshCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mic, RefreshCcw, Send, Square, Trash2 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import ERPToolbar from "../../components/ToolbarHR";
 import StatusBanner from "../../components/StatusBanner";
@@ -10,6 +10,7 @@ import {
   useFetchTRBirthdayPrayHistoryByDonatur,
   useFetchTRBirthdayPrayByDonatur,
   useSaveTRBirthdayPray,
+  useUploadVoiceMp3,
   useSendWhatsAppBirthdayPray,
   useSendTestWhatsAppText,
   useSendTestWhatsAppVoice,
@@ -19,6 +20,7 @@ import {
 import { FORM_IDS } from "../../config/formIds";
 import { buildMediaUrl } from "../../config/appConfig";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
+import { convertRecordedBlobToMp3File } from "../../utils/audioMp3";
 
 function formatDate(value?: string | null) {
   if (!value) return "";
@@ -105,6 +107,7 @@ export default function TRBirthdayPrayPage() {
   const historyQuery = useFetchTRBirthdayPrayHistoryByDonatur(idDonatur);
   const applicationSettingQuery = useFetchApplicationSetting();
   const { mutateAsync: saveAsync, isPending: isSaving } = useSaveTRBirthdayPray();
+  const { mutateAsync: uploadVoiceMp3Async, isPending: isUploadingVoice } = useUploadVoiceMp3();
   const { mutateAsync: sendWAAsync, isPending: isSendingWA } = useSendWhatsAppBirthdayPray();
   const { mutateAsync: sendTestTextAsync, isPending: isSendingTestText } = useSendTestWhatsAppText();
   const { mutateAsync: sendTestVoiceAsync, isPending: isSendingTestVoice } = useSendTestWhatsAppVoice();
@@ -116,8 +119,14 @@ export default function TRBirthdayPrayPage() {
   const [pesan, setPesan] = useState("");
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [isEncodingRecording, setIsEncodingRecording] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState("");
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [saveToAllSameBirthdayDate, setSaveToAllSameBirthdayDate] = useState(true);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<BlobPart[]>([]);
 
   useEffect(() => {
     if (!detailQuery.data) return;
@@ -127,6 +136,9 @@ export default function TRBirthdayPrayPage() {
       buildMediaUrl(detailQuery.data.pathPesanSuaraUrl || detailQuery.data.pathPesanSuara || "")
     );
     setSelectedAudioFile(null);
+    setIsRecording(false);
+    setIsEncodingRecording(false);
+    setRecordingStatus("");
     setSaveToAllSameBirthdayDate(true);
   }, [detailQuery.data]);
 
@@ -140,6 +152,12 @@ export default function TRBirthdayPrayPage() {
       URL.revokeObjectURL(objectUrl);
     };
   }, [selectedAudioFile]);
+
+  useEffect(() => {
+    return () => {
+      stopRecordingTracks();
+    };
+  }, []);
 
   const pageData = detailQuery.data;
 
@@ -208,6 +226,11 @@ export default function TRBirthdayPrayPage() {
     return originalPesan !== currentPesan || hasNewAudio;
   }, [pageData, pesan, selectedAudioFile]);
 
+  function stopRecordingTracks() {
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  }
+
   function handleBackToDashboard() {
     if (hasUnsavedChanges) {
       setShowLeaveConfirm(true);
@@ -221,6 +244,7 @@ export default function TRBirthdayPrayPage() {
 
   function clearSelectedAudio() {
     setSelectedAudioFile(null);
+    setRecordingStatus("");
     setAudioPreviewUrl(
       buildMediaUrl(pageData?.pathPesanSuaraUrl || pageData?.pathPesanSuara || "")
     );
@@ -235,12 +259,120 @@ export default function TRBirthdayPrayPage() {
     }
 
     const fileName = (file.name || "").toLowerCase();
-    if (!fileName.endsWith(".mp3") && !fileName.endsWith(".wav")) {
-      setFormError("File pesan suara harus berformat MP3 atau WAV.");
+    if (!fileName.endsWith(".mp3") ) {
+      setFormError("File pesan suara harus berformat MP3.");
       return;
     }
 
     setSelectedAudioFile(file);
+    setRecordingStatus("File MP3 siap disimpan.");
+  }
+
+  async function handleStartRecording() {
+    clearFormMessage();
+
+    if (typeof window === "undefined" || typeof MediaRecorder === "undefined") {
+      setFormError("Browser ini belum mendukung perekaman suara.");
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setFormError("Akses microphone tidak tersedia di browser ini.");
+      return;
+    }
+
+    try {
+      stopRecordingTracks();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferredMimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+
+      const recorder = preferredMimeType
+        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
+        : new MediaRecorder(stream);
+
+      recordedChunksRef.current = [];
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        void processRecordedAudio(recorder.mimeType || "audio/webm");
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingStatus("Sedang merekam suara dari microphone...");
+    } catch (error) {
+      stopRecordingTracks();
+      setIsRecording(false);
+      setRecordingStatus("");
+      setFormError(
+        error instanceof Error
+          ? `Tidak bisa mulai merekam: ${error.message}`
+          : "Tidak bisa mulai merekam suara."
+      );
+    }
+  }
+
+  function handleStopRecording() {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") {
+      return;
+    }
+
+    setRecordingStatus("Rekaman selesai. Sedang mengubah ke MP3...");
+    recorder.stop();
+    setIsRecording(false);
+  }
+
+  async function processRecordedAudio(mimeType: string) {
+    const chunks = recordedChunksRef.current;
+    recordedChunksRef.current = [];
+    stopRecordingTracks();
+    mediaRecorderRef.current = null;
+
+    if (chunks.length === 0) {
+      setRecordingStatus("");
+      setFormError("Rekaman suara kosong. Silakan coba lagi.");
+      return;
+    }
+
+    setIsEncodingRecording(true);
+
+    try {
+      const recordedBlob = new Blob(chunks, { type: mimeType || "audio/webm" });
+      const mp3File = await convertRecordedBlobToMp3File(
+        recordedBlob,
+        `birthday-pray-${idDonatur || "donatur"}-${Date.now()}.mp3`
+      );
+
+      setSelectedAudioFile(mp3File);
+      setRecordingStatus("Rekaman berhasil diubah ke MP3 dan siap disimpan.");
+      setFormSuccess("Rekaman suara siap disimpan sebagai MP3.");
+    } catch (error) {
+      setRecordingStatus("");
+      setFormError(
+        error instanceof Error
+          ? `Gagal mengubah rekaman menjadi MP3: ${error.message}`
+          : "Gagal mengubah rekaman menjadi MP3."
+      );
+    } finally {
+      setIsEncodingRecording(false);
+    }
+  }
+
+  async function uploadSelectedAudioFile(file: File) {
+    const uploadFormData = new FormData();
+    uploadFormData.append("audio", file, file.name);
+    return await uploadVoiceMp3Async(uploadFormData);
   }
 
   if (!permissions.canView) {
@@ -278,11 +410,17 @@ export default function TRBirthdayPrayPage() {
       String(saveToAllSameBirthdayDate)
     );
 
-    if (selectedAudioFile) {
-      formData.append("pesanSuaraFile", selectedAudioFile);
-    }
-
     try {
+      if (selectedAudioFile) {
+        setRecordingStatus("Mengupload file suara MP3 ke server...");
+        const uploadResult = await uploadSelectedAudioFile(selectedAudioFile);
+        if (!uploadResult?.id) {
+          throw new Error("Upload file suara tidak menghasilkan metadata yang valid.");
+        }
+
+        formData.append("voiceRecordingId", String(uploadResult.id));
+      }
+
       const result = await saveAsync(formData);
 
       if (!result?.success) {
@@ -298,11 +436,13 @@ export default function TRBirthdayPrayPage() {
       setFormSuccess(
         `${result.message || "Data berhasil disimpan."}${warningText}`
       );
+      setRecordingStatus("");
       await detailQuery.refetch();
       await historyQuery.refetch();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Gagal menyimpan data.";
+      setRecordingStatus("");
       setFormError(message);
     }
   }
@@ -423,7 +563,7 @@ export default function TRBirthdayPrayPage() {
           showUnapprove={false}
           showPrint={false}
           showExport={false}
-          loadingSave={isSaving}
+          loadingSave={isSaving || isUploadingVoice || isEncodingRecording}
           customButtons={[
             {
               key: "back-dashboard",
@@ -452,7 +592,17 @@ export default function TRBirthdayPrayPage() {
                   <h2 className="text-base font-semibold text-slate-800">Informasi Donatur</h2>
                   <div className="mt-3 grid grid-cols-[122px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
                     <div className="text-slate-500">Nama Donatur</div>
-                    <div className="font-medium text-slate-800">{pageData.namaDonatur}</div>
+                    <div className="font-medium text-slate-800">
+                      <a
+                        href={`/master-donatur?focusDonaturId=${pageData.id_donatur}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-cyan-600 underline-offset-4 hover:text-cyan-700 hover:underline"
+                      >
+                        {pageData.namaDonatur}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
 
                     <div className="text-slate-500">Tgl Lahir</div>
                     <div className="font-medium text-slate-800">
@@ -582,7 +732,7 @@ export default function TRBirthdayPrayPage() {
                 </div>
 
                 <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-900/80 bg-[#0b141a] shadow-[0_22px_60px_rgba(15,23,42,0.25)]">
-                  <div className="bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_35%),linear-gradient(180deg,#0b141a,#111b21)] px-5 py-5">
+                  <div className="bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_35%),linear-gradient(180deg,#0b141a,#111b21)] px-5 py-5">
                     <div className="mx-auto max-w-[880px] rounded-[22px] rounded-tr-md bg-[#005c4b] px-4 py-4 text-white shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
                       <div className="mb-4 text-lg font-bold text-[#f6c56f]">
                         Gema Kasih Yobel
@@ -621,7 +771,7 @@ export default function TRBirthdayPrayPage() {
                       ) : previewParagraphs.length > 0 ? (
                         <div className="space-y-5 pt-4 text-[15px] leading-8 text-white">
                           {previewParagraphs.map((paragraph, paragraphIndex) => (
-                            <p key={`${paragraphIndex}-${paragraph.slice(0, 24)}`} className="whitespace-pre-wrap break-words">
+                            <p key={`${paragraphIndex}-${paragraph.slice(0, 24)}`} className="whitespace-pre-wrap wrap-break-word">
                               {splitTextWithLinks(paragraph).map((part, partIndex) => {
                                 if (/^https?:\/\//i.test(part)) {
                                   return (
@@ -677,10 +827,38 @@ export default function TRBirthdayPrayPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <h2 className="text-base font-semibold text-slate-800">Pesan Suara</h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => void handleStartRecording()}
+                    disabled={isRecording || isEncodingRecording || isUploadingVoice}
+                  >
+                    <Mic className="h-3.5 w-3.5" />
+                    {isRecording ? "Sedang Rekam..." : "Mulai Rekam"}
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={handleStopRecording}
+                    disabled={!isRecording}
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                    Stop Rekam
+                  </button>
+                </div>
+
+                {recordingStatus ? (
+                  <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                    {recordingStatus}
+                  </div>
+                ) : null}
+
                 <input
                   type="file"
-                  accept=".mp3,audio/mpeg,.wav,audio/wav"
+                  accept=".mp3,audio/mpeg"
                   className="mt-3 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-700"
+                  disabled={isRecording || isEncodingRecording || isUploadingVoice}
                   onChange={(e) => handleAudioFileChange(e.target.files?.[0] ?? null)}
                 />
 
@@ -689,7 +867,7 @@ export default function TRBirthdayPrayPage() {
                     type="button"
                     className="inline-flex shrink-0 items-center gap-1 rounded bg-slate-500 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={clearSelectedAudio}
-                    disabled={!selectedAudioFile}
+                    disabled={!selectedAudioFile || isRecording || isEncodingRecording || isUploadingVoice}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Hapus
@@ -697,12 +875,19 @@ export default function TRBirthdayPrayPage() {
                 </div>
 
                 <div className="mt-2 text-xs text-slate-500">
-                  Upload file suara mendukung format MP3 dan WAV. Rekaman langsung dari browser dinonaktifkan agar format file tetap konsisten.
+                  Rekaman browser akan diubah dulu menjadi MP3 sebelum disimpan. Upload manual juga hanya menerima file MP3 maksimal 10 MB.
                 </div>
 
                 {audioFileName ? (
                   <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                    File: <span className="font-medium text-slate-800">{audioFileName}</span>
+                    <div>
+                      File: <span className="font-medium text-slate-800">{audioFileName}</span>
+                    </div>
+                    {selectedAudioFile ? (
+                      <div className="mt-1 text-xs text-slate-500">
+                        Status: belum disimpan ke transaksi. File MP3 akan diupload saat tombol Save ditekan.
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="mt-3 rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">

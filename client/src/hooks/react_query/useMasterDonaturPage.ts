@@ -83,10 +83,10 @@ export function useMasterDonaturPage() {
       return false;
     }
 
-    if (tglLahir && lastDonation && lastDonation < tglLahir) {
-      setFormError("Last Donation tidak boleh lebih kecil dari Tgl Lahir.");
-      return false;
-    }
+    // if (tglLahir && lastDonation && lastDonation < tglLahir) {
+    //   setFormError("Last Donation tidak boleh lebih kecil dari Tgl Lahir.");
+    //   return false;
+    // }
 
     clearFormMessage();
     return true;

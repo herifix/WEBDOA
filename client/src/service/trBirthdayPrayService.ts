@@ -4,6 +4,7 @@ import type {
   TRBirthdayPrayDetail,
   TRBirthdayPrayHistoryItem,
   TRBirthdayPrayMediaDebugInfo,
+  VoiceRecordingUploadResult,
 } from "../Model/ModelTRBirthdayPray";
 
 export async function getBirthdayDashboard(tgl: string): Promise<DashboardBirthdayItem[]> {
@@ -42,6 +43,16 @@ export async function getTRBirthdayPrayHistoryByDonatur(
 export async function saveTRBirthdayPray(formData: FormData) {
   const response = await http.put("api/Transaction/TRBirthdayPray/Save", formData);
   return response.data;
+}
+
+export async function uploadVoiceMp3(formData: FormData): Promise<VoiceRecordingUploadResult> {
+  const response = await http.post("api/voice/upload-mp3", formData);
+
+  if (response.data?.success === false) {
+    throw new Error(response.data?.message || "Gagal upload file suara MP3.");
+  }
+
+  return response.data.data;
 }
 
 export async function sendWhatsAppBirthdayPray(payload: { idDonatur: number; year?: number }) {

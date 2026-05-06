@@ -1,5 +1,6 @@
 using API.Repository.global;
 using API.Repository.Master;
+using API.Repository.Transaction;
 using Microsoft.AspNetCore.Hosting;
 using System.Data;
 using System.Net;
@@ -15,6 +16,7 @@ namespace API.Service.Transaction
         private readonly RepoTRBirthdayPray repo;
         private readonly RepoMasterDonatur donaturRepo;
         private readonly RepoApplicationSetting settingRepo;
+        private readonly ServiceVoiceStorage voiceStorageService;
         private readonly IWebHostEnvironment env;
         private readonly IConfiguration configuration;
 
@@ -23,6 +25,7 @@ namespace API.Service.Transaction
             RepoTRBirthdayPray repo,
             RepoMasterDonatur donaturRepo,
             RepoApplicationSetting settingRepo,
+            ServiceVoiceStorage voiceStorageService,
             IWebHostEnvironment env,
             IConfiguration configuration)
         {
@@ -30,6 +33,7 @@ namespace API.Service.Transaction
             this.repo = repo;
             this.donaturRepo = donaturRepo;
             this.settingRepo = settingRepo;
+            this.voiceStorageService = voiceStorageService;
             this.env = env;
             this.configuration = configuration;
         }
@@ -136,7 +140,7 @@ namespace API.Service.Transaction
                 var response = repo.GetDataByDonaturId(idDonatur, targetYear, conn);
                 if (response.success && response.data != null)
                 {
-                    response.data.pathPesanSuaraUrl = BuildPublicAssetUrl(response.data.pathPesanSuara);
+                    response.data.pathPesanSuaraUrl = ResolveStoredAudioPreviewUrl(response.data.pathPesanSuara);
                 }
 
                 return response;
@@ -167,7 +171,7 @@ namespace API.Service.Transaction
                 var history = repo.GetHistoryByDonaturId(idDonatur, conn);
                 foreach (var item in history)
                 {
-                    item.pathPesanSuaraUrl = BuildPublicAssetUrl(item.pathPesanSuara);
+                    item.pathPesanSuaraUrl = ResolveStoredAudioPreviewUrl(item.pathPesanSuara);
                 }
 
                 return new ResponseData<List<ResponseModelTRBirthdayPrayHistory>>
@@ -215,8 +219,12 @@ namespace API.Service.Transaction
 
                 string publicBaseUrl = GetPublicBaseUrl();
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
-                string resolvedUrl = BuildAbsoluteUrl(publicBaseUrl, prayData.pathPesanSuara);
-                var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
+                string effectiveStorageProvider = GetEffectiveVoiceStorageProvider(conn);
+                string resolvedUrl = ResolveStoredAudioDeliveryUrl(prayData.pathPesanSuara);
+                bool requiresPublicBaseUrl = StoredAudioRequiresPublicBaseUrl(prayData.pathPesanSuara);
+                (bool isValid, string message) publicBaseUrlValidation = requiresPublicBaseUrl
+                    ? ValidatePublicBaseUrl(publicBaseUrl)
+                    : (true, "URL audio akan di-resolve dari Google Cloud Storage.");
 
                 return new ResponseData<ResponseModelTRBirthdayPrayMediaDebug>
                 {
@@ -228,10 +236,11 @@ namespace API.Service.Transaction
                         targetYear = targetYear,
                         publicBaseUrl = publicBaseUrl,
                         gatewayUrl = gatewayUrl,
+                        voiceStorageProvider = effectiveStorageProvider,
                         voiceStorageRootPath = GetVoiceStorageRootPath(),
                         voiceStorageEnvironmentFolder = GetVoiceStorageEnvironmentFolder(),
                         pathPesanSuara = prayData.pathPesanSuara ?? "",
-                        pathPesanSuaraUrl = BuildPublicAssetUrl(prayData.pathPesanSuara),
+                        pathPesanSuaraUrl = ResolveStoredAudioPreviewUrl(prayData.pathPesanSuara),
                         audioUrl = resolvedUrl,
                         hasAudioFile = !string.IsNullOrWhiteSpace(prayData.pathPesanSuara),
                         isPublicBaseUrlConfigured = !string.IsNullOrWhiteSpace(publicBaseUrl),
@@ -319,6 +328,11 @@ namespace API.Service.Transaction
 
                 var existing = repo.GetDataByDonaturId(bodyRequest.idDonatur, targetYear, conn, tran).data;
                 string pathPesanSuara = existing?.pathPesanSuara ?? "";
+                if (bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0)
+                {
+                    pathPesanSuara = BuildVoiceRecordingReference(bodyRequest.voiceRecordingId.Value);
+                }
+
                 if (bodyRequest.pesanSuaraFile != null && bodyRequest.pesanSuaraFile.Length > 0)
                 {
                     if (!IsSupportedAudioFile(bodyRequest.pesanSuaraFile))
@@ -327,12 +341,12 @@ namespace API.Service.Transaction
                         return new ResponseData<long>
                         {
                             success = false,
-                            message = "File pesan suara harus berformat MP3 atau WAV.",
+                            message = "File pesan suara harus berformat MP3.",
                             data = 0
                         };
                     }
 
-                    pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile, donatur.Nama, birthdayDate);
+                    pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile);
                 }
 
                 foreach (var targetDonatur in targetDonaturs)
@@ -424,24 +438,34 @@ namespace API.Service.Transaction
 
                 if (bodyRequest.pesanSuaraFile == null || bodyRequest.pesanSuaraFile.Length <= 0)
                 {
-                    tran.Rollback();
-                    return new ResponseData<long>
+                    if (bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0)
                     {
-                        success = false,
-                        message = "File pesan suara wajib diisi.",
-                        data = 0
-                    };
+                        // already handled below
+                    }
+                    else
+                    {
+                        tran.Rollback();
+                        return new ResponseData<long>
+                        {
+                            success = false,
+                            message = "File pesan suara wajib diisi.",
+                            data = 0
+                        };
+                    }
                 }
 
-                if (!IsSupportedAudioFile(bodyRequest.pesanSuaraFile))
+                if (bodyRequest.pesanSuaraFile != null && bodyRequest.pesanSuaraFile.Length > 0)
                 {
-                    tran.Rollback();
-                    return new ResponseData<long>
+                    if (!IsSupportedAudioFile(bodyRequest.pesanSuaraFile))
                     {
-                        success = false,
-                        message = "File pesan suara harus berformat MP3 atau WAV.",
-                        data = 0
-                    };
+                        tran.Rollback();
+                        return new ResponseData<long>
+                        {
+                            success = false,
+                            message = "File pesan suara harus berformat MP3.",
+                            data = 0
+                        };
+                    }
                 }
 
                 var donaturResponse = donaturRepo.GetDataById(bodyRequest.idDonatur, conn, tran);
@@ -481,7 +505,9 @@ namespace API.Service.Transaction
                     targetDonaturs.Add(donatur);
                 }
 
-                string pathPesanSuara = SaveVoiceFile(bodyRequest.pesanSuaraFile, donatur.Nama, birthdayDate);
+                string pathPesanSuara = bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0
+                    ? BuildVoiceRecordingReference(bodyRequest.voiceRecordingId.Value)
+                    : SaveVoiceFile(bodyRequest.pesanSuaraFile!);
 
                 foreach (var targetDonatur in targetDonaturs)
                 {
@@ -507,6 +533,7 @@ namespace API.Service.Transaction
                                 idTRBirthdayPray = bodyRequest.idTRBirthdayPray,
                                 pesan = "",
                                 pesanSuaraFile = null,
+                                voiceRecordingId = bodyRequest.voiceRecordingId,
                                 saveToAllSameBirthdayDate = bodyRequest.saveToAllSameBirthdayDate
                             },
                             targetDonatur,
@@ -576,7 +603,9 @@ namespace API.Service.Transaction
                     return new ResponseData<string> { success = false, message = "WhatsApp gateway URL belum diatur." };
                 }
 
-                if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara) && string.IsNullOrWhiteSpace(publicBaseUrl))
+                bool requiresPublicBaseUrl = StoredAudioRequiresPublicBaseUrl(prayData.pathPesanSuara);
+
+                if (requiresPublicBaseUrl && string.IsNullOrWhiteSpace(publicBaseUrl))
                 {
                     return new ResponseData<string>
                     {
@@ -585,7 +614,7 @@ namespace API.Service.Transaction
                     };
                 }
 
-                if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
+                if (requiresPublicBaseUrl)
                 {
                     var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
                     if (!publicBaseUrlValidation.isValid)
@@ -688,7 +717,7 @@ namespace API.Service.Transaction
                     {
                         try
                         {
-                            string audioUrl = BuildAbsoluteUrl(publicBaseUrl, prayData.pathPesanSuara);
+                            string audioUrl = ResolveStoredAudioDeliveryUrl(prayData.pathPesanSuara);
                             var audioPayload = new
                             {
                                 phone_number = phoneNumber,
@@ -781,13 +810,16 @@ namespace API.Service.Transaction
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
                 string publicBaseUrl = GetPublicBaseUrl();
-                if (string.IsNullOrWhiteSpace(publicBaseUrl))
+                if (StoredAudioRequiresPublicBaseUrl(prayData.pathPesanSuara) && string.IsNullOrWhiteSpace(publicBaseUrl))
                     return new ResponseData<string> { success = false, message = "Runtime.PublicBaseUrl belum diatur untuk test pesan suara." };
-                var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
-                if (!publicBaseUrlValidation.isValid)
-                    return new ResponseData<string> { success = false, message = $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}" };
+                if (StoredAudioRequiresPublicBaseUrl(prayData.pathPesanSuara))
+                {
+                    var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
+                    if (!publicBaseUrlValidation.isValid)
+                        return new ResponseData<string> { success = false, message = $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}" };
+                }
                 string phoneNumber = FormatPhoneNumber(prayData.noHPDonatur);
-                string audioUrl = BuildAbsoluteUrl(publicBaseUrl, prayData.pathPesanSuara);
+                string audioUrl = ResolveStoredAudioDeliveryUrl(prayData.pathPesanSuara);
 
                 var payload = new
                 {
@@ -864,6 +896,26 @@ namespace API.Service.Transaction
         private string GetPublicBaseUrl()
         {
             return (configuration["Runtime:PublicBaseUrl"] ?? "").Trim();
+        }
+
+        private string GetEffectiveVoiceStorageProvider(IDbConnection activeConn)
+        {
+            try
+            {
+                var setting = settingRepo.GetSetting(activeConn);
+                if (string.Equals(setting.storageType, "GoogleCloud", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "GoogleCloud";
+                }
+            }
+            catch
+            {
+                // fallback ke config
+            }
+
+            return string.Equals(configuration["VoiceStorage:Provider"], "GoogleCloud", StringComparison.OrdinalIgnoreCase)
+                ? "GoogleCloud"
+                : "LocalServer";
         }
 
         private string GetVoiceStorageRootPath()
@@ -951,11 +1003,6 @@ namespace API.Service.Transaction
             return (true, "OK");
         }
 
-        private string BuildPublicAssetUrl(string relativePath)
-        {
-            return BuildAbsoluteUrl(GetPublicBaseUrl(), relativePath);
-        }
-
         private string BuildAbsoluteUrl(string publicBaseUrl, string relativePath)
         {
             if (string.IsNullOrWhiteSpace(relativePath))
@@ -980,33 +1027,94 @@ namespace API.Service.Transaction
             return new DateTime(targetYear, sourceBirthday.Month, day);
         }
 
-        private string SaveVoiceFile(IFormFile file, string donaturName, DateTime birthdayDate)
+        private string SaveVoiceFile(IFormFile file)
         {
-            string extension = Path.GetExtension(file.FileName ?? "").Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(extension)) extension = ".mp3";
-
-            string safeName = SanitizeFileName(donaturName);
-            string fileName = $"{birthdayDate:yyyyMMdd}_{safeName}_{DateTime.Now:HHmmssfff}{extension}";
-
-            string folder = GetVoiceStoragePhysicalFolder();
-            if (!Directory.Exists(folder))
+            var uploadResponse = voiceStorageService.UploadMp3(new RequestUploadVoiceMp3
             {
-                Directory.CreateDirectory(folder);
+                audio = file
+            });
+
+            if (!uploadResponse.success || uploadResponse.data == null || uploadResponse.data.id <= 0)
+            {
+                throw new InvalidOperationException(uploadResponse.message ?? "Gagal upload file suara ke storage.");
             }
 
-            string filePath = Path.Combine(folder, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                file.CopyTo(stream);
-            }
-
-            return BuildStoredVoiceRelativePath(fileName);
+            return BuildVoiceRecordingReference(uploadResponse.data.id);
         }
 
         private bool IsSupportedAudioFile(IFormFile file)
         {
             string extension = Path.GetExtension(file.FileName ?? "").Trim().ToLowerInvariant();
-            return extension == ".mp3" || extension == ".wav";
+            return extension == ".mp3";
+        }
+
+        private string ResolveStoredAudioPreviewUrl(string storedValue)
+        {
+            if (string.IsNullOrWhiteSpace(storedValue))
+            {
+                return "";
+            }
+
+            if (TryParseVoiceRecordingReference(storedValue, out long voiceRecordingId))
+            {
+                // We use ResolvePlaybackUrl instead of BuildBackendPlaybackUrl 
+                // so that LocalServer gets the direct physical path URL.
+                return voiceStorageService.ResolvePlaybackUrl(voiceRecordingId, conn).url;
+            }
+
+            return BuildAbsoluteUrl(GetPublicBaseUrl(), storedValue);
+        }
+
+        private string ResolveStoredAudioDeliveryUrl(string storedValue)
+        {
+            if (string.IsNullOrWhiteSpace(storedValue))
+            {
+                return "";
+            }
+
+            if (TryParseVoiceRecordingReference(storedValue, out long voiceRecordingId))
+            {
+                return voiceStorageService.ResolvePlaybackUrl(voiceRecordingId, conn).url;
+            }
+
+            return BuildAbsoluteUrl(GetPublicBaseUrl(), storedValue);
+        }
+
+        private bool StoredAudioRequiresPublicBaseUrl(string storedValue)
+        {
+            if (string.IsNullOrWhiteSpace(storedValue))
+            {
+                return false;
+            }
+
+            if (TryParseVoiceRecordingReference(storedValue, out _))
+            {
+                return false;
+            }
+
+            return !Uri.TryCreate(storedValue, UriKind.Absolute, out _);
+        }
+
+        private string BuildVoiceRecordingReference(long id)
+        {
+            return $"voice-recording:{id}";
+        }
+
+        private bool TryParseVoiceRecordingReference(string storedValue, out long id)
+        {
+            id = 0;
+            if (string.IsNullOrWhiteSpace(storedValue))
+            {
+                return false;
+            }
+
+            const string prefix = "voice-recording:";
+            if (!storedValue.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return long.TryParse(storedValue[prefix.Length..], out id) && id > 0;
         }
 
         private string SanitizeFileName(string value)

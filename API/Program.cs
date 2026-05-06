@@ -117,47 +117,50 @@ builder.Services.AddScoped<RepoWhatsAppSchedule>();
 builder.Services.AddScoped<RepoApplicationSetting>();
 builder.Services.AddScoped<RepoTRBirthdayPray>();
 builder.Services.AddScoped<RepoTRBuletin>();
+builder.Services.AddScoped<RepoVoiceRecording>();
 builder.Services.AddScoped<ServiceTRBirthdayPray>();
 builder.Services.AddScoped<ServiceTRBuletin>();
+builder.Services.AddScoped<ServiceVoiceStorage>();
 builder.Services.AddScoped<ServiceMasterUser>();
 builder.Services.AddScoped<ServiceWhatsAppSchedule>();
 builder.Services.AddScoped<ServiceApplicationSetting>();
 builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
 var app = builder.Build();
+// 1. Static Files for Voice (Move to top and include /api in RequestPath for direct access)
 var voiceStorageRootPath = (builder.Configuration["VoiceStorage:RootPath"] ?? "").Trim();
-
-// Support running the API both directly (localhost:7125/api/...)
-// and behind an IIS application mounted at /api.
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path.StartsWithSegments("/api", out var remaining))
-    {
-        context.Request.Path = remaining.HasValue ? remaining : "/";
-    }
-
-    await next();
-});
-
-app.UseSwagger();
-app.UseSwaggerUI();
 if (!string.IsNullOrWhiteSpace(voiceStorageRootPath))
 {
     Directory.CreateDirectory(voiceStorageRootPath);
     var contentTypeProvider = new FileExtensionContentTypeProvider();
-    contentTypeProvider.Mappings[".webm"] = "video/webm";
-    contentTypeProvider.Mappings[".m4a"] = "audio/mp4";
     contentTypeProvider.Mappings[".mp3"] = "audio/mpeg";
 
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(voiceStorageRootPath),
-        RequestPath = "/uploads/birthday-pray",
+        RequestPath = "/api/uploads/birthday-pray", // Include /api here
         ContentTypeProvider = contentTypeProvider
     });
 }
 
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseStaticFiles();
+
+// 2. Middleware to strip /api (for Controllers)
+app.Use(async (context, next) =>
+{
+    // If it was already handled by StaticFiles above, this won't be reached for those files
+    if (context.Request.Path.StartsWithSegments("/api", out var remaining))
+    {
+        // Don't strip if it's already handled or specifically for uploads if needed, 
+        // but since StaticFiles is above, it's fine.
+        context.Request.Path = remaining.HasValue ? remaining : "/";
+    }
+
+    await next();
+});
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {

@@ -49,10 +49,25 @@ export interface TRBirthdayPrayMediaDebugInfo {
   targetYear: number;
   publicBaseUrl: string;
   gatewayUrl: string;
+  voiceStorageProvider: string;
   voiceStorageRootPath: string;
   voiceStorageEnvironmentFolder: string;
   pathPesanSuara: string;
   pathPesanSuaraUrl: string;
   audioUrl: string;
   hasAudioFile: boolean;
+}
+
+export interface VoiceRecordingUploadResult {
+  id: number;
+  provider: string;
+  fileName: string;
+  bucketName: string;
+  objectName: string;
+  storagePath: string;
+  fileUrl: string | null;
+  contentType: string;
+  fileSize: number;
+  createdAt: string;
+  playbackUrl: string;
 }

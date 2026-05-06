@@ -4,6 +4,7 @@ import {
   getTRBirthdayPrayHistoryByDonatur,
   getTRBirthdayPrayByDonatur,
   saveTRBirthdayPray,
+  uploadVoiceMp3,
   sendWhatsAppBirthdayPray,
   sendTestWhatsAppText,
   sendTestWhatsAppVoice,
@@ -37,6 +38,12 @@ export function useFetchTRBirthdayPrayHistoryByDonatur(idDonatur: number) {
 export function useSaveTRBirthdayPray() {
   return useMutation({
     mutationFn: (formData: FormData) => saveTRBirthdayPray(formData),
+  });
+}
+
+export function useUploadVoiceMp3() {
+  return useMutation({
+    mutationFn: (formData: FormData) => uploadVoiceMp3(formData),
   });
 }
 

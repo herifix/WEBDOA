@@ -37,7 +37,7 @@ namespace API.Service.Master
                 return new ResponseData<ResponseModelApplicationSetting>
                 {
                     success = false,
-                    message = ex.Message,
+                    message = $"Error GetSetting: {ex.Message} (Stack: {ex.StackTrace})",
                     data = new ResponseModelApplicationSetting()
                 };
             }

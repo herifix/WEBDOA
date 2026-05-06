@@ -88,6 +88,7 @@ public class ResponseModelApplicationSetting
     public string msgLink { get; set; } = "";
     public string msgImage { get; set; } = "";
     public string whatsappTemplateName { get; set; } = "";
+    public string storageType { get; set; } = "";
 }
 
 #endregion LOGIN
@@ -208,6 +209,7 @@ public class ResponseModelTRBirthdayPrayMediaDebug
     public int targetYear { get; set; }
     public string publicBaseUrl { get; set; } = "";
     public string gatewayUrl { get; set; } = "";
+    public string voiceStorageProvider { get; set; } = "";
     public string voiceStorageRootPath { get; set; } = "";
     public string voiceStorageEnvironmentFolder { get; set; } = "";
     public string pathPesanSuara { get; set; } = "";
@@ -217,6 +219,29 @@ public class ResponseModelTRBirthdayPrayMediaDebug
     public bool isPublicBaseUrlConfigured { get; set; }
     public bool isPublicBaseUrlLikelyPublic { get; set; }
     public string publicBaseUrlValidationMessage { get; set; } = "";
+}
+
+public class ResponseModelVoiceRecording
+{
+    public long id { get; set; }
+    public string provider { get; set; } = "";
+    public string fileName { get; set; } = "";
+    public string bucketName { get; set; } = "";
+    public string objectName { get; set; } = "";
+    public string storagePath { get; set; } = "";
+    public string? fileUrl { get; set; }
+    public string contentType { get; set; } = "";
+    public long fileSize { get; set; }
+    public DateTime createdAt { get; set; }
+    public string playbackUrl { get; set; } = "";
+}
+
+public class ResponseModelVoiceSignedUrl
+{
+    public long id { get; set; }
+    public string url { get; set; } = "";
+    public DateTime? expiresAt { get; set; }
+    public bool isPublicUrl { get; set; }
 }
 
 public class ResponseModelTRBuletin

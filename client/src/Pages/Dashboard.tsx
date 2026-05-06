@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { RefreshCcw, Send } from "lucide-react";
+import { ExternalLink, RefreshCcw, Send } from "lucide-react";
 import ERPGridTable, { type Column } from "../components/GridFullParent";
 import {
   useFetchBirthdayDashboard,
@@ -341,7 +341,20 @@ export default function DashboardPage() {
         );
         }
 
-        return <span className="pl-12">{row.nama}</span>;
+        return (
+          <span className="pl-12 font-medium">
+            <a
+              href={`/master-donatur?focusDonaturId=${row.id_donatur}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sky-700 underline-offset-4 hover:text-sky-800 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {row.nama}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </span>
+        );
       },
     },
     {
@@ -508,7 +521,7 @@ export default function DashboardPage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 p-5 text-white shadow-sm">
+        <div className="rounded-2xl bg-linear-to-r from-cyan-600 to-sky-700 p-5 text-white shadow-sm">
           <div className="text-sm font-medium text-cyan-100">Ulang Tahun Mendatang</div>
           <div className="mt-2 text-3xl font-bold">{totalUpcoming}</div>
         </div>
