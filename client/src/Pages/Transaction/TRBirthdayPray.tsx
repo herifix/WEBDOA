@@ -89,6 +89,42 @@ function splitTextWithLinks(value: string) {
   return value.split(/(https?:\/\/[^\s]+)/gi).filter(Boolean);
 }
 
+function validateWhatsAppTemplateSend(params: {
+  templateName?: string;
+  namaPenerima?: string;
+  namaPendoa?: string;
+  link?: string;
+  isiDoa?: string;
+}) {
+  if (!params.templateName?.trim()) {
+    return "Nama template WhatsApp belum diatur.";
+  }
+
+  const missingFields: string[] = [];
+
+  if (!params.namaPenerima?.trim()) {
+    missingFields.push("nama penerima");
+  }
+
+  if (!params.namaPendoa?.trim()) {
+    missingFields.push("pendoa");
+  }
+
+  if (!params.link?.trim()) {
+    missingFields.push("link");
+  }
+
+  if (!params.isiDoa?.trim()) {
+    missingFields.push("isi doa");
+  }
+
+  if (missingFields.length > 0) {
+    return `Parameter template WhatsApp belum lengkap. Lengkapi: ${missingFields.join(", ")}.`;
+  }
+
+  return "";
+}
+
 export default function TRBirthdayPrayPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -457,6 +493,19 @@ export default function TRBirthdayPrayPage() {
 
     if (hasUnsavedChanges) {
       setFormError("Silakan simpan perubahan terlebih dahulu sebelum mengirim WhatsApp.");
+      return;
+    }
+
+    const validationMessage = validateWhatsAppTemplateSend({
+      templateName: applicationSettingQuery.data?.whatsappTemplateName,
+      namaPenerima: pageData?.namaDonatur,
+      namaPendoa: pageData?.namaPendoa,
+      link: applicationSettingQuery.data?.msgLink,
+      isiDoa: pageData?.pesan,
+    });
+
+    if (validationMessage) {
+      setFormError(validationMessage);
       return;
     }
 

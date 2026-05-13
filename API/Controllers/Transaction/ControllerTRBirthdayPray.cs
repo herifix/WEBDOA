@@ -64,31 +64,38 @@ namespace API.Controllers
         {
             return service.SaveVoice(bodyRequest);
         }
+
+        [HttpPut]
+        [Route("Transaction/TRBirthdayPray/SaveVoiceFFmpeg")]
+        public ResponseData<long> SaveVoiceFFmpeg([FromForm] RequestSaveTRBirthdayPrayVoice bodyRequest)
+        {
+            return service.SaveVoiceFFmpeg(bodyRequest);
+        }
  
         [HttpPost]
         [Route("Transaction/TRBirthdayPray/SendWhatsApp")]
-        public async Task<ResponseData<string>> SendWhatsApp([FromBody] RequestSendWhatsApp bodyRequest)
+        public async Task<ResponseData<object>> SendWhatsApp([FromBody] RequestSendWhatsApp bodyRequest)
         {
             return await service.SendWhatsApp(bodyRequest.idDonatur, bodyRequest.year);
         }
 
         [HttpPost]
         [Route("Transaction/TRBirthdayPray/SendTestWhatsAppText")]
-        public async Task<ResponseData<string>> SendTestWhatsAppText([FromBody] RequestSendWhatsApp bodyRequest)
+        public async Task<ResponseData<object>> SendTestWhatsAppText([FromBody] RequestSendWhatsApp bodyRequest)
         {
             return await service.SendTestWhatsAppText(bodyRequest.idDonatur, bodyRequest.year);
         }
 
         [HttpPost]
         [Route("Transaction/TRBirthdayPray/SendTestWhatsAppVoice")]
-        public async Task<ResponseData<string>> SendTestWhatsAppVoice([FromBody] RequestSendWhatsApp bodyRequest)
+        public async Task<ResponseData<object>> SendTestWhatsAppVoice([FromBody] RequestSendWhatsApp bodyRequest)
         {
             return await service.SendTestWhatsAppVoice(bodyRequest.idDonatur, bodyRequest.year);
         }
 
         [HttpGet]
         [Route("Transaction/TRBirthdayPray/GetPhoneNumbers")]
-        public async Task<ResponseData<string>> GetPhoneNumbers()
+        public async Task<ResponseData<object>> GetPhoneNumbers()
         {
             return await service.GetWhatsAppPhoneNumbers();
         }

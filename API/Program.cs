@@ -124,6 +124,7 @@ builder.Services.AddScoped<ServiceVoiceStorage>();
 builder.Services.AddScoped<ServiceMasterUser>();
 builder.Services.AddScoped<ServiceWhatsAppSchedule>();
 builder.Services.AddScoped<ServiceApplicationSetting>();
+builder.Services.AddScoped<API.Helpers.HelperFFmpeg>();
 builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
 var app = builder.Build();
@@ -142,6 +143,13 @@ if (!string.IsNullOrWhiteSpace(voiceStorageRootPath))
         ContentTypeProvider = contentTypeProvider
     });
 }
+
+// 1.1 Static Files for generic uploads in wwwroot (matches /api/uploads)
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(app.Environment.WebRootPath, "uploads")),
+    RequestPath = "/api/uploads"
+});
 
 app.UseSwagger();
 app.UseSwaggerUI();

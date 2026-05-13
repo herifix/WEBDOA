@@ -1,0 +1,38 @@
+# .NET (API)
+**/[Bb]in/
+**/[Oo]bj/
+**/*.user
+**/*.suo
+**/App_Data/
+**/codex-api-*.log
+
+# Folder Tools & Uploads (Penting: agar tidak masuk Git)
+API/Tools/
+API/wwwroot/uploads/
+
+# Node / React (Client)
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/build/
+
+# Editor / OS
+.vs/
+.vscode/
+.idea/
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Other project specific
+publish/
+out-*/
+File Support/
+*.msi
+*.exe

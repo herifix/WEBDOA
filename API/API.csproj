@@ -29,8 +29,15 @@
     <Folder Include="Controllers\Transaction\AR\" />
     <Folder Include="Controllers\Transaction\" />
     <Folder Include="Controllers\PPIC\" />
+    <Folder Include="Tools\" />
     <Folder Include="Repository\Transaction\" />
     <Folder Include="Service\AP\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="tools\ffmpeg\bin\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
