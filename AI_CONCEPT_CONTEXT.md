@@ -15,7 +15,7 @@ Buat implementasi sistem approval pada modul/page TRPR dengan konsep:
   contoh:
   [InventoryTES].dbo.MsApprovalModuleSetting
   [InventoryERP].dbo.TrApprovalRequest
-- InventoryAktif dikirim sebagai parameter atau dibaca dari config, misalnya InventoryTES untuk DEV dan InventoryERP untuk PROD.
+- InventoryAktif dikirim sebagai parameter atau dibaca dari config, misalnya InventoryTES 
 
 ==================================================
 
