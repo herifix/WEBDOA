@@ -1,5 +1,6 @@
 using API.Repository.Transaction;
 using API.Repository.global;
+using API.Repository.Master;
 using Microsoft.AspNetCore.Hosting;
 using System.Data;
 using System.Net.Http.Headers;
@@ -13,6 +14,7 @@ namespace API.Service.Transaction
         private readonly IDbConnection conn;
         private readonly RepoTRBuletin repo;
         private readonly RepoMasterDonatur donaturRepo;
+        private readonly RepoApplicationSetting settingRepo;
         private readonly IConfiguration configuration;
         private readonly IWebHostEnvironment env;
 
@@ -20,12 +22,14 @@ namespace API.Service.Transaction
             IDbConnection conn,
             RepoTRBuletin repo,
             RepoMasterDonatur donaturRepo,
+            RepoApplicationSetting settingRepo,
             IConfiguration configuration,
             IWebHostEnvironment env)
         {
             this.conn = conn;
             this.repo = repo;
             this.donaturRepo = donaturRepo;
+            this.settingRepo = settingRepo;
             this.configuration = configuration;
             this.env = env;
         }
@@ -346,7 +350,8 @@ namespace API.Service.Transaction
                 }
 
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
-                string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
+                var setting = settingRepo.GetSetting(conn);
+                string gatewayToken = ResolveGatewayToken(setting.whatsappGatewayToken);
                 string publicBaseUrl = configuration["Runtime:PublicBaseUrl"] ?? "";
 
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
@@ -499,6 +504,17 @@ namespace API.Service.Transaction
                 return relativePath.Replace("\\", "/");
 
             return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
+        }
+
+        private string ResolveGatewayToken(string? tokenFromSetting)
+        {
+            string value = (tokenFromSetting ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            return (configuration["WhatsAppGateway:Token"] ?? "").Trim();
         }
     }
 }

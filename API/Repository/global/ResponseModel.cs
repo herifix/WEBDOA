@@ -88,6 +88,7 @@ public class ResponseModelApplicationSetting
     public string msgLink { get; set; } = "";
     public string msgImage { get; set; } = "";
     public string whatsappTemplateName { get; set; } = "";
+    public string whatsappGatewayToken { get; set; } = "";
     public string storageType { get; set; } = "";
 }
 

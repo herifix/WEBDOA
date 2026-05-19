@@ -47,7 +47,7 @@ UpcomingBirthday AS (
         b.Status,
         b.LastDonation,
         CASE
-            WHEN CAST(b.birthdayDateThisYear AS date) > CAST(@currentDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
+            WHEN CAST(b.birthdayDateThisYear AS date) >= CAST(@currentDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
             ELSE CAST(CASE
                 WHEN MONTH(b.TglLahir) = 2 AND DAY(b.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@currentDate) + 1, 2, 1))) < 29
                     THEN EOMONTH(DATEFROMPARTS(YEAR(@currentDate) + 1, 2, 1))

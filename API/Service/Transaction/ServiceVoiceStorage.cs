@@ -53,7 +53,7 @@ namespace API.Service.Transaction
                     return FailedUpload("File audio wajib diisi.");
                 }
 
-                var validationError = ValidateMp3File(request.audio);
+                var validationError = ValidateSupportedMediaFile(request.audio);
                 if (!string.IsNullOrWhiteSpace(validationError))
                 {
                     return FailedUpload(validationError);
@@ -69,7 +69,7 @@ namespace API.Service.Transaction
                 return new ResponseData<ResponseModelVoiceRecording>
                 {
                     success = true,
-                    message = "File MP3 berhasil diupload.",
+                    message = "File MP3/MP4 berhasil diupload.",
                     data = metadata
                 };
             }
@@ -290,40 +290,39 @@ namespace API.Service.Transaction
             };
         }
 
-        private string ValidateMp3File(IFormFile file)
+        private string ValidateSupportedMediaFile(IFormFile file)
         {
             if (file.Length <= 0)
             {
-                return "File audio kosong.";
+                return "File media kosong.";
             }
 
             long maxBytes = GetMaxUploadSizeMb() * 1024L * 1024L;
             if (file.Length > maxBytes)
             {
-                return $"Ukuran file audio melebihi batas {GetMaxUploadSizeMb()} MB.";
+                return $"Ukuran file media melebihi batas {GetMaxUploadSizeMb()} MB.";
             }
 
             string extension = Path.GetExtension(file.FileName ?? "").Trim().ToLowerInvariant();
-            if (extension != ".mp3")
+            if (!IsSupportedMediaExtension(extension))
             {
-                return "File audio harus berformat MP3.";
+                return "File pesan suara harus berformat MP3 atau MP4.";
             }
 
             string contentType = (file.ContentType ?? "").Trim().ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(contentType) &&
-                contentType != "audio/mpeg" &&
-                contentType != "audio/mp3" &&
-                contentType != "application/octet-stream")
+                contentType != "application/octet-stream" &&
+                !IsSupportedContentTypeForExtension(extension, contentType))
             {
-                return "Content type file audio tidak valid. Gunakan file MP3.";
+                return "Content type file media tidak valid. Gunakan file MP3 atau MP4.";
             }
 
             return "";
         }
 
-        private string BuildObjectName()
+        private string BuildObjectName(string extension)
         {
-            return $"voice/{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}.mp3";
+            return $"voice/{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}{extension}";
         }
 
         private ResponseModelVoiceRecording CreateAndStoreVoiceRecording(IFormFile file)
@@ -346,7 +345,9 @@ namespace API.Service.Transaction
             }
 
             bool usePublicUrl = GetUsePublicUrl();
-            string objectName = BuildObjectName();
+            string extension = GetSupportedMediaExtension(file);
+            string contentType = GetStorageContentType(extension);
+            string objectName = BuildObjectName(extension);
             string fileName = Path.GetFileName(objectName);
 
             var storageClient = StorageClient.Create();
@@ -361,7 +362,7 @@ namespace API.Service.Transaction
             storageClient.UploadObject(
                 bucket: bucketName,
                 objectName: objectName,
-                contentType: "audio/mpeg",
+                contentType: contentType,
                 source: stream,
                 options: uploadOptions
             );
@@ -374,14 +375,16 @@ namespace API.Service.Transaction
                 objectName = objectName,
                 storagePath = "",
                 fileUrl = usePublicUrl ? BuildPublicFileUrl(bucketName, objectName) : null,
-                contentType = "audio/mpeg",
+                contentType = contentType,
                 fileSize = file.Length
             };
         }
 
         private ResponseModelVoiceRecording SaveToLocalServer(IFormFile file)
         {
-            string fileName = $"{DateTime.UtcNow:yyyyMMdd_HHmmssfff}_{Guid.NewGuid():N}.mp3";
+            string extension = GetSupportedMediaExtension(file);
+            string contentType = GetStorageContentType(extension);
+            string fileName = $"{DateTime.UtcNow:yyyyMMdd_HHmmssfff}_{Guid.NewGuid():N}{extension}";
             string relativePath = BuildStoredLocalRelativePath(fileName);
             string physicalFolder = GetLocalVoicePhysicalFolder();
             string physicalPath = Path.Combine(physicalFolder, fileName);
@@ -404,9 +407,44 @@ namespace API.Service.Transaction
                 objectName = relativePath,
                 storagePath = physicalPath,
                 fileUrl = BuildLocalPublicUrl(relativePath),
-                contentType = "audio/mpeg",
+                contentType = contentType,
                 fileSize = file.Length
             };
+        }
+
+        private string GetSupportedMediaExtension(IFormFile file)
+        {
+            string extension = Path.GetExtension(file.FileName ?? "").Trim().ToLowerInvariant();
+            if (!IsSupportedMediaExtension(extension))
+            {
+                throw new InvalidOperationException("File pesan suara harus berformat MP3 atau MP4.");
+            }
+
+            return extension;
+        }
+
+        private bool IsSupportedMediaExtension(string extension)
+        {
+            return extension == ".mp3" || extension == ".mp4";
+        }
+
+        private bool IsSupportedContentTypeForExtension(string extension, string contentType)
+        {
+            if (extension == ".mp4")
+            {
+                return contentType == "video/mp4" ||
+                    contentType == "audio/mp4" ||
+                    contentType == "application/mp4";
+            }
+
+            return contentType == "audio/mpeg" ||
+                contentType == "audio/mp3" ||
+                contentType == "audio/x-mpeg";
+        }
+
+        private string GetStorageContentType(string extension)
+        {
+            return extension == ".mp4" ? "video/mp4" : "audio/mpeg";
         }
 
         private string BuildPublicFileUrl(string bucketName, string objectName)

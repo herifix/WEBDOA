@@ -10,6 +10,7 @@ import {
   sendTestWhatsAppVoice,
   getPhoneNumbers,
   getTRBirthdayPrayMediaDebugInfo,
+  getTRBirthdayPrayWhatsAppDeliveryStatus,
 } from "../../service/trBirthdayPrayService";
 
 export function useFetchBirthdayDashboard(tgl: string) {
@@ -56,7 +57,7 @@ export function useSendWhatsAppBirthdayPray() {
 
 export function useSendTestWhatsAppText() {
   return useMutation({
-    mutationFn: (payload: { idDonatur: number; year?: number }) =>
+    mutationFn: (payload: { idDonatur: number; year?: number; messageText?: string }) =>
       sendTestWhatsAppText(payload),
   });
 }
@@ -78,5 +79,12 @@ export function useFetchTRBirthdayPrayMediaDebugInfo() {
   return useMutation({
     mutationFn: (payload: { idDonatur: number; year?: number }) =>
       getTRBirthdayPrayMediaDebugInfo(payload.idDonatur, payload.year),
+  });
+}
+
+export function useFetchTRBirthdayPrayWhatsAppDeliveryStatus() {
+  return useMutation({
+    mutationFn: (payload: { idDonatur: number; year?: number }) =>
+      getTRBirthdayPrayWhatsAppDeliveryStatus(payload.idDonatur, payload.year),
   });
 }

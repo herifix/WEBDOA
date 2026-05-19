@@ -49,7 +49,7 @@ export async function uploadVoiceMp3(formData: FormData): Promise<VoiceRecording
   const response = await http.post("api/voice/upload-mp3", formData);
 
   if (response.data?.success === false) {
-    throw new Error(response.data?.message || "Gagal upload file suara MP3.");
+    throw new Error(response.data?.message || "Gagal upload file suara MP3/MP4.");
   }
 
   return response.data.data;
@@ -60,7 +60,11 @@ export async function sendWhatsAppBirthdayPray(payload: { idDonatur: number; yea
   return response.data;
 }
 
-export async function sendTestWhatsAppText(payload: { idDonatur: number; year?: number }) {
+export async function sendTestWhatsAppText(payload: {
+  idDonatur: number;
+  year?: number;
+  messageText?: string;
+}) {
   const response = await http.post("api/Transaction/TRBirthdayPray/SendTestWhatsAppText", payload);
   return response.data;
 }
@@ -88,4 +92,15 @@ export async function getTRBirthdayPrayMediaDebugInfo(
   }
 
   return response.data.data;
+}
+
+export async function getTRBirthdayPrayWhatsAppDeliveryStatus(
+  idDonatur: number,
+  year?: number
+) {
+  const response = await http.get("api/Transaction/TRBirthdayPray/GetWhatsAppDeliveryStatus", {
+    params: { idDonatur, year },
+  });
+
+  return response.data;
 }

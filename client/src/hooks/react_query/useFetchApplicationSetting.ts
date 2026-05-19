@@ -19,6 +19,7 @@ export function useUpdateApplicationSetting() {
       existingMsgImage: string;
       msgImageFile?: File | null;
       whatsappTemplateName: string;
+      whatsappGatewayToken: string;
       storageType: string;
     }) => updateApplicationSetting(payload),
   });

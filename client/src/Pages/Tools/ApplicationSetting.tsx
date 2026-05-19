@@ -1,4 +1,4 @@
-import { Database, ImagePlus, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
+import { Database, ImagePlus, KeyRound, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import StatusBanner from "../../components/StatusBanner";
 import { FORM_IDS } from "../../config/formIds";
@@ -20,6 +20,7 @@ export default function ApplicationSettingPage() {
   const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
   const [msgImagePreviewUrl, setMsgImagePreviewUrl] = useState("");
   const [whatsappTemplateName, setWhatsappTemplateName] = useState("");
+  const [whatsappGatewayToken, setWhatsappGatewayToken] = useState("");
   const [storageType, setStorageType] = useState("LocalServer");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
@@ -32,6 +33,7 @@ export default function ApplicationSettingPage() {
     setMsgLink(settingQuery.data.msgLink || "");
     setMsgImage(settingQuery.data.msgImage || "");
     setWhatsappTemplateName(settingQuery.data.whatsappTemplateName || "");
+    setWhatsappGatewayToken(settingQuery.data.whatsappGatewayToken || "");
     setStorageType(settingQuery.data.storageType || "LocalServer");
     setMsgImageFile(null);
     setMsgImagePreviewUrl("");
@@ -62,10 +64,20 @@ export default function ApplicationSettingPage() {
       (settingQuery.data.msgLink || "") !== msgLink ||
       (settingQuery.data.msgImage || "") !== msgImage ||
       (settingQuery.data.whatsappTemplateName || "") !== whatsappTemplateName ||
+      (settingQuery.data.whatsappGatewayToken || "") !== whatsappGatewayToken ||
       (settingQuery.data.storageType || "LocalServer") !== storageType ||
       msgImageFile !== null
     );
-  }, [msgImage, msgImageFile, msgLink, msgTemplate, settingQuery.data, storageType, whatsappTemplateName]);
+  }, [
+    msgImage,
+    msgImageFile,
+    msgLink,
+    msgTemplate,
+    settingQuery.data,
+    storageType,
+    whatsappGatewayToken,
+    whatsappTemplateName,
+  ]);
 
   if (!permissions.canView) {
     return (
@@ -91,6 +103,7 @@ export default function ApplicationSettingPage() {
         existingMsgImage: msgImage,
         msgImageFile,
         whatsappTemplateName: whatsappTemplateName.trim(),
+        whatsappGatewayToken: whatsappGatewayToken.trim(),
         storageType,
       });
       setFormSuccess(response.message || "Application setting berhasil disimpan.");
@@ -261,6 +274,24 @@ export default function ApplicationSettingPage() {
                   </button>
                 </div>
               </div>
+
+              <label className="pt-3 text-sm font-semibold text-slate-700">WA Gateway Token</label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+                  <input
+                    type="password"
+                    value={whatsappGatewayToken}
+                    onChange={(e) => setWhatsappGatewayToken(e.target.value)}
+                    autoComplete="new-password"
+                    className="h-12 w-full rounded-2xl border border-amber-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    placeholder="Bearer token WhatsApp gateway"
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  Jika diisi, token ini akan diprioritaskan saat kirim WhatsApp (manual dan scheduler).
+                </p>
+              </div>
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -310,6 +341,10 @@ export default function ApplicationSettingPage() {
               <p>
                 `StorageType` disimpan ke field `MsProg.StorageType` dan dibaca backend sebagai
                 provider efektif rekaman suara untuk environment/database yang sedang aktif.
+              </p>
+              <p>
+                `WA Gateway Token` disimpan ke `MsProg.MsgWA_Token` dan dipakai backend untuk
+                otorisasi ke WhatsApp Gateway.
               </p>
               <p>
                 Bila tabel `dbo.MsProg` belum ada, backend akan membuatnya otomatis saat halaman

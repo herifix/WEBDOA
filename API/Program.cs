@@ -35,6 +35,7 @@ builder.Services.AddScoped<IDbConnection>(sp =>
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpContextAccessor();
 
 // Swagger + Bearer
 builder.Services.AddSwaggerGen(c =>
@@ -121,6 +122,7 @@ builder.Services.AddScoped<RepoVoiceRecording>();
 builder.Services.AddScoped<ServiceTRBirthdayPray>();
 builder.Services.AddScoped<ServiceTRBuletin>();
 builder.Services.AddScoped<ServiceVoiceStorage>();
+builder.Services.AddScoped<ServiceMediaConversion>();
 builder.Services.AddScoped<ServiceMasterUser>();
 builder.Services.AddScoped<ServiceWhatsAppSchedule>();
 builder.Services.AddScoped<ServiceApplicationSetting>();
@@ -135,6 +137,7 @@ if (!string.IsNullOrWhiteSpace(voiceStorageRootPath))
     Directory.CreateDirectory(voiceStorageRootPath);
     var contentTypeProvider = new FileExtensionContentTypeProvider();
     contentTypeProvider.Mappings[".mp3"] = "audio/mpeg";
+    contentTypeProvider.Mappings[".mp4"] = "video/mp4";
 
     app.UseStaticFiles(new StaticFileOptions
     {

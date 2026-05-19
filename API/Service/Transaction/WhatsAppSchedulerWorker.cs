@@ -49,6 +49,7 @@ namespace API.Service.Transaction
             using var scope = scopeFactory.CreateScope();
             var conn = scope.ServiceProvider.GetRequiredService<IDbConnection>();
             var repo = scope.ServiceProvider.GetRequiredService<RepoWhatsAppSchedule>();
+            var settingRepo = scope.ServiceProvider.GetRequiredService<RepoApplicationSetting>();
 
             if (conn.State == ConnectionState.Closed)
                 conn.Open();
@@ -61,6 +62,9 @@ namespace API.Service.Transaction
                     return;
                 }
 
+                var appSetting = settingRepo.GetSetting(conn);
+                string gatewayToken = ResolveGatewayToken(appSetting.whatsappGatewayToken);
+
                 foreach (var item in dueItems)
                 {
                     bool success = false;
@@ -68,7 +72,7 @@ namespace API.Service.Transaction
 
                     try
                     {
-                        var result = await SendWhatsAppAsync(item, stoppingToken);
+                        var result = await SendWhatsAppAsync(item, gatewayToken, stoppingToken);
                         success = result.success;
                         responseMessage = result.message;
                     }
@@ -96,10 +100,10 @@ namespace API.Service.Transaction
 
         private async Task<(bool success, string message)> SendWhatsAppAsync(
             ResponseModelBirthdayPrayDispatchItem item,
+            string gatewayToken,
             CancellationToken cancellationToken)
         {
             string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
-            string gatewayToken = configuration["WhatsAppGateway:Token"] ?? "";
             string publicBaseUrl = (configuration["Runtime:PublicBaseUrl"] ?? "").Trim();
 
             if (string.IsNullOrWhiteSpace(gatewayUrl))
@@ -221,6 +225,17 @@ namespace API.Service.Transaction
             }
 
             return (true, "OK");
+        }
+
+        private string ResolveGatewayToken(string? tokenFromSetting)
+        {
+            string value = (tokenFromSetting ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            return (configuration["WhatsAppGateway:Token"] ?? "").Trim();
         }
     }
 }

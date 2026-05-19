@@ -16,6 +16,7 @@ import {
   useSendTestWhatsAppVoice,
   useFetchPhoneNumbers,
   useFetchTRBirthdayPrayMediaDebugInfo,
+  useFetchTRBirthdayPrayWhatsAppDeliveryStatus,
 } from "../../hooks/react_query/useFetchTRBirthdayPray";
 import { FORM_IDS } from "../../config/formIds";
 import { buildMediaUrl } from "../../config/appConfig";
@@ -89,6 +90,48 @@ function splitTextWithLinks(value: string) {
   return value.split(/(https?:\/\/[^\s]+)/gi).filter(Boolean);
 }
 
+const SUPPORTED_PRAYER_MEDIA_EXTENSIONS = new Set(["mp3", "mp4"]);
+
+function getBirthdayPrayMediaExtension(value?: string | null) {
+  if (!value) return "";
+
+  const withoutSuffix = value.trim().split(/[?#]/)[0] ?? "";
+  const fileName = withoutSuffix.split(/[\\/]/).pop() ?? withoutSuffix;
+  const match = fileName.toLowerCase().match(/\.([a-z0-9]+)$/);
+
+  return match?.[1] ?? "";
+}
+
+function isSupportedBirthdayPrayMediaFile(fileName: string) {
+  return SUPPORTED_PRAYER_MEDIA_EXTENSIONS.has(getBirthdayPrayMediaExtension(fileName));
+}
+
+function getBirthdayPrayMediaKind(sourceHint?: string | null) {
+  return getBirthdayPrayMediaExtension(sourceHint) === "mp4" ? "video" : "audio";
+}
+
+function BirthdayPrayMediaPreview({
+  src,
+  sourceHint,
+}: {
+  src: string;
+  sourceHint?: string | null;
+}) {
+  if (getBirthdayPrayMediaKind(sourceHint || src) === "video") {
+    return (
+      <video className="max-h-72 w-full rounded-lg bg-black" controls preload="metadata" src={src}>
+        Browser tidak mendukung video playback.
+      </video>
+    );
+  }
+
+  return (
+    <audio className="w-full" controls preload="metadata" src={src}>
+      Browser tidak mendukung audio playback.
+    </audio>
+  );
+}
+
 function validateWhatsAppTemplateSend(params: {
   templateName?: string;
   namaPenerima?: string;
@@ -108,10 +151,6 @@ function validateWhatsAppTemplateSend(params: {
 
   if (!params.namaPendoa?.trim()) {
     missingFields.push("pendoa");
-  }
-
-  if (!params.link?.trim()) {
-    missingFields.push("link");
   }
 
   if (!params.isiDoa?.trim()) {
@@ -149,6 +188,10 @@ export default function TRBirthdayPrayPage() {
   const { mutateAsync: sendTestVoiceAsync, isPending: isSendingTestVoice } = useSendTestWhatsAppVoice();
   const { mutateAsync: fetchPhoneNumbersAsync, isPending: isFetchingPhones } = useFetchPhoneNumbers();
   const { mutateAsync: fetchMediaDebugInfoAsync, isPending: isFetchingMediaDebug } = useFetchTRBirthdayPrayMediaDebugInfo();
+  const {
+    mutateAsync: fetchWhatsAppStatusAsync,
+    isPending: isCheckingWhatsAppStatus,
+  } = useFetchTRBirthdayPrayWhatsAppDeliveryStatus();
   const { permissions } = useFormMenuPermissions(FORM_IDS.transaksiBirthdayPray);
   const currentUserId = localStorage.getItem("userid") ?? "";
 
@@ -206,6 +249,11 @@ export default function TRBirthdayPrayPage() {
     return parts[parts.length - 1] ?? "";
   }, [pageData?.pathPesanSuara, selectedAudioFile]);
 
+  const effectivePreviewLink = useMemo(
+    () => buildMediaUrl(pageData?.pathPesanSuaraUrl || pageData?.pathPesanSuara || ""),
+    [pageData?.pathPesanSuaraUrl, pageData?.pathPesanSuara]
+  );
+
   const previewTemplateMessage = useMemo(() => {
     if (!pageData) return "";
 
@@ -215,10 +263,10 @@ export default function TRBirthdayPrayPage() {
     return buildTemplateMessage(template, {
       donatur: pageData.namaDonatur || "-",
       pendoa: pageData.namaPendoa || "-",
-      link: applicationSettingQuery.data?.msgLink || "",
+      link: effectivePreviewLink,
       pesandoa: pesan.trim(),
     }).trim();
-  }, [applicationSettingQuery.data, pageData, pesan]);
+  }, [applicationSettingQuery.data, pageData, pesan, effectivePreviewLink]);
 
   const previewCardImageUrl = useMemo(
     () => buildMediaUrl(applicationSettingQuery.data?.msgImage ?? ""),
@@ -294,14 +342,14 @@ export default function TRBirthdayPrayPage() {
       return;
     }
 
-    const fileName = (file.name || "").toLowerCase();
-    if (!fileName.endsWith(".mp3") ) {
-      setFormError("File pesan suara harus berformat MP3.");
+    const fileExtension = getBirthdayPrayMediaExtension(file.name);
+    if (!isSupportedBirthdayPrayMediaFile(file.name)) {
+      setFormError("File pesan suara harus berformat MP3 atau MP4.");
       return;
     }
 
     setSelectedAudioFile(file);
-    setRecordingStatus("File MP3 siap disimpan.");
+    setRecordingStatus(`File ${fileExtension.toUpperCase()} siap disimpan.`);
   }
 
   async function handleStartRecording() {
@@ -448,7 +496,7 @@ export default function TRBirthdayPrayPage() {
 
     try {
       if (selectedAudioFile) {
-        setRecordingStatus("Mengupload file suara MP3 ke server...");
+        setRecordingStatus("Mengupload file suara MP3/MP4 ke server...");
         const uploadResult = await uploadSelectedAudioFile(selectedAudioFile);
         if (!uploadResult?.id) {
           throw new Error("Upload file suara tidak menghasilkan metadata yang valid.");
@@ -496,11 +544,16 @@ export default function TRBirthdayPrayPage() {
       return;
     }
 
+    if (!effectivePreviewLink.trim()) {
+      setFormError("Rekaman audio belum tersedia. Simpan pesan suara terlebih dahulu sebelum mengirim WhatsApp.");
+      return;
+    }
+
     const validationMessage = validateWhatsAppTemplateSend({
       templateName: applicationSettingQuery.data?.whatsappTemplateName,
       namaPenerima: pageData?.namaDonatur,
       namaPendoa: pageData?.namaPendoa,
-      link: applicationSettingQuery.data?.msgLink,
+      link: effectivePreviewLink,
       isiDoa: pageData?.pesan,
     });
 
@@ -541,7 +594,11 @@ export default function TRBirthdayPrayPage() {
   const handleSendTestText = async () => {
     try {
       clearFormMessage();
-      const result = await sendTestTextAsync({ idDonatur, year: currentYear });
+      const result = await sendTestTextAsync({
+        idDonatur,
+        year: currentYear,
+        messageText: pesan.trim(),
+      });
       if (result.success) {
         setFormSuccess("Test Teks Berhasil: " + result.message);
       } else {
@@ -589,6 +646,22 @@ export default function TRBirthdayPrayPage() {
       alert("Debug Voice URL (cek console untuk detail):\n\n" + JSON.stringify(result, null, 2));
     } catch (error) {
       alert("Error Debug Voice URL: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const handleCheckWhatsAppStatus = async () => {
+    try {
+      clearFormMessage();
+      const result = await fetchWhatsAppStatusAsync({ idDonatur, year: currentYear });
+      console.log("TRBirthdayPray WhatsApp Status:", result);
+
+      if (result.success) {
+        setFormSuccess(result.message || "Status WhatsApp berhasil dicek.");
+      } else {
+        setFormError("Cek status WA gagal: " + (result.message || "Gateway tidak mengembalikan status."));
+      }
+    } catch (error) {
+      setFormError("Error Cek Status WA: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -700,9 +773,9 @@ export default function TRBirthdayPrayPage() {
                       Template diambil dari `Application Setting` dan placeholder akan diganti otomatis.
                     </p>
                   </div>
-                  {applicationSettingQuery.data?.msgLink ? (
+                  {effectivePreviewLink ? (
                     <a
-                      href={applicationSettingQuery.data.msgLink}
+                      href={effectivePreviewLink}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
@@ -735,7 +808,7 @@ export default function TRBirthdayPrayPage() {
                   </button>
 
                   {currentUserId === "1" && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => void handleSendTestText()}
@@ -765,6 +838,16 @@ export default function TRBirthdayPrayPage() {
                       >
                         {isFetchingPhones ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <RefreshCcw className="h-3 w-3" />}
                         Get Phones
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleCheckWhatsAppStatus()}
+                        disabled={isCheckingWhatsAppStatus || !pageData || pageData.id_donatur <= 0}
+                        className="inline-flex items-center gap-2 rounded-full bg-emerald-700 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-800 disabled:opacity-60"
+                        title="Cek status delivery WhatsApp terakhir tanpa kirim ulang"
+                      >
+                        {isCheckingWhatsAppStatus ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <RefreshCcw className="h-3 w-3" />}
+                        Check WA Status
                       </button>
                       <button
                         type="button"
@@ -809,7 +892,7 @@ export default function TRBirthdayPrayPage() {
                               Ucapan syukur dan doa ulang tahun dari rekan-rekan pendoa.
                             </div>
                             <div className="mt-2 truncate text-sm font-semibold text-slate-400">
-                              {applicationSettingQuery.data?.msgLink || "Link belum diatur"}
+                              {effectivePreviewLink || "Link rekaman belum tersedia"}
                             </div>
                           </div>
                         </div>
@@ -905,7 +988,7 @@ export default function TRBirthdayPrayPage() {
 
                 <input
                   type="file"
-                  accept=".mp3,audio/mpeg"
+                  accept=".mp3,.mp4,audio/mpeg,audio/mp3,audio/mp4,video/mp4"
                   className="mt-3 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-700"
                   disabled={isRecording || isEncodingRecording || isUploadingVoice}
                   onChange={(e) => handleAudioFileChange(e.target.files?.[0] ?? null)}
@@ -924,7 +1007,7 @@ export default function TRBirthdayPrayPage() {
                 </div>
 
                 <div className="mt-2 text-xs text-slate-500">
-                  Rekaman browser akan diubah dulu menjadi MP3 sebelum disimpan. Upload manual juga hanya menerima file MP3 maksimal 10 MB.
+                  Rekaman browser akan diubah dulu menjadi MP3 sebelum disimpan. Upload manual menerima file MP3 atau MP4 maksimal 10 MB.
                 </div>
 
                 {audioFileName ? (
@@ -934,7 +1017,8 @@ export default function TRBirthdayPrayPage() {
                     </div>
                     {selectedAudioFile ? (
                       <div className="mt-1 text-xs text-slate-500">
-                        Status: belum disimpan ke transaksi. File MP3 akan diupload saat tombol Save ditekan.
+                        Status: belum disimpan ke transaksi. File{" "}
+                        {getBirthdayPrayMediaExtension(selectedAudioFile.name).toUpperCase() || "media"} akan diupload saat tombol Save ditekan.
                       </div>
                     ) : null}
                   </div>
@@ -946,9 +1030,15 @@ export default function TRBirthdayPrayPage() {
 
                 {audioPreviewUrl ? (
                   <div className="mt-3 space-y-2">
-                    <audio className="w-full" controls src={audioPreviewUrl}>
-                      Browser tidak mendukung audio playback.
-                    </audio>
+                    <BirthdayPrayMediaPreview
+                      src={audioPreviewUrl}
+                      sourceHint={
+                        selectedAudioFile?.name ||
+                        pageData?.pathPesanSuaraUrl ||
+                        pageData?.pathPesanSuara ||
+                        audioPreviewUrl
+                      }
+                    />
 
                     <a
                       href={audioPreviewUrl}
@@ -956,7 +1046,7 @@ export default function TRBirthdayPrayPage() {
                       rel="noreferrer"
                       className="inline-flex rounded bg-cyan-600 px-3 py-1 text-xs font-semibold text-white hover:bg-cyan-700"
                     >
-                      Buka URL File Suara
+                      Buka URL File Media
                     </a>
                   </div>
                 ) : null}
@@ -974,9 +1064,11 @@ export default function TRBirthdayPrayPage() {
                 ) : (
                   <div className="mt-3 space-y-3">
                     {historyQuery.data.map((item) => {
-                      const historyAudioUrl = buildMediaUrl(
+                      const historyMediaUrl = buildMediaUrl(
                         item.pathPesanSuaraUrl || item.pathPesanSuara || ""
                       );
+                      const historyMediaSourceHint =
+                        item.pathPesanSuaraUrl || item.pathPesanSuara || historyMediaUrl;
 
                       return (
                         <div
@@ -1005,24 +1097,25 @@ export default function TRBirthdayPrayPage() {
                             {item.pesan || "-"}
                           </div>
 
-                          {historyAudioUrl ? (
+                          {historyMediaUrl ? (
                             <div className="mt-3 space-y-2">
-                              <audio className="w-full" controls src={historyAudioUrl}>
-                                Browser tidak mendukung audio playback.
-                              </audio>
+                              <BirthdayPrayMediaPreview
+                                src={historyMediaUrl}
+                                sourceHint={historyMediaSourceHint}
+                              />
 
                               <a
-                                href={historyAudioUrl}
+                                href={historyMediaUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex rounded bg-cyan-600 px-3 py-1 text-xs font-semibold text-white hover:bg-cyan-700"
                               >
-                                Buka File Suara
+                                Buka File Media
                               </a>
                             </div>
                           ) : (
                             <div className="mt-3 text-xs text-slate-500">
-                              Tidak ada file suara.
+                              Tidak ada file media.
                             </div>
                           )}
                         </div>
