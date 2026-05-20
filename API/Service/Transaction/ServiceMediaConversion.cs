@@ -117,6 +117,12 @@ namespace API.Service.Transaction
 
         private string ResolvePtLogoPath(string ptCode)
         {
+            string defaultLogoPath = ResolveConfiguredPath(configuration["MediaConversion:DefaultLogoPath"]);
+            if (!string.IsNullOrWhiteSpace(defaultLogoPath) && File.Exists(defaultLogoPath))
+            {
+                return defaultLogoPath;
+            }
+
             string normalizedPt = SanitizeFileName((ptCode ?? "").Trim());
             foreach (string rootPath in BuildLogoRootCandidates())
             {
@@ -145,12 +151,6 @@ namespace API.Service.Transaction
                         return caseInsensitiveMatch;
                     }
                 }
-            }
-
-            string defaultLogoPath = ResolveConfiguredPath(configuration["MediaConversion:DefaultLogoPath"]);
-            if (!string.IsNullOrWhiteSpace(defaultLogoPath) && File.Exists(defaultLogoPath))
-            {
-                return defaultLogoPath;
             }
 
             string ptHint = string.IsNullOrWhiteSpace(ptCode) ? "(kosong)" : ptCode;

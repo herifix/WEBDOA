@@ -19,6 +19,11 @@ namespace API.Service.Transaction
 {
     public class ServiceTRBirthdayPray
     {
+        private const string NewTemplateName = "ucapan_ulang_tahun_new";
+        private const string NewTemplateLanguageCode = "en";
+        private const string NewTemplateLinkPlaceholder = ".";
+        private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
+
         private readonly IDbConnection conn;
         private readonly RepoTRBirthdayPray repo;
         private readonly RepoMasterDonatur donaturRepo;
@@ -1004,12 +1009,15 @@ CreateNoWindow = true
                 {
                     templateName = "birthday_pray"; // Default fallback
                 }
+                string normalizedTemplateName = NormalizeTemplateName(templateName);
+                bool useNewTemplateFormat = normalizedTemplateName.Equals(NewTemplateName, StringComparison.OrdinalIgnoreCase);
+                string effectiveBodyLink = useNewTemplateFormat ? NewTemplateLinkPlaceholder : effectiveTemplateLink;
 
                 var templateValidation = ValidateWhatsAppTemplateParameters(
                     templateName,
                     prayData.namaDonatur,
                     prayData.namaPendoa,
-                    effectiveTemplateLink,
+                    effectiveBodyLink,
                     prayData.pesan
                 );
 
@@ -1022,25 +1030,7 @@ CreateNoWindow = true
                     };
                 }
 
-                // Format phone number to E.164 (remove +, -, spaces, ensure starts with 62)
-                string phoneNumber = prayData.noHPDonatur.Replace("+", "").Replace("-", "").Replace(" ", "");
-                if (phoneNumber.StartsWith("0"))
-                {
-                    phoneNumber = "62" + phoneNumber.Substring(1);
-                }
-                else if (!phoneNumber.StartsWith("62"))
-                {
-                    phoneNumber = "62" + phoneNumber;
-                }
-
-                string headerImageUrl = "";
-                if (!string.IsNullOrWhiteSpace(setting.msgImage))
-                {
-                    headerImageUrl = BuildAbsoluteUrl(publicBaseUrl, setting.msgImage);
-                }
-
-                var templateNameCandidates = BuildTemplateNameCandidates(templateName);
-                var templateLanguageCandidates = BuildTemplateLanguageCandidates(GetConfiguredTemplateLanguageCode());
+                string phoneNumber = FormatPhoneNumber(prayData.noHPDonatur);
 
                 using var httpClient = new HttpClient();
                 if (!string.IsNullOrWhiteSpace(gatewayToken))
@@ -1049,6 +1039,54 @@ CreateNoWindow = true
                         new AuthenticationHeaderValue("Bearer", gatewayToken);
                 }
 
+                HttpStatusCode latestStatusCode = HttpStatusCode.BadRequest;
+                string latestResponseBody = "";
+                string usedTemplateName = "";
+                string usedLanguageCode = "";
+
+                if (useNewTemplateFormat)
+                {
+                    string headerImageUrl = ResolveNewTemplateHeaderImageUrl(setting.msgLink, publicBaseUrl);
+                    var payload = BuildNewTemplatePayload(
+                        phoneNumber,
+                        headerImageUrl,
+                        prayData.namaDonatur,
+                        prayData.namaPendoa,
+                        prayData.pesan ?? "");
+
+                    using var content = new StringContent(
+                        JsonSerializer.Serialize(payload),
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    using var response = await httpClient.PostAsync(gatewayUrl, content);
+                    latestStatusCode = response.StatusCode;
+                    latestResponseBody = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return new ResponseData<object>
+                        {
+                            success = false,
+                            message = BuildGatewayErrorMessage(latestStatusCode, latestResponseBody),
+                            data = ParseGatewayResponseBody(latestResponseBody)
+                        };
+                    }
+
+                    usedTemplateName = NewTemplateName;
+                    usedLanguageCode = NewTemplateLanguageCode;
+                    goto TemplateMessageSent;
+                }
+
+                string legacyHeaderImageUrl = "";
+                if (!string.IsNullOrWhiteSpace(setting.msgImage))
+                {
+                    legacyHeaderImageUrl = BuildAbsoluteUrl(publicBaseUrl, setting.msgImage);
+                }
+
+                var templateNameCandidates = BuildTemplateNameCandidates(templateName);
+                var templateLanguageCandidates = BuildTemplateLanguageCandidates(GetConfiguredTemplateLanguageCode());
                 var templateLookup = await TryGetGatewayTemplateCatalogAsync(httpClient, gatewayUrl);
                 var availableApprovedTemplateHints = new List<string>();
                 if (templateLookup.success)
@@ -1065,12 +1103,7 @@ CreateNoWindow = true
                     }
                 }
 
-                HttpStatusCode latestStatusCode = HttpStatusCode.BadRequest;
-                string latestResponseBody = "";
-                string usedTemplateName = "";
-                string usedLanguageCode = "";
                 var attemptedCombinations = new List<string>();
-
                 foreach (var candidateTemplateName in templateNameCandidates)
                 {
                     foreach (var candidateLanguageCode in templateLanguageCandidates)
@@ -1080,31 +1113,23 @@ CreateNoWindow = true
                             candidateTemplateName,
                             candidateLanguageCode);
                         int bodyVariableCount = matchedTemplateInfo?.bodyVariableCount ?? 4;
-                        bool includeHeader = ShouldIncludeHeaderForTemplate(matchedTemplateInfo, headerImageUrl);
+                        bool includeHeader = ShouldIncludeHeaderForTemplate(matchedTemplateInfo, legacyHeaderImageUrl);
 
                         attemptedCombinations.Add(
                             $"{candidateTemplateName}:{candidateLanguageCode}" +
                             (includeHeader ? " [header]" : " [no-header]"));
 
-                        var payload = new
-                        {
-                            phone_number = phoneNumber,
-                            channel = "whatsapp",
-                            message_type = "template",
-                            template = new
-                            {
-                                name = candidateTemplateName,
-                                language = new { code = candidateLanguageCode },
-                                components = BuildTemplateComponents(
-                                    includeHeader,
-                                    headerImageUrl,
-                                    prayData.namaDonatur,
-                                    prayData.namaPendoa,
-                                    effectiveTemplateLink,
-                                    prayData.pesan ?? "",
-                                    bodyVariableCount)
-                            }
-                        };
+                        var payload = BuildLegacyTemplatePayload(
+                            phoneNumber,
+                            candidateTemplateName,
+                            candidateLanguageCode,
+                            includeHeader,
+                            legacyHeaderImageUrl,
+                            prayData.namaDonatur,
+                            prayData.namaPendoa,
+                            effectiveTemplateLink,
+                            prayData.pesan ?? "",
+                            bodyVariableCount);
 
                         using var content = new StringContent(
                             JsonSerializer.Serialize(payload),
@@ -1127,25 +1152,17 @@ CreateNoWindow = true
                         {
                             if (includeHeader)
                             {
-                                var fallbackPayload = new
-                                {
-                                    phone_number = phoneNumber,
-                                    channel = "whatsapp",
-                                    message_type = "template",
-                                    template = new
-                                    {
-                                        name = candidateTemplateName,
-                                        language = new { code = candidateLanguageCode },
-                                        components = BuildTemplateComponents(
-                                            includeHeader: false,
-                                            headerImageUrl: "",
-                                            namaDonatur: prayData.namaDonatur,
-                                            namaPendoa: prayData.namaPendoa,
-                                            link: effectiveTemplateLink,
-                                            isiDoa: prayData.pesan ?? "",
-                                            bodyVariableCount: bodyVariableCount)
-                                    }
-                                };
+                                var fallbackPayload = BuildLegacyTemplatePayload(
+                                    phoneNumber,
+                                    candidateTemplateName,
+                                    candidateLanguageCode,
+                                    includeHeader: false,
+                                    headerImageUrl: "",
+                                    namaDonatur: prayData.namaDonatur,
+                                    namaPendoa: prayData.namaPendoa,
+                                    link: effectiveTemplateLink,
+                                    isiDoa: prayData.pesan ?? "",
+                                    bodyVariableCount: bodyVariableCount);
 
                                 using var fallbackContent = new StringContent(
                                     JsonSerializer.Serialize(fallbackPayload),
@@ -1220,7 +1237,18 @@ CreateNoWindow = true
                     repo.MarkWASent(prayData.id_TRBirthdayPray, conn);
                 }
 
-                // --- KIRIM PESAN SUARA (Jika ada) ---
+                // Template lama/fallback: selesai setelah template sukses tanpa kirim media follow-up.
+                if (!useNewTemplateFormat)
+                {
+                    return new ResponseData<object>
+                    {
+                        success = true,
+                        message = $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}).",
+                        data = ParseGatewayResponseBody(latestResponseBody)
+                    };
+                }
+
+                // --- KIRIM PESAN SUARA (hanya untuk template baru) ---
                 if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
                 {
                     try
@@ -2111,6 +2139,82 @@ CreateNoWindow = true
             });
 
             return components;
+        }
+
+        private object BuildLegacyTemplatePayload(
+            string phoneNumber,
+            string templateName,
+            string languageCode,
+            bool includeHeader,
+            string headerImageUrl,
+            string namaDonatur,
+            string namaPendoa,
+            string link,
+            string isiDoa,
+            int bodyVariableCount)
+        {
+            return new
+            {
+                phone_number = phoneNumber,
+                channel = "whatsapp",
+                message_type = "template",
+                template = new
+                {
+                    name = templateName,
+                    language = new { code = languageCode },
+                    components = BuildTemplateComponents(
+                        includeHeader,
+                        headerImageUrl,
+                        namaDonatur,
+                        namaPendoa,
+                        link,
+                        isiDoa,
+                        bodyVariableCount)
+                }
+            };
+        }
+
+        private object BuildNewTemplatePayload(
+            string phoneNumber,
+            string headerImageUrl,
+            string namaDonatur,
+            string namaPendoa,
+            string isiDoa)
+        {
+            return new
+            {
+                phone_number = phoneNumber,
+                channel = "whatsapp",
+                message_type = "template",
+                template = new
+                {
+                    name = NewTemplateName,
+                    language = new { code = NewTemplateLanguageCode },
+                    components = BuildTemplateComponents(
+                        includeHeader: !string.IsNullOrWhiteSpace(headerImageUrl),
+                        headerImageUrl: headerImageUrl,
+                        namaDonatur: namaDonatur,
+                        namaPendoa: namaPendoa,
+                        link: NewTemplateLinkPlaceholder,
+                        isiDoa: isiDoa,
+                        bodyVariableCount: 4)
+                }
+            };
+        }
+
+        private string ResolveNewTemplateHeaderImageUrl(string configuredMessageLink, string publicBaseUrl)
+        {
+            string configured = (configuredMessageLink ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                string resolved = BuildAbsoluteUrl(publicBaseUrl, configured);
+                if (Uri.TryCreate(resolved, UriKind.Absolute, out _))
+                {
+                    return resolved;
+                }
+            }
+
+            return NewTemplateFallbackHeaderImageUrl;
         }
 
         private bool TemplateNameMatches(string templateName, List<string> candidates)
