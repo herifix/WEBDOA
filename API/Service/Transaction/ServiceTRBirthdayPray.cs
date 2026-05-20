@@ -1248,7 +1248,9 @@ CreateNoWindow = true
                     };
                 }
 
-                // --- KIRIM PESAN SUARA (hanya untuk template baru) ---
+                // --- KIRIM PESAN SUARA (template baru) ---
+                // Sementara di-remark/nonaktifkan sesuai request.
+                /*
                 if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
                 {
                     try
@@ -1278,7 +1280,8 @@ CreateNoWindow = true
                         // tapi log errornya (bisa ditambahkan logging di sini)
                     }
                 }
-                // ------------------------------------
+                */
+                // -----------------------------------------
 
                 return new ResponseData<object>
                 {
