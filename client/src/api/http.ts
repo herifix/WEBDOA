@@ -2,7 +2,8 @@ import axios from "axios";
 import { APP_CONFIG } from "../config/appConfig";
 
 const http = axios.create({
-  baseURL: APP_CONFIG.apiBaseUrl,
+  // Keep relative API paths rooted at the Vite origin when dev base URL is empty.
+  baseURL: APP_CONFIG.apiBaseUrl || "/",
 });
 
 http.interceptors.request.use((config) => {

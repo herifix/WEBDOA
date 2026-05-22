@@ -191,6 +191,19 @@ public class ResponseModelTRBirthdayPray
     public DateTime? waSentDate { get; set; }
 }
 
+public class ResponseModelTRBirthdayPrayAutoSendResult
+{
+    public bool found { get; set; }
+    public bool sent { get; set; }
+    public long id_donatur { get; set; }
+    public long id_TRBirthdayPray { get; set; }
+    public string namaDonatur { get; set; } = "";
+    public string noHPDonatur { get; set; } = "";
+    public DateTime? birthdayDate { get; set; }
+    public string sendMessage { get; set; } = "";
+    public object? sendResult { get; set; }
+}
+
 public class ResponseModelTRBirthdayPrayHistory
 {
     public long id_TRBirthdayPray { get; set; }

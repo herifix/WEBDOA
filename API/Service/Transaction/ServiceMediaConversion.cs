@@ -1,5 +1,6 @@
 using API.Helpers;
 using Microsoft.AspNetCore.Hosting;
+using System.Globalization;
 using System.Diagnostics;
 
 namespace API.Service.Transaction
@@ -31,6 +32,7 @@ namespace API.Service.Transaction
             int outputHeight = GetConfiguredPositiveInt("MediaConversion:OutputHeight", 720);
             string ffmpegPath = ffmpegHelper.GetFFmpegPath();
             int timeoutSeconds = ffmpegHelper.GetTimeoutSeconds();
+            double? audioDurationSeconds = TryProbeMediaDurationSeconds(sourceAudioPath, ffmpegPath, timeoutSeconds);
             string videoFilter =
                 $"scale={outputWidth}:{outputHeight}:force_original_aspect_ratio=decrease," +
                 $"pad={outputWidth}:{outputHeight}:(ow-iw)/2:(oh-ih)/2:color=0x04392f,setsar=1";
@@ -49,7 +51,7 @@ namespace API.Service.Transaction
             process.StartInfo.ArgumentList.Add("-loop");
             process.StartInfo.ArgumentList.Add("1");
             process.StartInfo.ArgumentList.Add("-framerate");
-            process.StartInfo.ArgumentList.Add("1");
+            process.StartInfo.ArgumentList.Add("50");
             process.StartInfo.ArgumentList.Add("-i");
             process.StartInfo.ArgumentList.Add(logoPath);
             process.StartInfo.ArgumentList.Add("-i");
@@ -72,7 +74,15 @@ namespace API.Service.Transaction
             process.StartInfo.ArgumentList.Add("128k");
             process.StartInfo.ArgumentList.Add("-ar");
             process.StartInfo.ArgumentList.Add("44100");
-            process.StartInfo.ArgumentList.Add("-shortest");
+            if (audioDurationSeconds.HasValue)
+            {
+                process.StartInfo.ArgumentList.Add("-t");
+                process.StartInfo.ArgumentList.Add(audioDurationSeconds.Value.ToString("0.######", CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                process.StartInfo.ArgumentList.Add("-shortest");
+            }
             process.StartInfo.ArgumentList.Add("-movflags");
             process.StartInfo.ArgumentList.Add("+faststart");
             process.StartInfo.ArgumentList.Add(outputMp4Path);
@@ -113,6 +123,93 @@ namespace API.Service.Transaction
                 string errorMessage = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
                 throw new InvalidOperationException($"Gagal konversi rekaman ke MP4 menggunakan FFmpeg. {TrimForErrorMessage(errorMessage)}");
             }
+        }
+
+        private double? TryProbeMediaDurationSeconds(string mediaPath, string ffmpegPath, int timeoutSeconds)
+        {
+            string ffprobePath = ResolveFFprobePath(ffmpegPath);
+            if (string.IsNullOrWhiteSpace(ffprobePath) || !File.Exists(ffprobePath))
+            {
+                return null;
+            }
+
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo
+            {
+                FileName = ffprobePath,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+
+            process.StartInfo.ArgumentList.Add("-v");
+            process.StartInfo.ArgumentList.Add("error");
+            process.StartInfo.ArgumentList.Add("-show_entries");
+            process.StartInfo.ArgumentList.Add("format=duration");
+            process.StartInfo.ArgumentList.Add("-of");
+            process.StartInfo.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+            process.StartInfo.ArgumentList.Add(mediaPath);
+
+            try
+            {
+                process.Start();
+            }
+            catch
+            {
+                return null;
+            }
+
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+
+            if (!process.WaitForExit(timeoutSeconds * 1000))
+            {
+                try
+                {
+                    process.Kill(true);
+                }
+                catch
+                {
+                    // ignore kill failure
+                }
+
+                return null;
+            }
+
+            string stdout = stdoutTask.GetAwaiter().GetResult();
+            _ = stderrTask.GetAwaiter().GetResult();
+
+            if (process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return double.TryParse(stdout.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double durationSeconds) &&
+                durationSeconds > 0
+                    ? durationSeconds
+                    : null;
+        }
+
+        private string ResolveFFprobePath(string ffmpegPath)
+        {
+            if (string.IsNullOrWhiteSpace(ffmpegPath))
+            {
+                return "";
+            }
+
+            string directory = Path.GetDirectoryName(ffmpegPath) ?? "";
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return "";
+            }
+
+            string extension = Path.GetExtension(ffmpegPath);
+            string fileName = string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase)
+                ? "ffprobe.exe"
+                : "ffprobe";
+
+            return Path.Combine(directory, fileName);
         }
 
         private string ResolvePtLogoPath(string ptCode)

@@ -21,6 +21,8 @@ namespace API.Service.Transaction
     {
         private const string NewTemplateName = "ucapan_ulang_tahun_new";
         private const string NewTemplateLanguageCode = "en";
+        private const string VoiceTemplateName = "doa_selamat_ulang_tahun";
+        private const string VoiceTemplateLanguageCode = "en";
         private const string NewTemplateLinkPlaceholder = ".";
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
 
@@ -177,6 +179,72 @@ namespace API.Service.Transaction
                 if (conn.State == ConnectionState.Open)
                     conn.Close();
             }
+        }
+
+        public async Task<ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>> SendNextTodayCompleteUnsentWhatsApp()
+        {
+            DateTime currentDate = DateTime.Today.Date;
+            ResponseModelTRBirthdayPray? candidate = null;
+
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                    conn.Open();
+
+                candidate = repo.GetNextTodayCompleteUnsent(currentDate, conn);
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = new ResponseModelTRBirthdayPrayAutoSendResult()
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                    conn.Close();
+            }
+
+            if (candidate == null || candidate.id_donatur <= 0 || candidate.id_TRBirthdayPray <= 0)
+            {
+                return new ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>
+                {
+                    success = true,
+                    message = "Tidak ada donatur ulang tahun hari ini yang complete dan belum dikirimi WhatsApp.",
+                    data = new ResponseModelTRBirthdayPrayAutoSendResult
+                    {
+                        found = false,
+                        sent = false
+                    }
+                };
+            }
+
+            var sendResponse = await SendWhatsApp(candidate.id_donatur, currentDate.Year);
+
+            var result = new ResponseModelTRBirthdayPrayAutoSendResult
+            {
+                found = true,
+                sent = sendResponse.success,
+                id_donatur = candidate.id_donatur,
+                id_TRBirthdayPray = candidate.id_TRBirthdayPray,
+                namaDonatur = candidate.namaDonatur,
+                noHPDonatur = candidate.noHPDonatur,
+                birthdayDate = candidate.birthdayDate,
+                sendMessage = sendResponse.message ?? "",
+                sendResult = sendResponse.data
+            };
+
+            return new ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>
+            {
+                success = sendResponse.success,
+                message = sendResponse.success
+                    ? $"Pesan WhatsApp ulang tahun berhasil dikirim untuk {candidate.namaDonatur}."
+                    : (sendResponse.message ?? "Gagal mengirim pesan WhatsApp ulang tahun."),
+                data = result
+            };
         }
 
         public ResponseData<List<ResponseModelTRBirthdayPrayHistory>> GetHistoryByDonatur(long idDonatur)
@@ -1248,46 +1316,58 @@ CreateNoWindow = true
                     };
                 }
 
-                // --- KIRIM PESAN SUARA (template baru) ---
-                // Sementara di-remark/nonaktifkan sesuai request.
-                /*
-                if (!string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
+                if (string.IsNullOrWhiteSpace(prayData.namaDonatur))
                 {
-                    try
+                    return new ResponseData<object>
                     {
-                        string mediaUrl = ResolveStoredAudioDeliveryUrl(prayData.pathPesanSuara);
-                        string mediaMessageType = ResolveWhatsAppMediaMessageType(prayData.pathPesanSuara, mediaUrl);
-                        var mediaPayload = new
-                        {
-                            phone_number = phoneNumber,
-                            channel = "whatsapp",
-                            message_type = mediaMessageType,
-                            media_url = mediaUrl
-                        };
-
-                        using var mediaContent = new StringContent(
-                            JsonSerializer.Serialize(mediaPayload),
-                            Encoding.UTF8,
-                            "application/json"
-                        );
-
-                        // Kirim media rekaman secara best-effort setelah template sukses.
-                        await httpClient.PostAsync(gatewayUrl, mediaContent);
-                    }
-                    catch (Exception)
-                    {
-                        // Jika suara gagal, kita tetap anggap sukses kirim teksnya saja
-                        // tapi log errornya (bisa ditambahkan logging di sini)
-                    }
+                        success = false,
+                        message = "Nama donatur wajib diisi untuk template doa suara."
+                    };
                 }
-                */
-                // -----------------------------------------
+
+                if (string.IsNullOrWhiteSpace(effectiveTemplateLink) ||
+                    !Uri.TryCreate(effectiveTemplateLink, UriKind.Absolute, out _))
+                {
+                    return new ResponseData<object>
+                    {
+                        success = false,
+                        message = "URL rekaman suara tidak valid untuk header template doa."
+                    };
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(3));
+
+                var voiceTemplatePayload = BuildVoiceTemplatePayload(
+                    phoneNumber,
+                    prayData.namaDonatur,
+                    effectiveTemplateLink);
+
+                using var voiceTemplateContent = new StringContent(
+                    JsonSerializer.Serialize(voiceTemplatePayload),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                using var voiceTemplateResponse = await httpClient.PostAsync(gatewayUrl, voiceTemplateContent);
+                string voiceTemplateResponseBody = await voiceTemplateResponse.Content.ReadAsStringAsync();
+
+                if (!voiceTemplateResponse.IsSuccessStatusCode)
+                {
+                    return new ResponseData<object>
+                    {
+                        success = false,
+                        message = BuildGatewayErrorMessage(voiceTemplateResponse.StatusCode, voiceTemplateResponseBody),
+                        data = ParseGatewayResponseBody(voiceTemplateResponseBody)
+                    };
+                }
 
                 return new ResponseData<object>
                 {
                     success = true,
-                    message = $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}).",
-                    data = ParseGatewayResponseBody(latestResponseBody)
+                    message =
+                        $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}) " +
+                        $"dan template follow-up {VoiceTemplateName} berhasil dikirim.",
+                    data = ParseGatewayResponseBody(voiceTemplateResponseBody)
                 };
             }
             catch (Exception ex)
@@ -2201,6 +2281,43 @@ CreateNoWindow = true
                         link: NewTemplateLinkPlaceholder,
                         isiDoa: isiDoa,
                         bodyVariableCount: 4)
+                }
+            };
+        }
+
+        private object BuildVoiceTemplatePayload(
+            string phoneNumber,
+            string namaDonatur,
+            string voiceUrl)
+        {
+            return new
+            {
+                phone_number = phoneNumber,
+                channel = "whatsapp",
+                message_type = "template",
+                template = new
+                {
+                    name = VoiceTemplateName,
+                    language = new { code = VoiceTemplateLanguageCode },
+                    components = new object[]
+                    {
+                        new
+                        {
+                            type = "header",
+                            parameters = new object[]
+                            {
+                                new { type = "video", video = new { link = voiceUrl } }
+                            }
+                        },
+                        new
+                        {
+                            type = "body",
+                            parameters = new object[]
+                            {
+                                new { type = "text", text = namaDonatur ?? "" }
+                            }
+                        }
+                    }
                 }
             };
         }

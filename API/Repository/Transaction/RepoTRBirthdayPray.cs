@@ -8,6 +8,7 @@ internal interface iRepoTRBirthdayPray
     List<ResponseModelDashboardBirthday> GetUpcomingBirthdayByDate(DateTime targetDate, IDbConnection conn);
     List<ResponseModelTRBirthdayPrayDateStatus> GetDateStatuses( IDbConnection conn);
     ResponseData<ResponseModelTRBirthdayPray> GetDataByDonaturId(long idDonatur, int targetYear, IDbConnection conn, IDbTransaction? tran = null);
+    ResponseModelTRBirthdayPray? GetNextTodayCompleteUnsent(DateTime currentDate, IDbConnection conn, IDbTransaction? tran = null);
     List<ResponseModelTRBirthdayPrayHistory> GetHistoryByDonaturId(long idDonatur, IDbConnection conn);
     List<ResponseModeMasterDonatur> GetDonatursByBirthdayDate(DateTime birthdayDate, IDbConnection conn, IDbTransaction? tran = null);
     ResponseModelMasterPendoa? GetDefaultPendoa(IDbConnection conn, IDbTransaction? tran = null);
@@ -328,6 +329,60 @@ LEFT JOIN Pendoa p
         }
 
         return response;
+    }
+
+    public ResponseModelTRBirthdayPray? GetNextTodayCompleteUnsent(DateTime currentDate, IDbConnection conn, IDbTransaction? tran = null)
+    {
+        const string sql = @"
+WITH DonaturBirthday AS (
+    SELECT
+        d.id_donatur,
+        d.Nama AS namaDonatur,
+        d.TglLahir,
+        d.NoHP AS noHPDonatur,
+        CASE
+            WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@currentDate), 2, 1))) < 29
+                THEN EOMONTH(DATEFROMPARTS(YEAR(@currentDate), 2, 1))
+            ELSE DATEFROMPARTS(YEAR(@currentDate), MONTH(d.TglLahir), DAY(d.TglLahir))
+        END AS birthdayDate
+    FROM Donatur d
+    WHERE d.TglLahir IS NOT NULL
+)
+SELECT TOP 1
+    pray.id_TRBirthdayPray,
+    d.id_donatur,
+    ISNULL(pray.id_pendoa, ISNULL(p.id_pendoa, 0)) AS id_pendoa,
+    d.namaDonatur,
+    d.TglLahir,
+    d.birthdayDate,
+    d.noHPDonatur,
+    ISNULL(p.nama, '') AS namaPendoa,
+    ISNULL(p.nohp, '') AS noHPPendoa,
+    ISNULL(pray.Pesan, '') AS pesan,
+    ISNULL(pray.PathPesanSuara, '') AS pathPesanSuara,
+    pray.CreatedDate,
+    ISNULL(pray.IsWASent, 0) AS isWASent,
+    pray.WASentDate AS waSentDate
+FROM DonaturBirthday d
+OUTER APPLY (
+    SELECT TOP 1 *
+    FROM TRBirthdayPray t
+    WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(d.namaDonatur))
+      AND CAST(t.BirthdayDate AS date) = CAST(d.birthdayDate AS date)
+    ORDER BY t.CreatedDate DESC, t.id_TRBirthdayPray DESC
+) pray
+LEFT JOIN Pendoa p
+    ON p.id_pendoa = ISNULL(pray.id_pendoa, (
+        SELECT TOP 1 id_pendoa FROM Pendoa WHERE dfl = 1 ORDER BY id_pendoa
+    ))
+WHERE CAST(d.birthdayDate AS date) = CAST(@currentDate AS date)
+  AND pray.id_TRBirthdayPray IS NOT NULL
+  AND LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) <> ''
+  AND LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) <> ''
+  AND ISNULL(pray.IsWASent, 0) = 0
+ORDER BY d.namaDonatur, d.id_donatur;";
+
+        return conn.QuerySingleOrDefault<ResponseModelTRBirthdayPray>(sql, new { currentDate }, tran);
     }
 
     public List<ResponseModeMasterDonatur> GetDonatursByBirthdayDate(DateTime birthdayDate, IDbConnection conn, IDbTransaction? tran = null)

@@ -80,6 +80,13 @@ namespace API.Controllers
         }
 
         [HttpPost]
+        [Route("Transaction/TRBirthdayPray/SendNextTodayWhatsApp")]
+        public async Task<ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>> SendNextTodayWhatsApp()
+        {
+            return await service.SendNextTodayCompleteUnsentWhatsApp();
+        }
+
+        [HttpPost]
         [Route("Transaction/TRBirthdayPray/SendTestWhatsAppText")]
         public async Task<ResponseData<object>> SendTestWhatsAppText([FromBody] RequestSendWhatsApp bodyRequest)
         {
