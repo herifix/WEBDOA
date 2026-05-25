@@ -183,7 +183,22 @@ namespace API.Service.Transaction
 
         public async Task<ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>> SendNextTodayCompleteUnsentWhatsApp()
         {
-            DateTime currentDate = DateTime.Today.Date;
+            DateTime now = DateTime.Now;
+            if (now.TimeOfDay < TimeSpan.FromHours(5))
+            {
+                return new ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>
+                {
+                    success = false,
+                    message = "Pengiriman WhatsApp ulang tahun hanya dapat dijalankan mulai jam 05:00 waktu server.",
+                    data = new ResponseModelTRBirthdayPrayAutoSendResult
+                    {
+                        found = false,
+                        sent = false
+                    }
+                };
+            }
+
+            DateTime currentDate = now.Date;
             ResponseModelTRBirthdayPray? candidate = null;
 
             try

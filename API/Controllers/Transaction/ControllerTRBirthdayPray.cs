@@ -79,7 +79,7 @@ namespace API.Controllers
             return await service.SendWhatsApp(bodyRequest.idDonatur, bodyRequest.year);
         }
 
-        [HttpPost]
+        [HttpGet]
         [Route("Transaction/TRBirthdayPray/SendNextTodayWhatsApp")]
         public async Task<ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>> SendNextTodayWhatsApp()
         {
