@@ -263,10 +263,10 @@ export default function TRBirthdayPrayPage() {
     return buildTemplateMessage(template, {
       donatur: pageData.namaDonatur || "-",
       pendoa: pageData.namaPendoa || "-",
-      link: effectivePreviewLink,
+      link: "",
       pesandoa: pesan.trim(),
     }).trim();
-  }, [applicationSettingQuery.data, pageData, pesan, effectivePreviewLink]);
+  }, [applicationSettingQuery.data, pageData, pesan]);
 
   const previewCardImageUrl = useMemo(
     () => buildMediaUrl(applicationSettingQuery.data?.msgImage ?? ""),
