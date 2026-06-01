@@ -12,6 +12,7 @@ type PrayerStatus = Record<string, Record<string, boolean>>;
 type CalendarCardProps = {
   currentMonth: Date;
   selectedDate?: string;
+  todayKey: string;
   donors: Donor[];
   prayerStatus: PrayerStatus;
   onSelectDate: (dateString: string) => void;
@@ -33,6 +34,7 @@ function getDateStatus(cell: MonthCell, donors: Donor[], prayerStatus: PrayerSta
 export default function CalendarCard({
   currentMonth,
   selectedDate,
+  todayKey,
   donors,
   prayerStatus,
   onSelectDate,
@@ -73,29 +75,38 @@ export default function CalendarCard({
 
       <div className="calendar-grid">
         {cells.map((cell) => {
-          const status = getDateStatus(cell, donors, prayerStatus);
+          const status = cell.isCurrentMonth ? getDateStatus(cell, donors, prayerStatus) : "none";
           const hasDonor = status !== "none";
+          const isInteractive = cell.isCurrentMonth && hasDonor && cell.dateKey >= todayKey;
           const classNames = [
             "calendar-day",
             !cell.isCurrentMonth ? "is-muted" : "",
-            selectedDate === cell.dateKey ? "is-selected" : "",
-            status === "pending" ? "has-pending" : "",
-            status === "done" ? "has-done" : ""
+            isInteractive ? "is-actionable" : "",
+            isInteractive && selectedDate === cell.dateKey ? "is-selected" : "",
+            isInteractive && status === "pending" ? "has-pending" : "",
+            isInteractive && status === "done" ? "has-done" : ""
           ]
             .filter(Boolean)
             .join(" ");
+
+          if (!isInteractive) {
+            return (
+              <div key={cell.dateKey} className={classNames}>
+                <span>{cell.date.getDate()}</span>
+              </div>
+            );
+          }
 
           return (
             <button
               key={cell.dateKey}
               type="button"
               className={classNames}
-              disabled={!cell.isCurrentMonth}
               onClick={() => onSelectDate(cell.dateKey)}
-              aria-label={`Tanggal ${cell.date.getDate()}${hasDonor ? ", ada donatur" : ""}`}
+              aria-label={`Tanggal ${cell.date.getDate()}, ada donatur`}
             >
               <span>{cell.date.getDate()}</span>
-              {hasDonor ? <span className="status-dot" /> : null}
+              <span className="status-dot" />
             </button>
           );
         })}

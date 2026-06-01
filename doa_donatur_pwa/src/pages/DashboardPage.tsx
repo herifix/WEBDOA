@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const prayerStatus = safeGetJSON<PrayerStatus>("doa.prayerStatus", {});
 
+  const todayKey = formatDateKey(new Date());
   const currentMonthKey = useMemo(() => getMonthKey(currentMonth), [currentMonth]);
 
   useEffect(() => {
@@ -78,13 +79,8 @@ export default function DashboardPage() {
 
   function handleSelectDate(dateString: string) {
     setSelectedDate(dateString);
-    const hasDonor = donors.some((donor) => donor.birthday === dateString);
-    if (hasDonor) {
-      navigate(`/birthdays?date=${dateString}`);
-      return;
-    }
-
-    setMessage("Tidak ada donatur ulang tahun pada tanggal ini.");
+    setMessage("");
+    navigate(`/birthdays?date=${dateString}`);
   }
 
   return (
@@ -99,6 +95,7 @@ export default function DashboardPage() {
         <CalendarCard
           currentMonth={currentMonth}
           selectedDate={selectedDate}
+          todayKey={todayKey}
           donors={donors}
           prayerStatus={prayerStatus}
           onSelectDate={handleSelectDate}
@@ -106,7 +103,7 @@ export default function DashboardPage() {
           onNextMonth={handleNextMonth}
         />
 
-        <p className="helper-text">Ketuk tanggal untuk melihat daftar donatur yang berulang tahun.</p>
+        <p className="helper-text">Ketuk tanggal bertitik untuk melihat daftar donatur yang berulang tahun.</p>
 
         <StatusLegend />
 

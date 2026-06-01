@@ -206,12 +206,17 @@ svg {
   border-radius: 999px;
   background: transparent;
   color: #e9deee;
+  cursor: default;
   font-size: 15px;
   font-weight: 800;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
-.calendar-day:active:not(:disabled) {
+.calendar-day.is-actionable {
+  cursor: pointer;
+}
+
+.calendar-day.is-actionable:active {
   transform: scale(0.95);
 }
 
@@ -260,6 +265,11 @@ svg {
   background: #ff8a7a;
 }
 
+.status-dot.is-caption {
+  background: #d6d147;
+  box-shadow: 0 0 0 4px rgba(214, 209, 71, 0.14);
+}
+
 .helper-text {
   max-width: 330px;
   margin: 18px auto 16px;
@@ -267,6 +277,12 @@ svg {
   text-align: center;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.legend-block {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
 }
 
 .legend {
@@ -290,6 +306,29 @@ svg {
   font-weight: 800;
 }
 
+.legend-caption {
+  width: 100%;
+  max-width: 330px;
+  min-height: 42px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: rgba(47, 42, 56, 0.8);
+  color: #d8d565;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.legend-caption .status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
 .inline-status,
 .install-hint {
   margin: 14px auto 0;
@@ -300,6 +339,10 @@ svg {
   padding: 12px 14px;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.inline-status {
+  margin-bottom: 12px;
 }
 
 .install-button {
