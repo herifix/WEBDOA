@@ -19,10 +19,14 @@ function getMockDonorsForVisibleRange(currentMonth: Date) {
   return mockDonors.filter((donor) => donor.birthday.startsWith(monthKey));
 }
 
+function getToday() {
+  return new Date();
+}
+
 export default function DashboardPage() {
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 4, 1));
-  const [selectedDate, setSelectedDate] = useState("2026-05-29");
-  const [donors, setDonors] = useState<Donor[]>(() => getMockDonorsForVisibleRange(new Date(2026, 4, 1)));
+  const [currentMonth, setCurrentMonth] = useState(() => monthStart(getToday()));
+  const [selectedDate, setSelectedDate] = useState(() => formatDateKey(getToday()));
+  const [donors, setDonors] = useState<Donor[]>(() => getMockDonorsForVisibleRange(getToday()));
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const prayerStatus = safeGetJSON<PrayerStatus>("doa.prayerStatus", {});
