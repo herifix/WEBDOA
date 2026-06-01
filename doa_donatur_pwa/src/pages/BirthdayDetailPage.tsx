@@ -29,6 +29,17 @@ function getMockDonorsForDate(dateKey: string) {
   return mockDonors.filter((donor) => donor.birthday === dateKey);
 }
 
+function compareDonorsForDisplay(first: Donor, second: Donor) {
+  const firstCompleted = Boolean(first.hasVoice);
+  const secondCompleted = Boolean(second.hasVoice);
+
+  if (firstCompleted !== secondCompleted) {
+    return firstCompleted ? 1 : -1;
+  }
+
+  return first.name.localeCompare(second.name, "id", { sensitivity: "base" });
+}
+
 export default function BirthdayDetailPage() {
   const dateKey = parseQuery().date || "2026-05-29";
   const cacheKey = `doa.cache.birthdays.${dateKey}`;
@@ -49,6 +60,10 @@ export default function BirthdayDetailPage() {
   const activeDraftRef = useRef<VoiceDraft | null>(null);
 
   const titleDate = useMemo(() => formatShortDateId(dateKey), [dateKey]);
+  const sortedDonors = useMemo(
+    () => [...donors].sort(compareDonorsForDisplay),
+    [donors]
+  );
 
   useEffect(() => {
     let active = true;
@@ -269,7 +284,7 @@ export default function BirthdayDetailPage() {
   return (
     <main>
       <header className="topbar detail-topbar">
-        <IconButton label="Kembali" onClick={() => navigate("/dashboard")}>
+        <IconButton label="Kembali" onClick={() => navigate(`/dashboard?date=${dateKey}`)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M19 12H5" />
             <path d="m12 19-7-7 7-7" />
@@ -285,11 +300,11 @@ export default function BirthdayDetailPage() {
         {loading ? <div className="inline-status">Memuat data...</div> : null}
         {message ? <div className="inline-status">{message}</div> : null}
 
-        {donors.length === 0 && !loading ? (
+        {sortedDonors.length === 0 && !loading ? (
           <div className="empty-state">Tidak ada donatur ulang tahun pada tanggal ini.</div>
         ) : (
           <div className="donor-list">
-            {donors.map((donor) => (
+            {sortedDonors.map((donor) => (
               <DonorCard
                 key={donor.id}
                 donor={donor}

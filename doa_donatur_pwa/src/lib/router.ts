@@ -4,8 +4,28 @@ export function getRoute() {
   return rawHash || "/login";
 }
 
+function normalizePath(path: string) {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
 export function navigate(path: string) {
-  window.location.hash = path.startsWith("/") ? path : `/${path}`;
+  window.location.hash = normalizePath(path);
+}
+
+export function replaceRoute(path: string) {
+  if (typeof window === "undefined") return;
+
+  const oldURL = window.location.href;
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}#${normalizePath(path)}`
+  );
+
+  const newURL = window.location.href;
+  if (newURL !== oldURL) {
+    window.dispatchEvent(new HashChangeEvent("hashchange", { oldURL, newURL }));
+  }
 }
 
 export function parseQuery(route = getRoute()) {

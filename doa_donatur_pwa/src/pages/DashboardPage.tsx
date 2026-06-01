@@ -4,11 +4,12 @@ import InstallHint from "../components/InstallHint";
 import StatusLegend from "../components/StatusLegend";
 import { mockDonors, type Donor } from "../data/donors";
 import { getBirthdayDashboard, mapApiBirthdayItem, readCache, writeCache } from "../lib/api";
-import { formatDateKey, getMonthKey } from "../lib/date";
-import { navigate } from "../lib/router";
+import { formatDateKey, getMonthKey, parseDateKey } from "../lib/date";
+import { navigate, parseQuery, replaceRoute } from "../lib/router";
 import { safeGetJSON } from "../lib/storage";
 
 type PrayerStatus = Record<string, Record<string, boolean>>;
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function monthStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -23,16 +24,40 @@ function getToday() {
   return new Date();
 }
 
+function isValidDateKey(value?: string) {
+  if (!value || !DATE_KEY_PATTERN.test(value)) return false;
+  return formatDateKey(parseDateKey(value)) === value;
+}
+
+function getDashboardFocusDateKey() {
+  const queryDate = parseQuery().date;
+  return isValidDateKey(queryDate) ? queryDate : formatDateKey(getToday());
+}
+
 export default function DashboardPage() {
-  const [currentMonth, setCurrentMonth] = useState(() => monthStart(getToday()));
-  const [selectedDate, setSelectedDate] = useState(() => formatDateKey(getToday()));
-  const [donors, setDonors] = useState<Donor[]>(() => getMockDonorsForVisibleRange(getToday()));
+  const focusDateKey = getDashboardFocusDateKey();
+  const [currentMonth, setCurrentMonth] = useState(() => monthStart(parseDateKey(focusDateKey)));
+  const [selectedDate, setSelectedDate] = useState(focusDateKey);
+  const [donors, setDonors] = useState<Donor[]>(() =>
+    getMockDonorsForVisibleRange(parseDateKey(focusDateKey))
+  );
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const prayerStatus = safeGetJSON<PrayerStatus>("doa.prayerStatus", {});
 
   const todayKey = formatDateKey(new Date());
   const currentMonthKey = useMemo(() => getMonthKey(currentMonth), [currentMonth]);
+
+  useEffect(() => {
+    const nextMonth = monthStart(parseDateKey(focusDateKey));
+
+    setCurrentMonth((value) =>
+      value.getFullYear() === nextMonth.getFullYear() && value.getMonth() === nextMonth.getMonth()
+        ? value
+        : nextMonth
+    );
+    setSelectedDate((value) => (value === focusDateKey ? value : focusDateKey));
+  }, [focusDateKey]);
 
   useEffect(() => {
     let active = true;
@@ -84,6 +109,7 @@ export default function DashboardPage() {
   function handleSelectDate(dateString: string) {
     setSelectedDate(dateString);
     setMessage("");
+    replaceRoute(`/dashboard?date=${dateString}`);
     navigate(`/birthdays?date=${dateString}`);
   }
 
