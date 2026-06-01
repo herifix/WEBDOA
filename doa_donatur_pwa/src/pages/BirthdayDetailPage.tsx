@@ -19,6 +19,15 @@ function chooseMimeType() {
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? "";
 }
 
+const voiceAudioConstraints: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 48000 },
+  sampleSize: { ideal: 16 }
+};
+
 function extensionForMimeType(mimeType: string) {
   if (mimeType.includes("mp4")) return "mp4";
   if (mimeType.includes("ogg")) return "ogg";
@@ -55,6 +64,9 @@ export default function BirthdayDetailPage() {
   const [loading, setLoading] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const sourceStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioNodesRef = useRef<AudioNode[]>([]);
   const chunksRef = useRef<BlobPart[]>([]);
   const recordingMimeRef = useRef("");
   const activeDraftRef = useRef<VoiceDraft | null>(null);
@@ -112,9 +124,138 @@ export default function BirthdayDetailPage() {
     };
   }, []);
 
+  function stopStream(stream: MediaStream | null) {
+    stream?.getTracks().forEach((track) => track.stop());
+  }
+
   function stopRecordingTracks() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    audioNodesRef.current.forEach((node) => {
+      try {
+        node.disconnect();
+      } catch {
+        // Some browsers throw when a node is already disconnected.
+      }
+    });
+    audioNodesRef.current = [];
+
+    stopStream(streamRef.current);
+    if (sourceStreamRef.current !== streamRef.current) {
+      stopStream(sourceStreamRef.current);
+    }
+
     streamRef.current = null;
+    sourceStreamRef.current = null;
+
+    const audioContext = audioContextRef.current;
+    audioContextRef.current = null;
+    if (audioContext && audioContext.state !== "closed") {
+      void audioContext.close().catch(() => undefined);
+    }
+  }
+
+  async function createVoiceOptimizedStream() {
+    let sourceStream: MediaStream;
+
+    try {
+      sourceStream = await navigator.mediaDevices.getUserMedia({ audio: voiceAudioConstraints });
+    } catch {
+      sourceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    sourceStreamRef.current = sourceStream;
+
+    const AudioContextConstructor =
+      window.AudioContext ??
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+    if (!AudioContextConstructor) {
+      return sourceStream;
+    }
+
+    let audioContext: AudioContext | null = null;
+    const nodes: AudioNode[] = [];
+
+    try {
+      try {
+        audioContext = new AudioContextConstructor({ sampleRate: 48000 });
+      } catch {
+        audioContext = new AudioContextConstructor();
+      }
+
+      const source = audioContext.createMediaStreamSource(sourceStream);
+      const highpass = audioContext.createBiquadFilter();
+      const lowpass = audioContext.createBiquadFilter();
+      const compressor = audioContext.createDynamicsCompressor();
+      const gain = audioContext.createGain();
+      const destination = audioContext.createMediaStreamDestination();
+
+      highpass.type = "highpass";
+      highpass.frequency.value = 85;
+      highpass.Q.value = 0.7;
+
+      lowpass.type = "lowpass";
+      lowpass.frequency.value = 8500;
+      lowpass.Q.value = 0.7;
+
+      compressor.threshold.value = -24;
+      compressor.knee.value = 24;
+      compressor.ratio.value = 3;
+      compressor.attack.value = 0.005;
+      compressor.release.value = 0.18;
+
+      gain.gain.value = 1.2;
+
+      source.connect(highpass);
+      highpass.connect(lowpass);
+      lowpass.connect(compressor);
+      compressor.connect(gain);
+      gain.connect(destination);
+
+      nodes.push(source, highpass, lowpass, compressor, gain, destination);
+      audioNodesRef.current = nodes;
+      audioContextRef.current = audioContext;
+
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      return destination.stream;
+    } catch {
+      nodes.forEach((node) => {
+        try {
+          node.disconnect();
+        } catch {
+          // Ignore partial graph cleanup failures.
+        }
+      });
+
+      if (audioContext && audioContext.state !== "closed") {
+        void audioContext.close().catch(() => undefined);
+      }
+
+      audioContextRef.current = null;
+      audioNodesRef.current = [];
+      return sourceStream;
+    }
+  }
+
+  function createVoiceMediaRecorder(stream: MediaStream, mimeType: string) {
+    const options: MediaRecorderOptions = { audioBitsPerSecond: 96000 };
+    if (mimeType) options.mimeType = mimeType;
+
+    try {
+      return new MediaRecorder(stream, options);
+    } catch {
+      if (mimeType) {
+        try {
+          return new MediaRecorder(stream, { mimeType });
+        } catch {
+          return new MediaRecorder(stream);
+        }
+      }
+
+      return new MediaRecorder(stream);
+    }
   }
 
   function stopActiveRecorder() {
@@ -195,9 +336,9 @@ export default function BirthdayDetailPage() {
       setDraft(null);
       chunksRef.current = [];
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await createVoiceOptimizedStream();
       const mimeType = chooseMimeType();
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const recorder = createVoiceMediaRecorder(stream, mimeType);
       const startedAt = Date.now();
 
       streamRef.current = stream;

@@ -464,7 +464,7 @@ var targetDonaturs = bodyRequest.saveToAllSameBirthdayDate
 string pathPesanSuara = "";
                 if (bodyRequest.voiceRecordingId.HasValue && bodyRequest.voiceRecordingId.Value > 0)
                     {
-    pathPesanSuara = voiceStorageService.ResolvePlaybackUrl(bodyRequest.voiceRecordingId.Value, conn, tran).url;
+    pathPesanSuara = SaveVoiceRecordingUsingFFmpeg(bodyRequest.voiceRecordingId.Value, tran);
                     }
                 else
                     {
@@ -509,8 +509,8 @@ tran
                     }
 
 response.message = bodyRequest.saveToAllSameBirthdayDate
-                    ? "Pesan suara berhasil dikonversi dengan FFmpeg dan disimpan untuk semua donatur dengan tanggal ulang tahun yang sama."
-                    : "Pesan suara berhasil dikonversi dengan FFmpeg dan disimpan.";
+                    ? "Pesan suara berhasil ditingkatkan kualitasnya, dikonversi ke MP4, dan disimpan untuk semua donatur dengan tanggal ulang tahun yang sama."
+                    : "Pesan suara berhasil ditingkatkan kualitasnya, dikonversi ke MP4, dan disimpan.";
 
 tran.Commit();
 response.success = true;
@@ -547,7 +547,6 @@ data = 0
             }
 
             string tempSourcePath = Path.Combine(tempFolder, $"{Guid.NewGuid():N}{sourceExtension}");
-            string tempMp3Path = Path.Combine(tempFolder, $"{Guid.NewGuid():N}.mp3");
 
             try
             {
@@ -556,26 +555,166 @@ data = 0
                     file.CopyTo(sourceStream);
                 }
 
-ConvertAudioToMp3WithFFmpeg(tempSourcePath, tempMp3Path);
-
-                using var mp3Stream = new FileStream(tempMp3Path, FileMode.Open, FileAccess.Read, FileShare.Read);
-var convertedFile = new FormFile(mp3Stream, 0, mp3Stream.Length, "audio", BuildConvertedMp3FileName(file.FileName))
-                {
-    Headers = new HeaderDictionary(),
-ContentType = "audio/mpeg"
+                return SaveEnhancedVoiceSourceAsMp4(tempSourcePath, file.FileName ?? "pesan-suara", tran);
+            }
+            finally
+            {
+    TryDeleteFile(tempSourcePath);
                 }
-;
+        }
+
+        private string SaveVoiceRecordingUsingFFmpeg(long voiceRecordingId, IDbTransaction tran)
+        {
+            string playbackUrl = voiceStorageService.ResolvePlaybackUrl(voiceRecordingId, conn, tran).url;
+            string tempFolder = Path.Combine(Path.GetTempPath(), "birthday-pray-ffmpeg");
+            Directory.CreateDirectory(tempFolder);
+
+            string sourceExtension = GetMediaExtension(playbackUrl);
+            if (string.IsNullOrWhiteSpace(sourceExtension))
+            {
+                sourceExtension = ".tmp";
+            }
+
+            string tempSourcePath = Path.Combine(tempFolder, $"{Guid.NewGuid():N}{sourceExtension}");
+
+            try
+            {
+                MaterializeStoredMediaToTempFileAsync("", playbackUrl, tempSourcePath).GetAwaiter().GetResult();
+                return SaveEnhancedVoiceSourceAsMp4(tempSourcePath, playbackUrl, tran);
+            }
+            finally
+            {
+                TryDeleteFile(tempSourcePath);
+            }
+        }
+
+        private string SaveEnhancedVoiceSourceAsMp4(string sourcePath, string sourceHint, IDbTransaction tran)
+        {
+            string tempFolder = Path.Combine(Path.GetTempPath(), "birthday-pray-ffmpeg");
+            Directory.CreateDirectory(tempFolder);
+
+            string tempMp3Path = Path.Combine(tempFolder, $"{Guid.NewGuid():N}.mp3");
+            string tempMp4Path = Path.Combine(tempFolder, $"{Guid.NewGuid():N}.mp4");
+
+            try
+            {
+                ConvertAudioToEnhancedMp3WithFFmpeg(sourcePath, tempMp3Path);
+                mediaConversionService.ConvertAudioToMp4WithImage(tempMp3Path, tempMp4Path, ResolveMessageImageForMp4(tran));
+
+                using var mp4Stream = new FileStream(tempMp4Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var convertedFile = new FormFile(mp4Stream, 0, mp4Stream.Length, "audio", BuildConvertedMp4FileName(sourceHint))
+                {
+                    Headers = new HeaderDictionary(),
+                    ContentType = "video/mp4"
+                };
 
                 return SaveVoiceFile(convertedFile, tran);
             }
             finally
             {
-    TryDeleteFile(tempSourcePath);
-    TryDeleteFile(tempMp3Path);
-                }
+                TryDeleteFile(tempMp3Path);
+                TryDeleteFile(tempMp4Path);
+            }
         }
 
-        private void ConvertAudioToMp3WithFFmpeg(string sourcePath, string outputMp3Path)
+        private string ResolveMessageImageForMp4(IDbTransaction tran)
+        {
+            var setting = settingRepo.GetSetting(conn, tran);
+            string configuredImage = (setting.msgImage ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(configuredImage))
+            {
+                throw new InvalidOperationException("Image Pesan belum diatur di Application Setting untuk cover MP4.");
+            }
+
+            foreach (string candidatePath in BuildMessageImagePathCandidates(configuredImage))
+            {
+                if (!string.IsNullOrWhiteSpace(candidatePath) && File.Exists(candidatePath))
+                {
+                    return candidatePath;
+                }
+            }
+
+            if (Uri.TryCreate(configuredImage, UriKind.Absolute, out _))
+            {
+                return configuredImage;
+            }
+
+            string publicUrl = BuildAbsoluteUrl(GetPublicBaseUrl(), configuredImage);
+            if (Uri.TryCreate(publicUrl, UriKind.Absolute, out _))
+            {
+                return publicUrl;
+            }
+
+            throw new InvalidOperationException($"Image Pesan untuk cover MP4 tidak ditemukan: {configuredImage}");
+        }
+
+        private IEnumerable<string> BuildMessageImagePathCandidates(string configuredImage)
+        {
+            string rawValue = (configuredImage ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                yield break;
+            }
+
+            if (Path.IsPathRooted(rawValue))
+            {
+                yield return rawValue;
+            }
+
+            string normalizedPath = rawValue;
+            if (Uri.TryCreate(rawValue, UriKind.Absolute, out var uri))
+            {
+                normalizedPath = uri.AbsolutePath;
+            }
+
+            int suffixIndex = normalizedPath.IndexOfAny(new[] { '?', '#' });
+            if (suffixIndex >= 0)
+            {
+                normalizedPath = normalizedPath[..suffixIndex];
+            }
+
+            normalizedPath = Uri.UnescapeDataString(normalizedPath)
+                .Replace("\\", "/")
+                .TrimStart('/');
+
+            if (normalizedPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase))
+            {
+                normalizedPath = normalizedPath[4..];
+            }
+
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                yield break;
+            }
+
+            string nativePath = normalizedPath.Replace("/", Path.DirectorySeparatorChar.ToString());
+
+            if (!string.IsNullOrWhiteSpace(env.WebRootPath))
+            {
+                yield return Path.GetFullPath(Path.Combine(env.WebRootPath, nativePath));
+            }
+
+            if (!string.IsNullOrWhiteSpace(env.ContentRootPath))
+            {
+                yield return Path.GetFullPath(Path.Combine(env.ContentRootPath, nativePath));
+            }
+        }
+
+        private void ConvertAudioToEnhancedMp3WithFFmpeg(string sourcePath, string outputMp3Path)
+        {
+            try
+            {
+                ConvertAudioToMp3WithFFmpeg(sourcePath, outputMp3Path, enhanceVoice: true);
+            }
+            catch
+            {
+                TryDeleteFile(outputMp3Path);
+                ConvertAudioToMp3WithFFmpeg(sourcePath, outputMp3Path, enhanceVoice: false);
+            }
+        }
+
+        private void ConvertAudioToMp3WithFFmpeg(string sourcePath, string outputMp3Path, bool enhanceVoice)
         {
     string ffmpegBinaryPath = (configuration["FFmpeg:BinaryPath"] ?? "ffmpeg").Trim();
                 if (string.IsNullOrWhiteSpace(ffmpegBinaryPath))
@@ -604,12 +743,17 @@ CreateNoWindow = true
     process.StartInfo.ArgumentList.Add("-i");
     process.StartInfo.ArgumentList.Add(sourcePath);
     process.StartInfo.ArgumentList.Add("-vn");
+                if (enhanceVoice)
+                    {
+    process.StartInfo.ArgumentList.Add("-af");
+    process.StartInfo.ArgumentList.Add("highpass=f=85,lowpass=f=8500,afftdn=nf=-25,acompressor=threshold=0.089:ratio=3:attack=5:release=180:makeup=1.5,loudnorm=I=-16:TP=-1.5:LRA=11");
+                    }
     process.StartInfo.ArgumentList.Add("-acodec");
     process.StartInfo.ArgumentList.Add("libmp3lame");
     process.StartInfo.ArgumentList.Add("-ar");
     process.StartInfo.ArgumentList.Add("44100");
     process.StartInfo.ArgumentList.Add("-ac");
-    process.StartInfo.ArgumentList.Add("2");
+    process.StartInfo.ArgumentList.Add("1");
     process.StartInfo.ArgumentList.Add("-b:a");
     process.StartInfo.ArgumentList.Add("128k");
     process.StartInfo.ArgumentList.Add(outputMp3Path);
@@ -646,7 +790,8 @@ CreateNoWindow = true
                     if (process.ExitCode != 0 || !File.Exists(outputMp3Path) || new FileInfo(outputMp3Path).Length <= 0)
                         {
             string errorMessage = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
-            throw new InvalidOperationException($"Gagal konversi audio ke MP3 menggunakan FFmpeg. {TrimForErrorMessage(errorMessage)}");
+            string mode = enhanceVoice ? "enhanced" : "dasar";
+            throw new InvalidOperationException($"Gagal konversi audio {mode} ke MP3 menggunakan FFmpeg. {TrimForErrorMessage(errorMessage)}");
                         }
                 }
     

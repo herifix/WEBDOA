@@ -26,6 +26,17 @@ namespace API.Service.Transaction
         public void ConvertAudioToMp4WithPtLogo(string sourceAudioPath, string outputMp4Path, string ptCode)
         {
             string logoPath = ResolvePtLogoPath(ptCode);
+            ConvertAudioToMp4WithStillImage(sourceAudioPath, outputMp4Path, logoPath);
+        }
+
+        public void ConvertAudioToMp4WithImage(string sourceAudioPath, string outputMp4Path, string coverImagePath)
+        {
+            string resolvedCoverImagePath = ResolveCoverImagePath(coverImagePath);
+            ConvertAudioToMp4WithStillImage(sourceAudioPath, outputMp4Path, resolvedCoverImagePath);
+        }
+
+        private void ConvertAudioToMp4WithStillImage(string sourceAudioPath, string outputMp4Path, string imagePath)
+        {
             Directory.CreateDirectory(Path.GetDirectoryName(outputMp4Path) ?? Path.GetTempPath());
 
             int outputWidth = GetConfiguredPositiveInt("MediaConversion:OutputWidth", 1280);
@@ -53,7 +64,7 @@ namespace API.Service.Transaction
             process.StartInfo.ArgumentList.Add("-framerate");
             process.StartInfo.ArgumentList.Add("50");
             process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(logoPath);
+            process.StartInfo.ArgumentList.Add(imagePath);
             process.StartInfo.ArgumentList.Add("-i");
             process.StartInfo.ArgumentList.Add(sourceAudioPath);
             process.StartInfo.ArgumentList.Add("-map");
@@ -123,6 +134,35 @@ namespace API.Service.Transaction
                 string errorMessage = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
                 throw new InvalidOperationException($"Gagal konversi rekaman ke MP4 menggunakan FFmpeg. {TrimForErrorMessage(errorMessage)}");
             }
+        }
+
+        private string ResolveCoverImagePath(string coverImagePath)
+        {
+            string value = (coverImagePath ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException("Image Pesan untuk cover MP4 belum diatur.");
+            }
+
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+                (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                 uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+            {
+                return value;
+            }
+
+            if (File.Exists(value))
+            {
+                return value;
+            }
+
+            string resolved = ResolveConfiguredPath(value);
+            if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved))
+            {
+                return resolved;
+            }
+
+            throw new InvalidOperationException($"Image Pesan untuk cover MP4 tidak ditemukan: {value}");
         }
 
         private double? TryProbeMediaDurationSeconds(string mediaPath, string ffmpegPath, int timeoutSeconds)
