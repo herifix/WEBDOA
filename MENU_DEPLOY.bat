@@ -11,13 +11,13 @@ echo.
 echo Development
 echo   1. Prepare Config Development
 echo   2. Cek Config Development
-echo   3. Publish Development
+echo   3. Publish Development (API + UI + PWA)
 echo   4. Start API Development
 echo.
 echo Production / Live
 echo   5. Prepare Config Production
 echo   6. Cek Config Production
-echo   7. Publish Production
+echo   7. Publish Production (API + UI + PWA)
 echo   8. Start API Production
 echo.
 echo Lainnya
@@ -102,6 +102,7 @@ goto menu
 :checkDevelopmentConfig
 set "API_CONFIG=%~dp0API\appsettings.Development.json"
 set "CLIENT_CONFIG=%~dp0client\.env.devpublish"
+set "PWA_CONFIG=%~dp0doa_donatur_pwa\.env.devpublish"
 
 echo.
 echo ========================================
@@ -120,6 +121,12 @@ if not exist "%CLIENT_CONFIG%" (
   goto :eof
 )
 
+if not exist "%PWA_CONFIG%" (
+  echo File PWA belum ada:
+  echo %PWA_CONFIG%
+  goto :eof
+)
+
 findstr /I /C:"YOUR_" "%API_CONFIG%" >nul
 if not errorlevel 1 (
   echo Backend config: MASIH ADA PLACEHOLDER
@@ -155,11 +162,33 @@ if not errorlevel 1 (
     echo   %CLIENT_CONFIG%
   )
 )
+
+findstr /I /C:"YOUR_" "%PWA_CONFIG%" >nul
+if not errorlevel 1 (
+  echo PWA config: MASIH ADA PLACEHOLDER
+  echo   %PWA_CONFIG%
+) else (
+  findstr /B /C:"VITE_API_BASE_URL=" "%PWA_CONFIG%" | findstr /R /C:"^VITE_API_BASE_URL=$" >nul
+  if not errorlevel 1 (
+    echo PWA config: VITE_API_BASE_URL MASIH KOSONG
+    echo   %PWA_CONFIG%
+  ) else (
+    findstr /R /C:"^VITE_PWA_BASE=/pwa/$" "%PWA_CONFIG%" >nul
+    if errorlevel 1 (
+      echo PWA config: VITE_PWA_BASE HARUS /pwa/
+      echo   %PWA_CONFIG%
+    ) else (
+      echo PWA config: OK
+      echo   %PWA_CONFIG%
+    )
+  )
+)
 goto :eof
 
 :checkProductionConfig
 set "API_CONFIG=%~dp0API\appsettings.Production.json"
 set "CLIENT_CONFIG=%~dp0client\.env.production"
+set "PWA_CONFIG=%~dp0doa_donatur_pwa\.env.production"
 
 echo.
 echo ========================================
@@ -178,6 +207,12 @@ if not exist "%CLIENT_CONFIG%" (
   goto :eof
 )
 
+if not exist "%PWA_CONFIG%" (
+  echo File PWA belum ada:
+  echo %PWA_CONFIG%
+  goto :eof
+)
+
 findstr /I /C:"YOUR_" "%API_CONFIG%" >nul
 if not errorlevel 1 (
   echo Backend config: MASIH ADA PLACEHOLDER
@@ -211,6 +246,27 @@ if not errorlevel 1 (
   ) else (
     echo Frontend config: OK
     echo   %CLIENT_CONFIG%
+  )
+)
+
+findstr /I /C:"YOUR_" "%PWA_CONFIG%" >nul
+if not errorlevel 1 (
+  echo PWA config: MASIH ADA PLACEHOLDER
+  echo   %PWA_CONFIG%
+) else (
+  findstr /B /C:"VITE_API_BASE_URL=" "%PWA_CONFIG%" | findstr /R /C:"^VITE_API_BASE_URL=$" >nul
+  if not errorlevel 1 (
+    echo PWA config: VITE_API_BASE_URL MASIH KOSONG
+    echo   %PWA_CONFIG%
+  ) else (
+    findstr /R /C:"^VITE_PWA_BASE=/pwa/$" "%PWA_CONFIG%" >nul
+    if errorlevel 1 (
+      echo PWA config: VITE_PWA_BASE HARUS /pwa/
+      echo   %PWA_CONFIG%
+    ) else (
+      echo PWA config: OK
+      echo   %PWA_CONFIG%
+    )
   )
 )
 goto :eof

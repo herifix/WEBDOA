@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Mic, RefreshCcw, Send, Square, Trash2 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -86,6 +87,89 @@ function buildTemplateMessage(
     .replace(/<pesandoa>/gi, replacements.pesandoa);
 }
 
+const MAX_WHATSAPP_PREVIEW_LENGTH = 1024;
+const MAX_CONSECUTIVE_SPACES = 4;
+const PESAN_DOA_LIMIT_MARKER = "\u0000PESAN_DOA_INPUT\u0000";
+const HIDDEN_CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/;
+const FIVE_SPACES_PATTERN = / {5,}/;
+
+type PreviewMessageReplacements = {
+  donatur: string;
+  pendoa: string;
+  link: string;
+};
+
+function buildBirthdayPreviewMessage(
+  template: string,
+  replacements: PreviewMessageReplacements,
+  pesanDoa: string
+) {
+  const hasPesanDoaPlaceholder = /<pesandoa>/i.test(template);
+  const templateMessage = template.trim()
+    ? buildTemplateMessage(template, {
+        ...replacements,
+        pesandoa: pesanDoa,
+      }).trim()
+    : "";
+  const sections = [templateMessage];
+  const trimmedPesan = pesanDoa.trim();
+
+  if (trimmedPesan && !hasPesanDoaPlaceholder) {
+    sections.push(trimmedPesan);
+  }
+
+  return sections.filter(Boolean).join("\n\n");
+}
+
+function countOccurrences(value: string, search: string) {
+  if (!search) return 0;
+
+  return value.split(search).length - 1;
+}
+
+function calculateMaxPesanDoaLength(
+  template: string,
+  replacements: PreviewMessageReplacements
+) {
+  const previewWithMarker = buildBirthdayPreviewMessage(
+    template,
+    replacements,
+    PESAN_DOA_LIMIT_MARKER
+  );
+  const markerCount = countOccurrences(previewWithMarker, PESAN_DOA_LIMIT_MARKER);
+
+  if (markerCount <= 0) {
+    return Math.max(0, MAX_WHATSAPP_PREVIEW_LENGTH - previewWithMarker.length);
+  }
+
+  const fixedPreviewLength =
+    previewWithMarker.length - PESAN_DOA_LIMIT_MARKER.length * markerCount;
+  return Math.max(
+    0,
+    Math.floor((MAX_WHATSAPP_PREVIEW_LENGTH - fixedPreviewLength) / markerCount)
+  );
+}
+
+function validateWhatsAppTextFormat(value: string, label = "Pesan Doa") {
+  if (/[\r\n]/.test(value)) {
+    return `Enter tidak diperbolehkan pada ${label}.`;
+  }
+
+  if (/\t/.test(value)) {
+    return `Tab tidak diperbolehkan pada ${label}.`;
+  }
+
+  if (HIDDEN_CONTROL_CHAR_PATTERN.test(value)) {
+    return `Karakter kontrol tersembunyi tidak diperbolehkan pada ${label}.`;
+  }
+
+  if (FIVE_SPACES_PATTERN.test(value)) {
+    return `Maksimal ${MAX_CONSECUTIVE_SPACES} spasi berurutan pada ${label}.`;
+  }
+
+  return "";
+}
+
 function splitTextWithLinks(value: string) {
   return value.split(/(https?:\/\/[^\s]+)/gi).filter(Boolean);
 }
@@ -161,6 +245,16 @@ function validateWhatsAppTemplateSend(params: {
     return `Parameter template WhatsApp belum lengkap. Lengkapi: ${missingFields.join(", ")}.`;
   }
 
+  const textValidation =
+    validateWhatsAppTextFormat(params.namaPenerima ?? "", "Nama penerima") ||
+    validateWhatsAppTextFormat(params.namaPendoa ?? "", "Pendoa") ||
+    validateWhatsAppTextFormat(params.link ?? "", "Link") ||
+    validateWhatsAppTextFormat(params.isiDoa ?? "", "Pesan Doa");
+
+  if (textValidation) {
+    return textValidation;
+  }
+
   return "";
 }
 
@@ -196,6 +290,7 @@ export default function TRBirthdayPrayPage() {
   const currentUserId = localStorage.getItem("userid") ?? "";
 
   const [pesan, setPesan] = useState("");
+  const [pesanDoaInputMessage, setPesanDoaInputMessage] = useState("");
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -211,6 +306,7 @@ export default function TRBirthdayPrayPage() {
     if (!detailQuery.data) return;
 
     setPesan(detailQuery.data.pesan ?? "");
+    setPesanDoaInputMessage("");
     setAudioPreviewUrl(
       buildMediaUrl(detailQuery.data.pathPesanSuaraUrl || detailQuery.data.pathPesanSuara || "")
     );
@@ -254,19 +350,15 @@ export default function TRBirthdayPrayPage() {
     [pageData?.pathPesanSuaraUrl, pageData?.pathPesanSuara]
   );
 
-  const previewTemplateMessage = useMemo(() => {
-    if (!pageData) return "";
-
-    const template = applicationSettingQuery.data?.msgTemplate ?? "";
-    if (!template.trim()) return "";
-
-    return buildTemplateMessage(template, {
-      donatur: pageData.namaDonatur || "-",
-      pendoa: pageData.namaPendoa || "-",
+  const previewMessageTemplate = applicationSettingQuery.data?.msgTemplate ?? "";
+  const previewMessageReplacements = useMemo<PreviewMessageReplacements>(
+    () => ({
+      donatur: pageData?.namaDonatur || "-",
+      pendoa: pageData?.namaPendoa || "-",
       link: "",
-      pesandoa: pesan.trim(),
-    }).trim();
-  }, [applicationSettingQuery.data, pageData, pesan]);
+    }),
+    [pageData?.namaDonatur, pageData?.namaPendoa]
+  );
 
   const previewCardImageUrl = useMemo(
     () => buildMediaUrl(applicationSettingQuery.data?.msgImage ?? ""),
@@ -274,17 +366,24 @@ export default function TRBirthdayPrayPage() {
   );
 
   const previewMessage = useMemo(() => {
-    const template = applicationSettingQuery.data?.msgTemplate ?? "";
-    const hasPesanDoaPlaceholder = /<pesandoa>/i.test(template);
-    const sections = [previewTemplateMessage];
-    const trimmedPesan = pesan.trim();
+    if (!pageData) return "";
 
-    if (trimmedPesan && !hasPesanDoaPlaceholder) {
-      sections.push(trimmedPesan);
-    }
+    return buildBirthdayPreviewMessage(
+      previewMessageTemplate,
+      previewMessageReplacements,
+      pesan.trim()
+    );
+  }, [pageData, pesan, previewMessageReplacements, previewMessageTemplate]);
 
-    return sections.filter(Boolean).join("\n\n");
-  }, [applicationSettingQuery.data?.msgTemplate, previewTemplateMessage, pesan]);
+  const maxPesanDoaLength = useMemo(
+    () => calculateMaxPesanDoaLength(previewMessageTemplate, previewMessageReplacements),
+    [previewMessageReplacements, previewMessageTemplate]
+  );
+  const pesanDoaFormatMessage = useMemo(
+    () => validateWhatsAppTextFormat(pesan),
+    [pesan]
+  );
+  const isPesanDoaOverLimit = pesan.length > maxPesanDoaLength;
 
   const previewParagraphs = useMemo(
     () => previewMessage.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean),
@@ -314,8 +413,6 @@ export default function TRBirthdayPrayPage() {
     (pageData?.pathPesanSuara ?? "").trim() || (pageData?.pathPesanSuaraUrl ?? "").trim()
   );
   const savedPrayerTextAvailable = Boolean((pageData?.pesan ?? "").trim());
-  const hasVoiceButMissingPrayerText = savedVoiceAvailable && !savedPrayerTextAvailable;
-  const hasTypedPrayerTextForSavedVoice = hasVoiceButMissingPrayerText && Boolean(pesan.trim());
   const isWhatsAppReady = Boolean(
     pageData &&
     pageData.id_donatur > 0 &&
@@ -323,6 +420,56 @@ export default function TRBirthdayPrayPage() {
     savedPrayerTextAvailable &&
     !hasUnsavedChanges
   );
+
+  function handlePesanChange(value: string) {
+    const formatMessage = validateWhatsAppTextFormat(value);
+    if (formatMessage) {
+      setPesanDoaInputMessage(formatMessage);
+      return;
+    }
+
+    const nextValue =
+      value.length > maxPesanDoaLength
+        ? value.slice(0, maxPesanDoaLength)
+        : value;
+
+    setPesan(nextValue);
+    setPesanDoaInputMessage(
+      value.length > maxPesanDoaLength
+        ? "Pesan Doa dipotong sampai batas maksimal."
+        : ""
+    );
+  }
+
+  function handlePesanKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      setPesanDoaInputMessage("Enter tidak diperbolehkan pada Pesan Doa.");
+      return;
+    }
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      setPesanDoaInputMessage("Tab tidak diperbolehkan pada Pesan Doa.");
+    }
+  }
+
+  function handlePesanPaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
+    const pastedText = event.clipboardData.getData("text");
+    const target = event.currentTarget;
+    const nextValue =
+      pesan.slice(0, target.selectionStart) +
+      pastedText +
+      pesan.slice(target.selectionEnd);
+    const formatMessage = validateWhatsAppTextFormat(nextValue);
+
+    if (!formatMessage) {
+      return;
+    }
+
+    event.preventDefault();
+    setPesanDoaInputMessage(formatMessage);
+  }
 
   function stopRecordingTracks() {
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -489,6 +636,18 @@ export default function TRBirthdayPrayPage() {
       return;
     }
 
+    if (pesanDoaFormatMessage) {
+      setFormError(pesanDoaFormatMessage);
+      return;
+    }
+
+    if (isPesanDoaOverLimit) {
+      setFormError(
+        `Pesan Doa terlalu panjang (${pesan.length}/${maxPesanDoaLength}). Kurangi teks sebelum disimpan.`
+      );
+      return;
+    }
+
     if (!hasUnsavedChanges) {
       setFormError("Belum ada perubahan data yang perlu disimpan.");
       return;
@@ -525,15 +684,7 @@ export default function TRBirthdayPrayPage() {
         throw new Error(result?.message || "Gagal menyimpan data.");
       }
 
-      const warningText =
-        !pesan.trim() ||
-        (!selectedAudioFile && !(pageData?.pathPesanSuara ?? "").trim())
-          ? " Status rekaman tampil selesai jika suara sudah ada. WhatsApp siap dikirim jika pesan doa dan pesan suara sudah terisi."
-          : "";
-
-      setFormSuccess(
-        `${result.message || "Data berhasil disimpan."}${warningText}`
-      );
+      setFormSuccess(result.message || "Data berhasil disimpan.");
       setRecordingStatus("");
       await detailQuery.refetch();
       await historyQuery.refetch();
@@ -560,6 +711,13 @@ export default function TRBirthdayPrayPage() {
 
     if (!effectivePreviewLink.trim()) {
       setFormError("Rekaman audio belum tersedia. Simpan pesan suara terlebih dahulu sebelum mengirim WhatsApp.");
+      return;
+    }
+
+    if (isPesanDoaOverLimit) {
+      setFormError(
+        `Pesan Doa terlalu panjang (${pesan.length}/${maxPesanDoaLength}). Kurangi teks sebelum kirim WhatsApp.`
+      );
       return;
     }
 
@@ -608,6 +766,12 @@ export default function TRBirthdayPrayPage() {
   const handleSendTestText = async () => {
     try {
       clearFormMessage();
+      const formatMessage = validateWhatsAppTextFormat(pesan, "Pesan Doa");
+      if (formatMessage) {
+        setFormError(formatMessage);
+        return;
+      }
+
       const result = await sendTestTextAsync({
         idDonatur,
         year: currentYear,
@@ -772,17 +936,29 @@ export default function TRBirthdayPrayPage() {
                   </label>
                   <textarea
                     value={pesan}
-                    onChange={(e) => setPesan(e.target.value)}
+                    onChange={(e) => handlePesanChange(e.target.value)}
+                    onKeyDown={handlePesanKeyDown}
+                    onPaste={handlePesanPaste}
+                    maxLength={maxPesanDoaLength}
                     className="mt-3 min-h-[230px] w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
                     placeholder="Tulis pesan doa ulang tahun..."
                   />
-                  {hasVoiceButMissingPrayerText ? (
-                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                      {hasTypedPrayerTextForSavedVoice
-                        ? "Rekaman suara sudah ada. Klik Save agar Pesan Doa tersimpan dan data siap kirim WhatsApp."
-                        : "Rekaman suara sudah ada dari PWA. Lengkapi Pesan Doa lalu Save agar data siap kirim WhatsApp."}
+                  <div className="mt-2 flex items-start justify-between gap-3 text-xs">
+                    <div className="min-h-4 flex-1 font-medium text-rose-600">
+                      {pesanDoaInputMessage}
                     </div>
-                  ) : null}
+                    <div
+                      className={
+                        isPesanDoaOverLimit
+                          ? "font-semibold text-rose-600"
+                          : pesan.length >= maxPesanDoaLength
+                            ? "font-semibold text-amber-600"
+                            : "text-slate-500"
+                      }
+                    >
+                      {pesan.length}/{maxPesanDoaLength}
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -17,7 +17,7 @@ Fitur yang tersedia:
   Mengecek apakah config development masih berisi placeholder `YOUR_*` atau value penting masih kosong.
 
 - `Publish Development`
-  Build frontend mode development dan publish backend ke folder `publish/development`.
+  Build frontend UI, build PWA, dan publish backend ke folder `publish/development`.
 
 - `Start API Development`
   Menjalankan API dengan mode `Development`.
@@ -29,7 +29,7 @@ Fitur yang tersedia:
   Mengecek apakah config production masih berisi placeholder `YOUR_*` atau value penting masih kosong.
 
 - `Publish Production`
-  Build frontend mode production dan publish backend ke folder `publish/production`.
+  Build frontend UI, build PWA, dan publish backend ke folder `publish/production`.
 
 - `Start API Production`
   Menjalankan API dengan mode `Production`.
@@ -58,6 +58,7 @@ Catatan penting:
 
 - `client/.env.development` dipakai untuk coding harian dengan `npm run dev`
 - `client/.env.devpublish` dipakai khusus untuk `publish-development.bat`
+- `doa_donatur_pwa/.env.devpublish` dipakai khusus untuk build PWA publish development
 - jadi konfigurasi deploy development tidak lagi menimpa konfigurasi coding harian
 
 ### A1. Development coding harian
@@ -78,6 +79,9 @@ Ini mengikuti API local dari [launchSettings.json](/d:/KANTOR/Project%20VB/WEB%2
 
    Jika belum ada, bisa mulai dari:
    - [client/.env.devpublish.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.devpublish.sample)
+
+   Untuk PWA, buka juga `doa_donatur_pwa/.env.devpublish`.
+   Isi `VITE_API_BASE_URL` ke host root API yang sama, dan biarkan `VITE_PWA_BASE=/pwa/`.
 
 2. Buka file [API/appsettings.Development.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Development.json)
    Isi:
@@ -107,6 +111,7 @@ Ini mengikuti API local dari [launchSettings.json](/d:/KANTOR/Project%20VB/WEB%2
 
 5. Ambil hasil publish dari folder:
    - `publish/development/client`
+   - `publish/development/PWA`
    - `publish/development/api`
 
 Script yang dipakai di belakang layar:
@@ -122,6 +127,9 @@ Script yang dipakai di belakang layar:
 
    Jika mau lebih aman, mulai dari template:
    - [client/.env.production.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production.sample)
+
+   Untuk PWA, buka juga `doa_donatur_pwa/.env.production`.
+   Isi `VITE_API_BASE_URL` ke host root API yang sama, dan biarkan `VITE_PWA_BASE=/pwa/`.
 
 2. Buka file [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
    Isi:
@@ -151,6 +159,7 @@ Script yang dipakai di belakang layar:
 
 5. Ambil hasil publish dari folder:
    - `publish/production/client`
+   - `publish/production/PWA`
    - `publish/production/api`
 
 Script yang dipakai di belakang layar:
@@ -164,6 +173,7 @@ Script yang dipakai di belakang layar:
 Frontend:
 
 - `VITE_API_BASE_URL`
+- `VITE_PWA_BASE` khusus PWA, nilai publish harus `/pwa/`
 
 Backend:
 
@@ -181,11 +191,13 @@ Catatan sinkronisasi:
 Jika host/IP/domain hosting berubah lagi di kemudian hari, cek dan ubah minimal file berikut:
 
 - [client/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production)
+- [doa_donatur_pwa/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/doa_donatur_pwa/.env.production)
 - [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
 
 Field yang biasanya wajib ikut disesuaikan:
 
 - `VITE_API_BASE_URL`
+- `VITE_PWA_BASE`
 - `AppClient:AllowedOrigins`
 - `WhatsAppGateway:PublicBaseUrl`
 
@@ -219,6 +231,12 @@ VITE_API_BASE_URL=http://127.0.0.1:5000
 VITE_API_PROXY_TARGET=http://127.0.0.1:5000
 ```
 
+File `doa_donatur_pwa/.env.devpublish`
+```env
+VITE_API_BASE_URL=http://127.0.0.1:5000
+VITE_PWA_BASE=/pwa/
+```
+
 File [API/appsettings.Development.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Development.json)
 ```json
 "Runtime": {
@@ -239,6 +257,12 @@ File [client/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.prod
 ```env
 VITE_API_BASE_URL=http://192.168.1.10:5000
 VITE_API_PROXY_TARGET=http://192.168.1.10:5000
+```
+
+File `doa_donatur_pwa/.env.production`
+```env
+VITE_API_BASE_URL=http://192.168.1.10:5000
+VITE_PWA_BASE=/pwa/
 ```
 
 File [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
@@ -300,6 +324,12 @@ VITE_API_BASE_URL=http://172.16.1.254
 VITE_API_PROXY_TARGET=http://172.16.1.254
 ```
 
+File `doa_donatur_pwa/.env.production`
+```env
+VITE_API_BASE_URL=http://172.16.1.254
+VITE_PWA_BASE=/pwa/
+```
+
 File [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
 ```json
 "Runtime": {
@@ -320,15 +350,20 @@ Setup IIS:
 - Site utama arahkan ke folder `publish/production/client`
 - Buat `Application` baru dengan alias `api`
 - Alias `api` arahkan ke folder `publish/production/api`
+- Buat `Application` baru dengan alias `pwa`
+- Alias `pwa` arahkan ke folder `publish/production/PWA`
 - App Pool untuk `api` gunakan `No Managed Code`
 - Install ASP.NET Core Hosting Bundle di server IIS
 - Setelah itu tes `http://172.16.1.254/api/swagger/index.html`
+- Setelah itu tes PWA di `http://172.16.1.254/pwa/` atau `http://172.16.1.254/pwa/#/dashboard`
 
 Catatan:
 
 - `AllowedOrigins` harus berisi origin frontend saja, misalnya `http://172.16.1.254`, bukan `http://172.16.1.254/api`
 - frontend cukup mengarah ke `http://172.16.1.254` karena source code client sudah memanggil endpoint dengan prefix `"/api/..."`
+- PWA juga cukup mengarah ke `http://172.16.1.254`; PWA tidak punya API sendiri dan memakai project `API` yang sama
 - jangan isi `VITE_API_BASE_URL=http://172.16.1.254/api` jika request di code masih memakai `"/api/..."`
+- jangan isi `VITE_PWA_BASE` selain `/pwa/` untuk hasil publish ini
 - `WhatsAppGateway:PublicBaseUrl` tetap harus `.../api` karena dipakai backend untuk membentuk link file/audio publik
 
 ## F. Tabel Ringkas Nilai Config

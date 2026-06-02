@@ -13,6 +13,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace API.Service.Transaction
@@ -25,6 +26,9 @@ namespace API.Service.Transaction
         private const string VoiceTemplateLanguageCode = "en";
         private const string NewTemplateLinkPlaceholder = ".";
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
+        private const int MaxWhatsAppPreviewLength = 1024;
+        private const int MaxConsecutiveSpaces = 4;
+        private static readonly Regex ExcessiveSpacesRegex = new(" {5,}", RegexOptions.Compiled);
 
         private readonly IDbConnection conn;
         private readonly RepoTRBirthdayPray repo;
@@ -1243,6 +1247,7 @@ CreateNoWindow = true
 
                 var templateValidation = ValidateWhatsAppTemplateParameters(
                     templateName,
+                    setting.msgTemplate,
                     prayData.namaDonatur,
                     prayData.namaPendoa,
                     effectiveBodyLink,
@@ -1563,6 +1568,16 @@ CreateNoWindow = true
                 if (string.IsNullOrWhiteSpace(testMessage))
                 {
                     testMessage = "Test Message";
+                }
+
+                string testMessageValidation = ValidateWhatsAppTextParameter("Pesan Test Text", testMessage);
+                if (!string.IsNullOrWhiteSpace(testMessageValidation))
+                {
+                    return new ResponseData<object>
+                    {
+                        success = false,
+                        message = testMessageValidation
+                    };
                 }
 
                 var payload = new
@@ -2784,6 +2799,7 @@ CreateNoWindow = true
 
         private ResponseData<object> ValidateWhatsAppTemplateParameters(
             string templateName,
+            string messageTemplate,
             string namaPenerima,
             string namaPendoa,
             string link,
@@ -2809,16 +2825,154 @@ CreateNoWindow = true
             if (string.IsNullOrWhiteSpace(isiDoa))
                 missingFields.Add("isi doa");
 
-            if (missingFields.Count == 0)
+            if (string.IsNullOrWhiteSpace(link))
+                missingFields.Add("link");
+
+            if (missingFields.Count > 0)
             {
-                return new ResponseData<object> { success = true };
+                return new ResponseData<object>
+                {
+                    success = false,
+                    message = $"Parameter template WhatsApp belum lengkap. Lengkapi: {string.Join(", ", missingFields)}."
+                };
             }
 
-            return new ResponseData<object>
+            var textErrors = new List<string>
             {
-                success = false,
-                message = $"Parameter template WhatsApp belum lengkap. Lengkapi: {string.Join(", ", missingFields)}."
-            };
+                ValidateWhatsAppTextParameter("Nama penerima", namaPenerima),
+                ValidateWhatsAppTextParameter("Pendoa", namaPendoa),
+                ValidateWhatsAppTextParameter("Link", link, validateUrl: true),
+                ValidateWhatsAppTextParameter("Pesan Doa", isiDoa)
+            }.Where(message => !string.IsNullOrWhiteSpace(message)).ToList();
+
+            if (textErrors.Count > 0)
+            {
+                return new ResponseData<object>
+                {
+                    success = false,
+                    message = textErrors[0]
+                };
+            }
+
+            string previewMessage = BuildBirthdayPreviewMessageForValidation(
+                messageTemplate,
+                namaPenerima,
+                namaPendoa,
+                link,
+                isiDoa);
+
+            if (previewMessage.Length > MaxWhatsAppPreviewLength)
+            {
+                return new ResponseData<object>
+                {
+                    success = false,
+                    message = $"Preview Pesan WhatsApp terlalu panjang ({previewMessage.Length}/{MaxWhatsAppPreviewLength}). Kurangi Pesan Doa sebelum kirim WhatsApp."
+                };
+            }
+
+            return new ResponseData<object> { success = true };
+        }
+
+        private string ValidateWhatsAppTextParameter(
+            string label,
+            string value,
+            bool validateUrl = false)
+        {
+            string text = value ?? "";
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return $"{label} wajib diisi.";
+            }
+
+            if (text.Contains('\r') || text.Contains('\n'))
+            {
+                return $"{label} tidak boleh mengandung Enter/newline.";
+            }
+
+            if (text.Contains('\t'))
+            {
+                return $"{label} tidak boleh mengandung Tab.";
+            }
+
+            if (text.Any(char.IsControl))
+            {
+                return $"{label} tidak boleh mengandung karakter kontrol tersembunyi.";
+            }
+
+            if (ExcessiveSpacesRegex.IsMatch(text))
+            {
+                return $"{label} maksimal {MaxConsecutiveSpaces} spasi berurutan.";
+            }
+
+            if (text.Length > MaxWhatsAppPreviewLength)
+            {
+                return $"{label} maksimal {MaxWhatsAppPreviewLength} karakter.";
+            }
+
+            if (validateUrl && !text.Equals(NewTemplateLinkPlaceholder, StringComparison.Ordinal))
+            {
+                if (text.Length > 2048)
+                {
+                    return $"{label} terlalu panjang untuk parameter URL.";
+                }
+
+                if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    return $"{label} harus berupa URL http/https yang valid.";
+                }
+            }
+
+            return "";
+        }
+
+        private string BuildBirthdayPreviewMessageForValidation(
+            string template,
+            string namaDonatur,
+            string namaPendoa,
+            string link,
+            string pesanDoa)
+        {
+            bool hasPesanDoaPlaceholder = (template ?? "").Contains("<pesandoa>", StringComparison.OrdinalIgnoreCase);
+            string templateMessage = (template ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(templateMessage))
+            {
+                templateMessage = ReplaceBirthdayPreviewPlaceholders(
+                    templateMessage,
+                    namaDonatur,
+                    namaPendoa,
+                    link,
+                    pesanDoa).Trim();
+            }
+
+            var sections = new List<string>();
+            if (!string.IsNullOrWhiteSpace(templateMessage))
+            {
+                sections.Add(templateMessage);
+            }
+
+            string trimmedPesan = (pesanDoa ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(trimmedPesan) && !hasPesanDoaPlaceholder)
+            {
+                sections.Add(trimmedPesan);
+            }
+
+            return string.Join("\n\n", sections);
+        }
+
+        private string ReplaceBirthdayPreviewPlaceholders(
+            string value,
+            string namaDonatur,
+            string namaPendoa,
+            string link,
+            string pesanDoa)
+        {
+            return (value ?? "")
+                .Replace("<donatur>", namaDonatur ?? "", StringComparison.OrdinalIgnoreCase)
+                .Replace("<pendoa>", namaPendoa ?? "", StringComparison.OrdinalIgnoreCase)
+                .Replace("<link>", link ?? "", StringComparison.OrdinalIgnoreCase)
+                .Replace("<pesandoa>", pesanDoa ?? "", StringComparison.OrdinalIgnoreCase);
         }
 
         private string GetPublicBaseUrl()

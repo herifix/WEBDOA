@@ -49,6 +49,27 @@ Build command:
 - `npm run build:devpublish`
 - `npm run build:production`
 
+## PWA
+
+PWA berada di project [doa_donatur_pwa](/d:/KANTOR/Project%20VB/WEB%20DOA/doa_donatur_pwa). PWA tidak punya API sendiri; semua request tetap memakai project `API`.
+
+Lokasi konfigurasi:
+
+- `doa_donatur_pwa/.env.devpublish`
+- `doa_donatur_pwa/.env.production`
+- `doa_donatur_pwa/.env.devpublish.sample`
+- `doa_donatur_pwa/.env.production.sample`
+
+Variable utama:
+
+- `VITE_API_BASE_URL` isi host root API, misalnya `http://172.16.1.254`
+- `VITE_PWA_BASE` harus `/pwa/` untuk hasil publish
+
+Build command:
+
+- `npm run build:devpublish`
+- `npm run build:production`
+
 ## Backend
 
 Lokasi konfigurasi:
@@ -86,6 +107,7 @@ Khusus jika deploy dengan IIS satu domain dan API dipasang sebagai application `
 - `WhatsAppGateway:PublicBaseUrl` backend isi URL API publik penuh, misalnya `http://172.16.1.254/api`
 - folder [publish/production/client](/d:/KANTOR/Project%20VB/WEB%20DOA/publish/production/client) dipasang sebagai site utama
 - folder [publish/production/api](/d:/KANTOR/Project%20VB/WEB%20DOA/publish/production/api) dipasang sebagai IIS Application dengan alias `api`
+- folder `publish/production/PWA` dipasang sebagai IIS Application dengan alias `pwa`
 
 Bagian yang paling sering perlu diubah:
 
@@ -124,6 +146,7 @@ Script publish sekarang akan berhenti jika:
 - `DefaultConnection` masih kosong
 - `Runtime:AspNetCoreUrls` masih kosong
 - `VITE_API_BASE_URL` masih kosong
+- `VITE_PWA_BASE` PWA bukan `/pwa/`
 
 Menu checker tersedia di:
 
@@ -135,8 +158,10 @@ Menu checker tersedia di:
 Hasil publish disimpan di:
 
 - `publish/development/client`
+- `publish/development/PWA`
 - `publish/development/api`
 - `publish/production/client`
+- `publish/production/PWA`
 - `publish/production/api`
 
 ## Catatan

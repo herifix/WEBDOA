@@ -6,6 +6,8 @@ set "API_SAMPLE=%ROOT%API\appsettings.Production.sample.json"
 set "API_TARGET=%ROOT%API\appsettings.Production.json"
 set "CLIENT_SAMPLE=%ROOT%client\.env.production.sample"
 set "CLIENT_TARGET=%ROOT%client\.env.production"
+set "PWA_SAMPLE=%ROOT%doa_donatur_pwa\.env.production.sample"
+set "PWA_TARGET=%ROOT%doa_donatur_pwa\.env.production"
 
 echo ========================================
 echo Prepare Production Config
@@ -23,6 +25,12 @@ if not exist "%CLIENT_SAMPLE%" (
   exit /b 1
 )
 
+if not exist "%PWA_SAMPLE%" (
+  echo File sample PWA tidak ditemukan:
+  echo %PWA_SAMPLE%
+  exit /b 1
+)
+
 if not exist "%API_TARGET%" (
   copy "%API_SAMPLE%" "%API_TARGET%" >nul
   echo Backend config dibuat dari sample.
@@ -35,6 +43,13 @@ if not exist "%CLIENT_TARGET%" (
   echo Frontend config dibuat dari sample.
 ) else (
   echo Frontend config sudah ada, tidak ditimpa.
+)
+
+if not exist "%PWA_TARGET%" (
+  copy "%PWA_SAMPLE%" "%PWA_TARGET%" >nul
+  echo PWA config dibuat dari sample.
+) else (
+  echo PWA config sudah ada, tidak ditimpa.
 )
 
 echo.

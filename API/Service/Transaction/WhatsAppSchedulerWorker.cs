@@ -8,11 +8,16 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace API.Service.Transaction
 {
     public class WhatsAppSchedulerWorker : BackgroundService
     {
+        private const int MaxWhatsAppPreviewLength = 1024;
+        private const int MaxConsecutiveSpaces = 4;
+        private static readonly Regex ExcessiveSpacesRegex = new(" {5,}", RegexOptions.Compiled);
+
         private readonly IServiceScopeFactory scopeFactory;
         private readonly IConfiguration configuration;
         private readonly ILogger<WhatsAppSchedulerWorker> logger;
@@ -135,6 +140,17 @@ namespace API.Service.Transaction
                     new AuthenticationHeaderValue("Bearer", gatewayToken);
             }
 
+            string? textValidation =
+                ValidateWhatsAppTextParameter("Nama donatur", item.namaDonatur) ??
+                ValidateWhatsAppTextParameter("Pendoa", item.namaPendoa) ??
+                ValidateWhatsAppTextParameter("Pesan Doa", item.pesan ?? "") ??
+                ValidateWhatsAppTextParameter("URL rekaman suara", audioUrl, validateUrl: true);
+
+            if (!string.IsNullOrWhiteSpace(textValidation))
+            {
+                return (false, textValidation);
+            }
+
             var payload = new
             {
                 fromPhone = item.noHPPendoa,
@@ -177,6 +193,60 @@ namespace API.Service.Transaction
                 return relativePath.Replace("\\", "/");
 
             return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
+        }
+
+        private string? ValidateWhatsAppTextParameter(
+            string label,
+            string value,
+            bool validateUrl = false)
+        {
+            string text = value ?? "";
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return $"{label} wajib diisi.";
+            }
+
+            if (text.Contains('\r') || text.Contains('\n'))
+            {
+                return $"{label} tidak boleh mengandung Enter/newline.";
+            }
+
+            if (text.Contains('\t'))
+            {
+                return $"{label} tidak boleh mengandung Tab.";
+            }
+
+            if (text.Any(char.IsControl))
+            {
+                return $"{label} tidak boleh mengandung karakter kontrol tersembunyi.";
+            }
+
+            if (ExcessiveSpacesRegex.IsMatch(text))
+            {
+                return $"{label} maksimal {MaxConsecutiveSpaces} spasi berurutan.";
+            }
+
+            if (text.Length > MaxWhatsAppPreviewLength)
+            {
+                return $"{label} maksimal {MaxWhatsAppPreviewLength} karakter.";
+            }
+
+            if (validateUrl)
+            {
+                if (text.Length > 2048)
+                {
+                    return $"{label} terlalu panjang untuk parameter URL.";
+                }
+
+                if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    return $"{label} harus berupa URL http/https yang valid.";
+                }
+            }
+
+            return null;
         }
 
         private (bool isValid, string message) ValidatePublicBaseUrl(string publicBaseUrl)

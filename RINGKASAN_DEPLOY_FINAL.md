@@ -7,17 +7,21 @@ Dokumen ini adalah ringkasan 1 halaman untuk melihat hasil akhir setup deploy pr
 Development:
 
 - [client/.env.development](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development)
+- `doa_donatur_pwa/.env.devpublish`
 - [API/appsettings.Development.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Development.json)
 
 Production:
 
 - [client/.env.production](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production)
+- `doa_donatur_pwa/.env.production`
 - [API/appsettings.Production.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.json)
 
 Sample:
 
 - [client/.env.development.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.development.sample)
 - [client/.env.production.sample](/d:/KANTOR/Project%20VB/WEB%20DOA/client/.env.production.sample)
+- `doa_donatur_pwa/.env.devpublish.sample`
+- `doa_donatur_pwa/.env.production.sample`
 - [API/appsettings.Development.sample.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Development.sample.json)
 - [API/appsettings.Production.sample.json](/d:/KANTOR/Project%20VB/WEB%20DOA/API/appsettings.Production.sample.json)
 
@@ -26,6 +30,7 @@ Sample:
 Frontend:
 
 - `VITE_API_BASE_URL`
+- `VITE_PWA_BASE=/pwa/` khusus PWA publish
 
 Backend:
 
@@ -71,8 +76,10 @@ Production:
 ## 5. Output Publish
 
 - `publish/development/client`
+- `publish/development/PWA`
 - `publish/development/api`
 - `publish/production/client`
+- `publish/production/PWA`
 - `publish/production/api`
 
 ## 6. Hubungan URL
@@ -80,8 +87,10 @@ Production:
 - `Runtime:AspNetCoreUrls` = API listen di server
 - `WhatsAppGateway:PublicBaseUrl` = URL publik API
 - `VITE_API_BASE_URL` = URL yang dipakai frontend
+- `VITE_PWA_BASE` = path publik PWA, yaitu `/pwa/`
 
 Idealnya `VITE_API_BASE_URL` dan `WhatsAppGateway:PublicBaseUrl` mengarah ke API yang sama.
+PWA tidak punya API sendiri; PWA memakai project `API` yang sama dengan UI.
 
 ## 7. Dokumen Pendukung
 
@@ -94,6 +103,7 @@ Idealnya `VITE_API_BASE_URL` dan `WhatsAppGateway:PublicBaseUrl` mengarah ke API
 
 - config development dan production sudah dipisah
 - frontend dan backend sudah memakai pengaturan terpusat
+- PWA publish tersedia di folder `PWA` dengan URL `/pwa/`
 - script deploy sudah tersedia dan dirapikan
 - checker config sudah tersedia
 - checklist go-live sudah tersedia
