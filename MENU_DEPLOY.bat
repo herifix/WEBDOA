@@ -52,7 +52,7 @@ pause
 goto menu
 
 :check_dev
-call :checkDevelopmentConfig
+call "%SCRIPT_DIR%check-development-config.bat"
 pause
 goto menu
 
@@ -72,7 +72,7 @@ pause
 goto menu
 
 :check_prod
-call :checkProductionConfig
+call "%SCRIPT_DIR%check-production-config.bat"
 pause
 goto menu
 

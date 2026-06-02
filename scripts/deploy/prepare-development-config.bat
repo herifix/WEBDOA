@@ -52,6 +52,12 @@ if not exist "%PWA_TARGET%" (
   echo PWA config development publish sudah ada, tidak ditimpa.
 )
 
+findstr /B /C:"VITE_PWA_BASE=" "%PWA_TARGET%" >nul
+if errorlevel 1 (
+  echo VITE_PWA_BASE=/pwa/>>"%PWA_TARGET%"
+  echo PWA config development ditambahkan VITE_PWA_BASE=/pwa/.
+)
+
 echo.
 echo Langkah berikutnya:
 echo 1. Edit file development yang baru dibuat bila perlu

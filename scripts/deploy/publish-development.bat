@@ -101,7 +101,7 @@ if not errorlevel 1 (
   exit /b 1
 )
 
-findstr /R /C:"^VITE_PWA_BASE=/pwa/$" "%PWA_CONFIG%" >nul
+findstr /B /L /C:"VITE_PWA_BASE=/pwa/" "%PWA_CONFIG%" >nul
 if errorlevel 1 (
   echo.
   echo PERINGATAN: VITE_PWA_BASE di PWA .env.devpublish harus /pwa/
