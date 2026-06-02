@@ -42,6 +42,8 @@ type DashboardRow =
       noHP: string;
       birthdayDate: string | null;
       sudahDidoakan: boolean;
+      sudahAdaPesanDoa: boolean;
+      sudahAdaPesanSuara: boolean;
       isWASent: boolean;
     };
 
@@ -114,7 +116,7 @@ export default function DashboardPage() {
     [dashboardQuery.data]
   );
   const totalUpcoming = sourceRows.length;
-  const totalCompleted = sourceRows.filter((item) => item.sudahDidoakan).length;
+  const totalCompleted = sourceRows.filter((item) => item.sudahAdaPesanSuara).length;
   const totalWithText = sourceRows.filter((item) => item.sudahAdaPesanDoa).length;
   const totalWithVoice = sourceRows.filter((item) => item.sudahAdaPesanSuara).length;
   const totalPending = totalUpcoming - totalCompleted;
@@ -158,7 +160,7 @@ export default function DashboardPage() {
 
       const dateMap = monthMap.get(monthKey)!;
       const monthItems = Array.from(dateMap.values()).flat();
-      const monthCompleteCount = monthItems.filter((item) => item.sudahDidoakan).length;
+      const monthCompleteCount = monthItems.filter((item) => item.sudahAdaPesanSuara).length;
       const monthTotalCount = monthItems.length;
 
       result.push({
@@ -180,7 +182,7 @@ export default function DashboardPage() {
         const dateExpandKey = `${monthKey}|${dateKey}`;
         const isDateExpanded = expandedDates[dateExpandKey] ?? false;
         const dateItems = dateMap.get(dateKey) ?? [];
-        const dateCompleteCount = dateItems.filter((item) => item.sudahDidoakan).length;
+        const dateCompleteCount = dateItems.filter((item) => item.sudahAdaPesanSuara).length;
         const dateTotalCount = dateItems.length;
 
         result.push({
@@ -213,6 +215,8 @@ export default function DashboardPage() {
             noHP: item.noHP,
             birthdayDate: item.birthdayDate,
             sudahDidoakan: item.sudahDidoakan,
+            sudahAdaPesanDoa: item.sudahAdaPesanDoa,
+            sudahAdaPesanSuara: item.sudahAdaPesanSuara,
             isWASent: item.isWASent,
           });
         }
@@ -305,7 +309,7 @@ export default function DashboardPage() {
               isComplete ? "bg-emerald-600" : "bg-rose-500"
             }`}
           >
-            {isComplete ? "Complete" : "Belum Complete"} ({row.completeCount}/{row.totalCount})
+            {isComplete ? "Selesai Rekam" : "Belum Rekam"} ({row.completeCount}/{row.totalCount})
           </span>
         </div>
       );
@@ -335,7 +339,7 @@ export default function DashboardPage() {
                 isComplete ? "bg-emerald-600" : "bg-rose-500"
               }`}
             >
-              {isComplete ? "Complete" : "Belum Complete"} ({row.completeCount}/{row.totalCount})
+              {isComplete ? "Selesai Rekam" : "Belum Rekam"} ({row.completeCount}/{row.totalCount})
             </span>
           </div>
         );
@@ -365,7 +369,7 @@ export default function DashboardPage() {
     },
     {
       key: "status",
-      label: "Status Doa",
+      label: "Status Rekam",
       width: "170px",
       render: (row) => {
         if (row.rowType !== "detail") return null;
@@ -373,10 +377,10 @@ export default function DashboardPage() {
         return (
           <span
             className={`inline-flex rounded px-3 py-1 text-xs font-semibold text-white ${
-              row.sudahDidoakan ? "bg-green-600" : "bg-red-500"
+              row.sudahAdaPesanSuara ? "bg-green-600" : "bg-red-500"
             }`}
           >
-            {row.sudahDidoakan ? "Complete" : "Belum Complete"}
+            {row.sudahAdaPesanSuara ? "Selesai Rekam" : "Belum Rekam"}
           </span>
         );
       },
@@ -412,7 +416,19 @@ export default function DashboardPage() {
       width: "160px",
       render: (row) => {
         if (row.rowType !== "detail") return null;
-        if (!row.sudahDidoakan) return null;
+        if (!row.sudahDidoakan) {
+          const hint = row.sudahAdaPesanSuara && !row.sudahAdaPesanDoa
+            ? "Lengkapi Pesan Doa"
+            : row.sudahAdaPesanDoa && !row.sudahAdaPesanSuara
+              ? "Lengkapi Rekaman"
+              : "Belum Siap WA";
+
+          return (
+            <span className="inline-flex rounded bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+              {hint}
+            </span>
+          );
+        }
 
         const currentYear = row.birthdayDate ? new Date(row.birthdayDate).getFullYear() : undefined;
 
@@ -527,7 +543,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-sm font-medium text-slate-500">Sudah Complete</div>
+          <div className="text-sm font-medium text-slate-500">Selesai Rekam</div>
           <div className="mt-2 text-3xl font-bold text-green-600">{totalCompleted}</div>
         </div>
 
@@ -542,7 +558,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-sm font-medium text-slate-500">Belum Complete</div>
+          <div className="text-sm font-medium text-slate-500">Belum Rekam</div>
           <div className="mt-2 text-3xl font-bold text-red-500">{totalPending}</div>
         </div>
       </div>

@@ -310,6 +310,20 @@ export default function TRBirthdayPrayPage() {
     return originalPesan !== currentPesan || hasNewAudio;
   }, [pageData, pesan, selectedAudioFile]);
 
+  const savedVoiceAvailable = Boolean(
+    (pageData?.pathPesanSuara ?? "").trim() || (pageData?.pathPesanSuaraUrl ?? "").trim()
+  );
+  const savedPrayerTextAvailable = Boolean((pageData?.pesan ?? "").trim());
+  const hasVoiceButMissingPrayerText = savedVoiceAvailable && !savedPrayerTextAvailable;
+  const hasTypedPrayerTextForSavedVoice = hasVoiceButMissingPrayerText && Boolean(pesan.trim());
+  const isWhatsAppReady = Boolean(
+    pageData &&
+    pageData.id_donatur > 0 &&
+    savedVoiceAvailable &&
+    savedPrayerTextAvailable &&
+    !hasUnsavedChanges
+  );
+
   function stopRecordingTracks() {
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaStreamRef.current = null;
@@ -514,7 +528,7 @@ export default function TRBirthdayPrayPage() {
       const warningText =
         !pesan.trim() ||
         (!selectedAudioFile && !(pageData?.pathPesanSuara ?? "").trim())
-          ? " Status dashboard akan Complete jika pesan doa dan pesan suara sudah terisi."
+          ? " Status rekaman tampil selesai jika suara sudah ada. WhatsApp siap dikirim jika pesan doa dan pesan suara sudah terisi."
           : "";
 
       setFormSuccess(
@@ -762,6 +776,13 @@ export default function TRBirthdayPrayPage() {
                     className="mt-3 min-h-[230px] w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
                     placeholder="Tulis pesan doa ulang tahun..."
                   />
+                  {hasVoiceButMissingPrayerText ? (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      {hasTypedPrayerTextForSavedVoice
+                        ? "Rekaman suara sudah ada. Klik Save agar Pesan Doa tersimpan dan data siap kirim WhatsApp."
+                        : "Rekaman suara sudah ada dari PWA. Lengkapi Pesan Doa lalu Save agar data siap kirim WhatsApp."}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -790,7 +811,12 @@ export default function TRBirthdayPrayPage() {
                     onClick={() => {
                       void handleSendWhatsApp();
                     }}
-                    disabled={isSendingWA || !pageData || pageData.id_donatur <= 0}
+                    disabled={isSendingWA || !isWhatsAppReady}
+                    title={
+                      isWhatsAppReady
+                        ? "Kirim WhatsApp"
+                        : "Lengkapi dan simpan Pesan Doa serta Pesan Suara terlebih dahulu."
+                    }
                     className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-60 ${
                       pageData.isWASent
                         ? "bg-amber-500 shadow-amber-200 hover:bg-amber-600 hover:shadow-amber-300"

@@ -1,5 +1,6 @@
 :root,
 :root[data-theme="dark"] {
+  --topbar-height: 72px;
   --app-bg: #17151d;
   --app-shell-bg:
     radial-gradient(circle at 50% 0%, rgba(86, 59, 145, 0.2), transparent 32%),
@@ -267,7 +268,7 @@ svg {
 }
 
 .topbar {
-  min-height: 68px;
+  min-height: var(--topbar-height);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -291,7 +292,7 @@ svg {
 }
 
 .page {
-  min-height: calc(100dvh - 68px);
+  min-height: calc(100dvh - var(--topbar-height));
   padding: 28px 18px 32px;
 }
 
@@ -761,7 +762,7 @@ svg {
 }
 
 .detail-page {
-  padding-bottom: 46px;
+  padding-bottom: 32px;
 }
 
 .detail-date {

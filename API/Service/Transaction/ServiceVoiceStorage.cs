@@ -20,19 +20,22 @@ namespace API.Service.Transaction
         private readonly RepoVoiceRecording repo;
         private readonly RepoApplicationSetting applicationSettingRepo;
         private readonly IWebHostEnvironment env;
+        private readonly IHttpContextAccessor httpContextAccessor;
 
         public ServiceVoiceStorage(
             IDbConnection conn,
             IConfiguration configuration,
             RepoVoiceRecording repo,
             RepoApplicationSetting applicationSettingRepo,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IHttpContextAccessor httpContextAccessor)
         {
             this.conn = conn;
             this.configuration = configuration;
             this.repo = repo;
             this.applicationSettingRepo = applicationSettingRepo;
             this.env = env;
+            this.httpContextAccessor = httpContextAccessor;
         }
 
         public ResponseData<ResponseModelVoiceRecording> UploadMp3(RequestUploadVoiceMp3 request, IDbTransaction? tran = null)
@@ -211,7 +214,7 @@ namespace API.Service.Transaction
 
         public string BuildBackendPlaybackUrl(long id)
         {
-            string publicBaseUrl = (configuration["Runtime:PublicBaseUrl"] ?? "").Trim().TrimEnd('/');
+            string publicBaseUrl = ResolveLocalPublicBaseUrl();
             if (string.IsNullOrWhiteSpace(publicBaseUrl))
             {
                 return $"voice/{id}/redirect";
@@ -225,9 +228,11 @@ namespace API.Service.Transaction
             string provider = NormalizeProvider(item.provider, item);
             if (provider.Equals(ProviderLocalServer, StringComparison.OrdinalIgnoreCase))
             {
-                string localUrl = !string.IsNullOrWhiteSpace(item.fileUrl)
-                    ? item.fileUrl ?? ""
-                    : BuildLocalPublicUrl(item.objectName);
+                string localUrl = BuildLocalPublicUrl(item.objectName);
+                if (string.IsNullOrWhiteSpace(localUrl))
+                {
+                    localUrl = BuildLocalPublicUrlForStoredValue(item.fileUrl);
+                }
 
                 if (string.IsNullOrWhiteSpace(localUrl))
                 {
@@ -453,16 +458,102 @@ namespace API.Service.Transaction
             return $"https://storage.googleapis.com/{bucketName}/{escapedObjectName}";
         }
 
+        public string BuildLocalPublicUrlForStoredValue(string? storedValue)
+        {
+            string normalizedPath = ExtractLocalUploadRelativePath(storedValue);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                return "";
+            }
+
+            return BuildLocalPublicUrl(normalizedPath);
+        }
+
         private string BuildLocalPublicUrl(string relativePath)
         {
-            string publicBaseUrl = (configuration["Runtime:PublicBaseUrl"] ?? "").Trim().TrimEnd('/');
-            if (string.IsNullOrWhiteSpace(publicBaseUrl) || string.IsNullOrWhiteSpace(relativePath))
+            if (string.IsNullOrWhiteSpace(relativePath))
             {
                 return "";
             }
 
             string normalizedPath = relativePath.Replace("\\", "/").TrimStart('/');
+            string publicBaseUrl = ResolveLocalPublicBaseUrl();
+            if (string.IsNullOrWhiteSpace(publicBaseUrl))
+            {
+                return normalizedPath;
+            }
+
             return $"{publicBaseUrl}/{normalizedPath}";
+        }
+
+        private string ResolveLocalPublicBaseUrl()
+        {
+            string publicBaseUrl = (configuration["Runtime:PublicBaseUrl"] ?? "").Trim().TrimEnd('/');
+            string sharedRootPath = (configuration["VoiceStorage:RootPath"] ?? "").Trim();
+            bool usesLocalWebRoot = string.IsNullOrWhiteSpace(sharedRootPath);
+            bool shouldPreferRequestHost = usesLocalWebRoot && !env.EnvironmentName.Equals("Production", StringComparison.OrdinalIgnoreCase);
+
+            if (shouldPreferRequestHost)
+            {
+                string requestBaseUrl = BuildCurrentRequestApiBaseUrl();
+                if (!string.IsNullOrWhiteSpace(requestBaseUrl))
+                {
+                    return requestBaseUrl;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(publicBaseUrl))
+            {
+                return publicBaseUrl;
+            }
+
+            return BuildCurrentRequestApiBaseUrl();
+        }
+
+        private string BuildCurrentRequestApiBaseUrl()
+        {
+            var request = httpContextAccessor.HttpContext?.Request;
+            if (request == null || !request.Host.HasValue)
+            {
+                return "";
+            }
+
+            return $"{request.Scheme}://{request.Host.Value}/api";
+        }
+
+        private string ExtractLocalUploadRelativePath(string? storedValue)
+        {
+            string value = (storedValue ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "";
+            }
+
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
+            {
+                value = Uri.UnescapeDataString(uri.AbsolutePath);
+            }
+
+            int suffixIndex = value.IndexOfAny(new[] { '?', '#' });
+            if (suffixIndex >= 0)
+            {
+                value = value[..suffixIndex];
+            }
+
+            string normalizedPath = value.Replace("\\", "/").TrimStart('/');
+            const string apiUploadPrefix = "api/uploads/birthday-pray/";
+            if (normalizedPath.StartsWith(apiUploadPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"uploads/birthday-pray/{normalizedPath[apiUploadPrefix.Length..]}";
+            }
+
+            const string uploadPrefix = "uploads/birthday-pray/";
+            if (normalizedPath.StartsWith(uploadPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return normalizedPath;
+            }
+
+            return "";
         }
 
         private string BuildStoredLocalRelativePath(string fileName)

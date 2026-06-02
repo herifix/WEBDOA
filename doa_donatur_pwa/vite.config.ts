@@ -12,7 +12,7 @@ export default defineConfig({
         name: "Doa Donatur",
         short_name: "Doa",
         description: "Aplikasi jadwal doa donatur",
-        start_url: "/",
+        start_url: "/#/dashboard",
         scope: "/",
         display: "standalone",
         orientation: "portrait",

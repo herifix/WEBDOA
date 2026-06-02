@@ -3275,6 +3275,12 @@ CreateNoWindow = true
                 return voiceStorageService.ResolvePlaybackUrl(voiceRecordingId, conn).url;
             }
 
+            string localServerUrl = voiceStorageService.BuildLocalPublicUrlForStoredValue(storedValue);
+            if (!string.IsNullOrWhiteSpace(localServerUrl))
+            {
+                return localServerUrl;
+            }
+
             return BuildAbsoluteUrl(GetPublicBaseUrl(), storedValue);
         }
 
@@ -3288,6 +3294,12 @@ CreateNoWindow = true
             if (TryParseVoiceRecordingReference(storedValue, out long voiceRecordingId))
             {
                 return voiceStorageService.ResolvePlaybackUrl(voiceRecordingId, conn).url;
+            }
+
+            string localServerUrl = voiceStorageService.BuildLocalPublicUrlForStoredValue(storedValue);
+            if (!string.IsNullOrWhiteSpace(localServerUrl))
+            {
+                return localServerUrl;
             }
 
             return BuildAbsoluteUrl(GetPublicBaseUrl(), storedValue);

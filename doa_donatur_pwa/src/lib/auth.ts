@@ -11,6 +11,26 @@ export type Session = {
 export const SESSION_KEY = "doa.session";
 export const DEFAULT_USER_PT = "GKY";
 
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeSession(value: unknown): Session | null {
+  if (!value || typeof value !== "object") return null;
+
+  const candidate = value as Partial<Session>;
+  if (!hasText(candidate.token) || !hasText(candidate.userid) || !hasText(candidate.userpt)) {
+    return null;
+  }
+
+  return {
+    token: candidate.token.trim(),
+    userid: candidate.userid.trim(),
+    userpt: candidate.userpt.trim(),
+    loginAt: hasText(candidate.loginAt) ? candidate.loginAt : ""
+  };
+}
+
 export async function login(username: string, password: string) {
   const trimmedUser = username.trim();
   if (!trimmedUser || !password) {
@@ -34,7 +54,12 @@ export function logout() {
 }
 
 export function getSession() {
-  return safeGetJSON<Session | null>(SESSION_KEY, null);
+  const session = normalizeSession(safeGetJSON<unknown>(SESSION_KEY, null));
+  if (!session) {
+    safeRemove(SESSION_KEY);
+  }
+
+  return session;
 }
 
 export function isAuthenticated() {

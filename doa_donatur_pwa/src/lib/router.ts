@@ -1,7 +1,7 @@
 export function getRoute() {
-  if (typeof window === "undefined") return "/login";
+  if (typeof window === "undefined") return "/";
   const rawHash = window.location.hash.replace(/^#/, "");
-  return rawHash || "/login";
+  return rawHash || "/";
 }
 
 function normalizePath(path: string) {

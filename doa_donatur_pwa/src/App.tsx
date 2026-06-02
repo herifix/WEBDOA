@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "./components/AppShell";
 import { getSession, logout } from "./lib/auth";
-import { getRoute, listenRouteChange, navigate, parseQuery } from "./lib/router";
+import { getRoute, listenRouteChange, navigate, parseQuery, replaceRoute } from "./lib/router";
 import { getThemeStorageKey, useThemeMode } from "./lib/theme";
 import BirthdayDetailPage from "./pages/BirthdayDetailPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -20,6 +20,8 @@ export default function App() {
   }, [route, routePath]);
   const session = forceLoginReset ? null : getSession();
   const authed = Boolean(session?.token);
+  const effectiveRoutePath =
+    authed && (routePath === "/" || routePath === "/login") ? "/dashboard" : routePath;
   const themeStorageKey = useMemo(() => getThemeStorageKey(session), [session]);
   const { themeMode, toggleThemeMode } = useThemeMode(themeStorageKey);
 
@@ -37,17 +39,17 @@ export default function App() {
     }
 
     if (authed && (routePath === "/" || routePath === "/login")) {
-      navigate("/dashboard");
+      replaceRoute("/dashboard");
     }
   }, [authed, forceLoginReset, routePath]);
 
   let page = <LoginPage />;
 
-  if (authed && routePath === "/dashboard") {
+  if (authed && effectiveRoutePath === "/dashboard") {
     page = <DashboardPage />;
-  } else if (authed && routePath === "/birthdays") {
+  } else if (authed && effectiveRoutePath === "/birthdays") {
     page = <BirthdayDetailPage />;
-  } else if (authed && routePath !== "/login") {
+  } else if (authed && effectiveRoutePath !== "/login") {
     page = <DashboardPage />;
   }
 
