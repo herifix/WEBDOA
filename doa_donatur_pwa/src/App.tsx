@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "./components/AppShell";
-import { isAuthenticated, logout } from "./lib/auth";
+import { getSession, logout } from "./lib/auth";
 import { getRoute, listenRouteChange, navigate, parseQuery } from "./lib/router";
+import { getThemeStorageKey, useThemeMode } from "./lib/theme";
 import BirthdayDetailPage from "./pages/BirthdayDetailPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
@@ -17,7 +18,10 @@ export default function App() {
     const query = parseQuery(route);
     return import.meta.env.DEV && routePath === "/login" && query.resetSession === "1";
   }, [route, routePath]);
-  const authed = forceLoginReset ? false : isAuthenticated();
+  const session = forceLoginReset ? null : getSession();
+  const authed = Boolean(session?.token);
+  const themeStorageKey = useMemo(() => getThemeStorageKey(session), [session]);
+  const { themeMode, toggleThemeMode } = useThemeMode(themeStorageKey);
 
   useEffect(() => listenRouteChange(() => setRoute(getRoute())), []);
 
@@ -47,5 +51,9 @@ export default function App() {
     page = <DashboardPage />;
   }
 
-  return <AppShell>{page}</AppShell>;
+  return (
+    <AppShell themeMode={themeMode} onToggleTheme={toggleThemeMode}>
+      {page}
+    </AppShell>
+  );
 }

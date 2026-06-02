@@ -1,11 +1,161 @@
-:root {
-  color: #f5edf8;
-  background: #17151d;
+:root,
+:root[data-theme="dark"] {
+  --app-bg: #17151d;
+  --app-shell-bg:
+    radial-gradient(circle at 50% 0%, rgba(86, 59, 145, 0.2), transparent 32%),
+    #17151d;
+  --app-shell-border: rgba(255, 255, 255, 0.04);
+  --login-bg:
+    radial-gradient(circle at 50% 18%, rgba(119, 76, 206, 0.2), transparent 22%),
+    linear-gradient(180deg, #121019 0%, #17151d 58%, #111018 100%);
+  --topbar-bg: #563b91;
+  --topbar-text: #ffffff;
+  --topbar-shadow: rgba(25, 12, 49, 0.38);
+  --text-primary: #f5edf8;
+  --text-secondary: #d8ccef;
+  --text-muted: #aaa1b5;
+  --text-subtle: #bcb2c8;
+  --text-inverse: #211a2a;
+  --surface-card: #2a2632;
+  --surface-card-glow: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 34%);
+  --surface-panel: #2f2a38;
+  --surface-panel-glow: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 50%);
+  --surface-login-card:
+    radial-gradient(circle at 50% -15%, rgba(203, 183, 255, 0.11), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    #252130;
+  --surface-soft: rgba(47, 42, 56, 0.8);
+  --surface-chip: rgba(255, 255, 255, 0.05);
+  --surface-input: rgba(23, 20, 31, 0.78);
+  --surface-player: rgba(23, 20, 31, 0.62);
+  --surface-recorder:
+    radial-gradient(circle at 50% -10%, rgba(203, 183, 255, 0.09), transparent 42%),
+    #302c3a;
+  --shadow-card: rgba(0, 0, 0, 0.3);
+  --shadow-panel: rgba(0, 0, 0, 0.24);
+  --shadow-login: rgba(0, 0, 0, 0.44);
+  --shadow-recorder: rgba(0, 0, 0, 0.5);
+  --border-soft: rgba(203, 183, 255, 0.18);
+  --border-card: rgba(255, 255, 255, 0.06);
+  --border-input: rgba(203, 183, 255, 0.24);
+  --border-strong: rgba(203, 183, 255, 0.65);
+  --accent: #cbb7ff;
+  --accent-strong: #8e5cff;
+  --accent-gradient: linear-gradient(135deg, #8251e5, #6e3bc4);
+  --accent-control: #5d3ea1;
+  --accent-soft: rgba(203, 183, 255, 0.16);
+  --accent-soft-hover: rgba(203, 183, 255, 0.24);
+  --theme-toggle-hover: var(--accent-soft-hover);
+  --accent-faint: rgba(203, 183, 255, 0.08);
+  --accent-focus: rgba(203, 183, 255, 0.12);
+  --accent-shadow: rgba(105, 58, 194, 0.34);
+  --input-icon: #b894ff;
+  --input-action: #bfb0dc;
+  --placeholder: rgba(188, 178, 200, 0.6);
+  --pending-bg: #3a0d0d;
+  --pending-text: #ffd6d0;
+  --pending-dot: #ff8a7a;
+  --pending-dot-shadow: rgba(255, 138, 122, 0.14);
+  --pending-border: rgba(255, 138, 122, 0.32);
+  --pending-soft: rgba(58, 13, 13, 0.32);
+  --danger-bg: #ff8a7a;
+  --danger-text: #241111;
+  --danger-strong: #a82121;
+  --danger-strong-text: #ffd2d2;
+  --done-bg: #0f3318;
+  --done-text: #bff1c1;
+  --done-dot: #79d17c;
+  --done-dot-shadow: rgba(121, 209, 124, 0.14);
+  --done-border: rgba(121, 209, 124, 0.34);
+  --caption-text: #d8d565;
+  --caption-dot: #d6d147;
+  --caption-dot-shadow: rgba(214, 209, 71, 0.14);
+  --overlay-bg: rgba(0, 0, 0, 0.68);
+  --white: #ffffff;
+  color-scheme: dark;
+  color: var(--text-primary);
+  background: var(--app-bg);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme="light"] {
+  --app-bg: #f8f3e8;
+  --app-shell-bg:
+    radial-gradient(circle at 50% 0%, rgba(126, 87, 194, 0.13), transparent 32%),
+    linear-gradient(180deg, #fffaf0 0%, #f8f3e8 70%, #f2ebdc 100%);
+  --app-shell-border: rgba(94, 68, 32, 0.1);
+  --login-bg:
+    radial-gradient(circle at 50% 18%, rgba(126, 87, 194, 0.12), transparent 22%),
+    linear-gradient(180deg, #fffaf0 0%, #f8f3e8 64%, #efe5d3 100%);
+  --topbar-bg: #6d4bb3;
+  --topbar-text: #fffaf5;
+  --topbar-shadow: rgba(90, 55, 139, 0.24);
+  --text-primary: #251f2f;
+  --text-secondary: #4d405f;
+  --text-muted: #756b7a;
+  --text-subtle: #6a5f70;
+  --text-inverse: #fffaf5;
+  --surface-card: #fff8ea;
+  --surface-card-glow: linear-gradient(180deg, rgba(126, 87, 194, 0.08), transparent 36%);
+  --surface-panel: #fffaf0;
+  --surface-panel-glow: linear-gradient(180deg, rgba(126, 87, 194, 0.055), transparent 52%);
+  --surface-login-card:
+    radial-gradient(circle at 50% -15%, rgba(126, 87, 194, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 249, 236, 0.72)),
+    #fff8ea;
+  --surface-soft: rgba(255, 248, 234, 0.9);
+  --surface-chip: rgba(109, 75, 179, 0.1);
+  --surface-input: rgba(255, 252, 245, 0.95);
+  --surface-player: rgba(255, 252, 245, 0.86);
+  --surface-recorder:
+    radial-gradient(circle at 50% -10%, rgba(126, 87, 194, 0.1), transparent 42%),
+    #fff8ea;
+  --shadow-card: rgba(94, 68, 32, 0.14);
+  --shadow-panel: rgba(94, 68, 32, 0.12);
+  --shadow-login: rgba(94, 68, 32, 0.18);
+  --shadow-recorder: rgba(32, 24, 42, 0.26);
+  --border-soft: rgba(109, 75, 179, 0.18);
+  --border-card: rgba(109, 75, 179, 0.12);
+  --border-input: rgba(109, 75, 179, 0.2);
+  --border-strong: rgba(109, 75, 179, 0.5);
+  --accent: #6d4bb3;
+  --accent-strong: #7653d6;
+  --accent-gradient: linear-gradient(135deg, #7b59d9, #5f3caf);
+  --accent-control: #6d4bb3;
+  --accent-soft: rgba(109, 75, 179, 0.13);
+  --accent-soft-hover: rgba(109, 75, 179, 0.2);
+  --theme-toggle-hover: rgba(255, 221, 118, 0.34);
+  --accent-faint: rgba(109, 75, 179, 0.08);
+  --accent-focus: rgba(109, 75, 179, 0.14);
+  --accent-shadow: rgba(109, 75, 179, 0.24);
+  --input-icon: #6d4bb3;
+  --input-action: #756b7a;
+  --placeholder: rgba(106, 95, 112, 0.62);
+  --pending-bg: #fee2df;
+  --pending-text: #7a241b;
+  --pending-dot: #d84b3f;
+  --pending-dot-shadow: rgba(216, 75, 63, 0.16);
+  --pending-border: rgba(216, 75, 63, 0.28);
+  --pending-soft: rgba(254, 226, 223, 0.76);
+  --danger-bg: #d84b3f;
+  --danger-text: #fffaf5;
+  --danger-strong: #b8322c;
+  --danger-strong-text: #fffaf5;
+  --done-bg: #c9f7cf;
+  --done-text: #145f26;
+  --done-dot: #22a947;
+  --done-dot-shadow: rgba(34, 169, 71, 0.2);
+  --done-border: rgba(34, 169, 71, 0.38);
+  --caption-text: #6f6900;
+  --caption-dot: #aaa51f;
+  --caption-dot-shadow: rgba(170, 165, 31, 0.16);
+  --overlay-bg: rgba(30, 24, 38, 0.48);
+  --white: #ffffff;
+  color-scheme: light;
 }
 
 *,
@@ -19,7 +169,7 @@ body,
 #root {
   width: 100%;
   min-height: 100%;
-  background: #17151d;
+  background: var(--app-bg);
 }
 
 body {
@@ -65,12 +215,42 @@ svg {
   width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(86, 59, 145, 0.2), transparent 32%),
-    #17151d;
+  background: var(--app-shell-bg);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 1px var(--app-shell-border);
+  color: var(--text-primary);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 10px);
+  right: max(14px, calc((100vw - 430px) / 2 + 14px));
+  z-index: 70;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--accent);
+  box-shadow: 0 14px 32px var(--shadow-card);
+  backdrop-filter: blur(14px);
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.theme-toggle:active {
+  transform: scale(0.96);
+}
+
+.theme-toggle:hover {
+  background: var(--theme-toggle-hover);
 }
 
 .offline-banner {
@@ -80,8 +260,8 @@ svg {
   min-height: 34px;
   display: grid;
   place-items: center;
-  background: #3a0d0d;
-  color: #ffd6d0;
+  background: var(--pending-bg);
+  color: var(--pending-text);
   font-size: 12px;
   font-weight: 700;
 }
@@ -91,10 +271,10 @@ svg {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 22px;
-  background: #563b91;
-  color: #ffffff;
-  box-shadow: 0 12px 30px rgba(25, 12, 49, 0.38);
+  padding: 14px 66px 14px 22px;
+  background: var(--topbar-bg);
+  color: var(--topbar-text);
+  box-shadow: 0 12px 30px var(--topbar-shadow);
 }
 
 .topbar h1 {
@@ -118,7 +298,7 @@ svg {
 .section-title {
   margin: 0 0 22px;
   text-align: center;
-  color: #f5edf8;
+  color: var(--text-primary);
   font-size: 15px;
   line-height: 1.45;
   font-weight: 850;
@@ -129,9 +309,9 @@ svg {
   overflow: hidden;
   border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 34%),
-    #2a2632;
-  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.3);
+    var(--surface-card-glow),
+    var(--surface-card);
+  box-shadow: 0 20px 46px var(--shadow-card);
   padding: 22px 16px 18px;
 }
 
@@ -144,7 +324,7 @@ svg {
 }
 
 .calendar-month {
-  color: #f5edf8;
+  color: var(--text-primary);
   font-size: 26px;
   line-height: 1;
   font-weight: 850;
@@ -152,7 +332,7 @@ svg {
 
 .calendar-year {
   margin-top: 6px;
-  color: #aaa1b5;
+  color: var(--text-muted);
   font-size: 15px;
   font-weight: 700;
 }
@@ -168,8 +348,8 @@ svg {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: rgba(203, 183, 255, 0.16);
-  color: #f5edf8;
+  background: var(--accent-soft);
+  color: var(--text-primary);
   transition: transform 160ms ease, background 160ms ease;
 }
 
@@ -178,7 +358,7 @@ svg {
 }
 
 .icon-button:hover {
-  background: rgba(203, 183, 255, 0.24);
+  background: var(--accent-soft-hover);
 }
 
 .calendar-days,
@@ -190,7 +370,7 @@ svg {
 
 .calendar-days {
   margin-bottom: 8px;
-  color: #aaa1b5;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 800;
   text-align: center;
@@ -205,7 +385,7 @@ svg {
   place-items: center;
   border-radius: 999px;
   background: transparent;
-  color: #e9deee;
+  color: var(--text-primary);
   cursor: default;
   font-size: 15px;
   font-weight: 800;
@@ -221,20 +401,22 @@ svg {
 }
 
 .calendar-day.is-muted {
-  color: rgba(170, 161, 181, 0.38);
+  color: color-mix(in srgb, var(--text-muted) 42%, transparent);
 }
 
 .calendar-day.is-selected {
-  outline: 2px solid #cbb7ff;
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
 .calendar-day.has-pending {
-  background: #3a0d0d;
+  background: var(--pending-bg);
+  color: var(--pending-text);
 }
 
 .calendar-day.has-done {
-  background: #0f3318;
+  background: var(--done-bg);
+  color: var(--done-text);
 }
 
 .calendar-day .status-dot {
@@ -251,29 +433,29 @@ svg {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #ff8a7a;
-  box-shadow: 0 0 0 4px rgba(255, 138, 122, 0.14);
+  background: var(--pending-dot);
+  box-shadow: 0 0 0 4px var(--pending-dot-shadow);
 }
 
 .has-done .status-dot,
 .status-dot.is-done {
-  background: #79d17c;
-  box-shadow: 0 0 0 4px rgba(121, 209, 124, 0.14);
+  background: var(--done-dot);
+  box-shadow: 0 0 0 4px var(--done-dot-shadow);
 }
 
 .status-dot.is-pending {
-  background: #ff8a7a;
+  background: var(--pending-dot);
 }
 
 .status-dot.is-caption {
-  background: #d6d147;
-  box-shadow: 0 0 0 4px rgba(214, 209, 71, 0.14);
+  background: var(--caption-dot);
+  box-shadow: 0 0 0 4px var(--caption-dot-shadow);
 }
 
 .helper-text {
   max-width: 330px;
   margin: 18px auto 16px;
-  color: #aaa1b5;
+  color: var(--text-muted);
   text-align: center;
   font-size: 13px;
   line-height: 1.6;
@@ -299,8 +481,8 @@ svg {
   align-items: center;
   gap: 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #f5edf8;
+  background: var(--surface-chip);
+  color: var(--text-primary);
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 800;
@@ -315,8 +497,8 @@ svg {
   gap: 10px;
   margin: 0 auto;
   border-radius: 12px;
-  background: rgba(47, 42, 56, 0.8);
-  color: #d8d565;
+  background: var(--surface-soft);
+  color: var(--caption-text);
   padding: 10px 12px;
   font-size: 12px;
   line-height: 1.45;
@@ -332,10 +514,10 @@ svg {
 .inline-status,
 .install-hint {
   margin: 14px auto 0;
-  border: 1px solid rgba(203, 183, 255, 0.18);
+  border: 1px solid var(--border-soft);
   border-radius: 18px;
-  background: rgba(47, 42, 56, 0.8);
-  color: #d8ccef;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
   padding: 12px 14px;
   font-size: 13px;
   line-height: 1.5;
@@ -350,8 +532,8 @@ svg {
   min-height: 44px;
   margin-top: 14px;
   border-radius: 999px;
-  background: #cbb7ff;
-  color: #211a2a;
+  background: var(--accent);
+  color: var(--text-inverse);
   font-weight: 850;
 }
 
@@ -362,9 +544,7 @@ svg {
   justify-content: center;
   gap: 24px;
   padding: 26px 28px 44px;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(119, 76, 206, 0.2), transparent 22%),
-    linear-gradient(180deg, #121019 0%, #17151d 58%, #111018 100%);
+  background: var(--login-bg);
 }
 
 .login-brand {
@@ -379,41 +559,41 @@ svg {
   height: 80px;
   display: grid;
   place-items: center;
-  color: #cbb7ff;
+  color: var(--accent);
 }
 
 .prayer-mark svg {
   width: 58px;
   height: 58px;
   stroke-width: 2.15;
-  filter: drop-shadow(0 12px 30px rgba(144, 91, 255, 0.34));
+  filter: drop-shadow(0 12px 30px var(--accent-shadow));
 }
 
 .prayer-mark .prayer-arc {
-  stroke: #8e5cff;
+  stroke: var(--accent-strong);
 }
 
 .login-brand h1 {
   margin: 0;
-  color: #f5edf8;
+  color: var(--text-primary);
   font-size: 22px;
   line-height: 1.1;
   font-weight: 850;
   letter-spacing: 0.22em;
-  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
+  text-shadow: 0 10px 24px var(--shadow-panel);
 }
 
 .login-brand span {
   width: 46px;
   height: 3px;
   border-radius: 999px;
-  background: #9362ff;
-  box-shadow: 0 0 20px rgba(147, 98, 255, 0.52);
+  background: var(--accent-strong);
+  box-shadow: 0 0 20px var(--accent-shadow);
 }
 
 .login-brand p {
   margin: 0;
-  color: #bcb2c8;
+  color: var(--text-subtle);
   font-size: 12px;
   font-weight: 700;
 }
@@ -422,20 +602,17 @@ svg {
   display: grid;
   gap: 16px;
   border-radius: 28px;
-  background:
-    radial-gradient(circle at 50% -15%, rgba(203, 183, 255, 0.11), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
-    #252130;
+  background: var(--surface-login-card);
   box-shadow:
-    0 28px 70px rgba(0, 0, 0, 0.44),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 28px 70px var(--shadow-login),
+    inset 0 1px 0 var(--app-shell-border);
   padding: 30px 22px 28px;
 }
 
 .login-card label {
   display: grid;
   gap: 7px;
-  color: #d8ccef;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 800;
 }
@@ -443,7 +620,7 @@ svg {
 .input-wrap {
   position: relative;
   display: block;
-  color: #b894ff;
+  color: var(--input-icon);
 }
 
 .input-wrap svg {
@@ -459,13 +636,13 @@ svg {
 .input {
   width: 100%;
   min-height: 44px;
-  border: 1px solid rgba(203, 183, 255, 0.24);
+  border: 1px solid var(--border-input);
   border-radius: 10px;
-  background: rgba(23, 20, 31, 0.78);
-  color: #f5edf8;
+  background: var(--surface-input);
+  color: var(--text-primary);
   outline: none;
   padding: 0 14px 0 48px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 1px 0 var(--app-shell-border);
 }
 
 .input-wrap.has-action .input {
@@ -473,13 +650,13 @@ svg {
 }
 
 .input::placeholder {
-  color: rgba(188, 178, 200, 0.6);
+  color: var(--placeholder);
   font-weight: 700;
 }
 
 .input:focus {
-  border-color: #cbb7ff;
-  box-shadow: 0 0 0 4px rgba(203, 183, 255, 0.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-focus);
 }
 
 .input-action {
@@ -493,7 +670,7 @@ svg {
   transform: translateY(-50%);
   border-radius: 999px;
   background: transparent;
-  color: #bfb0dc;
+  color: var(--input-action);
 }
 
 .input-action svg {
@@ -520,9 +697,9 @@ svg {
   width: 100%;
   min-height: 46px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #8251e5, #6e3bc4);
-  color: #ffffff;
-  box-shadow: 0 12px 26px rgba(105, 58, 194, 0.34);
+  background: var(--accent-gradient);
+  color: var(--white);
+  box-shadow: 0 12px 26px var(--accent-shadow);
 }
 
 .primary-button.is-compact {
@@ -531,19 +708,19 @@ svg {
 }
 
 .outline-button {
-  border: 1px solid rgba(203, 183, 255, 0.65);
-  background: rgba(203, 183, 255, 0.08);
-  color: #e7dcff;
+  border: 1px solid var(--border-strong);
+  background: var(--accent-faint);
+  color: var(--text-primary);
 }
 
 .danger-button {
-  background: #ff8a7a;
-  color: #241111;
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 .done-button {
-  background: #0f3318;
-  color: #bff1c1;
+  background: var(--done-bg);
+  color: var(--done-text);
 }
 
 .primary-button:active,
@@ -565,7 +742,7 @@ svg {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #ff99aa;
+  color: var(--pending-dot);
   opacity: 0;
   font-size: 12px;
   font-weight: 800;
@@ -590,7 +767,7 @@ svg {
 .detail-date {
   margin: -8px 0 22px;
   text-align: center;
-  color: #f5edf8;
+  color: var(--text-primary);
   font-size: 30px;
   line-height: 1;
   font-weight: 850;
@@ -606,17 +783,17 @@ svg {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-card);
   border-radius: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 50%),
-    #2f2a38;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+    var(--surface-panel-glow),
+    var(--surface-panel);
+  box-shadow: 0 16px 34px var(--shadow-panel);
   padding: 15px;
 }
 
 .donor-card.is-complete {
-  border-color: rgba(121, 209, 124, 0.34);
+  border-color: var(--done-border);
 }
 
 .donor-card.is-complete::after {
@@ -627,8 +804,8 @@ svg {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #79d17c;
-  box-shadow: 0 0 0 4px rgba(121, 209, 124, 0.14);
+  background: var(--done-dot);
+  box-shadow: 0 0 0 4px var(--done-dot-shadow);
 }
 
 .avatar {
@@ -637,8 +814,8 @@ svg {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: rgba(203, 183, 255, 0.16);
-  color: #f5edf8;
+  background: var(--accent-soft);
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 900;
 }
@@ -649,7 +826,7 @@ svg {
 
 .donor-info h2 {
   margin: 2px 0 4px;
-  color: #f5edf8;
+  color: var(--text-primary);
   font-size: 16px;
   line-height: 1.3;
   font-weight: 850;
@@ -657,7 +834,7 @@ svg {
 
 .donor-info p {
   margin: 0;
-  color: #aaa1b5;
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 650;
 }
@@ -693,9 +870,9 @@ svg {
   grid-template-columns: 44px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  border: 1px solid rgba(203, 183, 255, 0.2);
+  border: 1px solid var(--border-soft);
   border-radius: 999px;
-  background: rgba(23, 20, 31, 0.62);
+  background: var(--surface-player);
   padding: 7px 12px 7px 7px;
 }
 
@@ -705,9 +882,9 @@ svg {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: linear-gradient(135deg, #8b5cf6, #6e3bc4);
-  color: #ffffff;
-  box-shadow: 0 10px 24px rgba(105, 58, 194, 0.34);
+  background: var(--accent-gradient);
+  color: var(--white);
+  box-shadow: 0 10px 24px var(--accent-shadow);
 }
 
 .voice-play-button svg {
@@ -727,7 +904,7 @@ svg {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: #d8ccef;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
@@ -752,40 +929,40 @@ svg {
   height: 6px;
   border-radius: 999px;
   background:
-    linear-gradient(90deg, #cbb7ff var(--voice-progress, 0%), rgba(203, 183, 255, 0.18) 0);
+    linear-gradient(90deg, var(--accent) var(--voice-progress, 0%), var(--border-soft) 0);
 }
 
 .voice-progress::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   margin-top: -6px;
-  border: 3px solid #211a2a;
+  border: 3px solid var(--text-inverse);
   border-radius: 999px;
   appearance: none;
   -webkit-appearance: none;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(203, 183, 255, 0.18);
+  background: var(--white);
+  box-shadow: 0 0 0 4px var(--border-soft);
 }
 
 .voice-progress::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: rgba(203, 183, 255, 0.18);
+  background: var(--border-soft);
 }
 
 .voice-progress::-moz-range-progress {
   height: 6px;
   border-radius: 999px;
-  background: #cbb7ff;
+  background: var(--accent);
 }
 
 .voice-progress::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border: 3px solid #211a2a;
+  border: 3px solid var(--text-inverse);
   border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(203, 183, 255, 0.18);
+  background: var(--white);
+  box-shadow: 0 0 0 4px var(--border-soft);
 }
 
 .recording-panel {
@@ -796,9 +973,9 @@ svg {
   align-items: center;
   gap: 10px;
   margin-top: 12px;
-  border: 1px solid rgba(255, 138, 122, 0.32);
+  border: 1px solid var(--pending-border);
   border-radius: 999px;
-  background: rgba(58, 13, 13, 0.32);
+  background: var(--pending-soft);
   padding: 7px 8px 7px 14px;
 }
 
@@ -807,7 +984,7 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #ffd6d0;
+  color: var(--pending-text);
   font-size: 12px;
   font-weight: 850;
 }
@@ -818,8 +995,8 @@ svg {
   height: 10px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: #ff8a7a;
-  box-shadow: 0 0 0 6px rgba(255, 138, 122, 0.12);
+  background: var(--pending-dot);
+  box-shadow: 0 0 0 6px var(--pending-dot-shadow);
 }
 
 .recording-dot::after {
@@ -827,12 +1004,12 @@ svg {
   position: absolute;
   inset: -7px;
   border-radius: inherit;
-  border: 1px solid rgba(255, 138, 122, 0.34);
+  border: 1px solid var(--pending-border);
   animation: recording-pulse 1.25s ease-out infinite;
 }
 
 .recording-timer {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -856,7 +1033,7 @@ svg {
   z-index: 80;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.68);
+  background: var(--overlay-bg);
   padding: 24px 28px;
 }
 
@@ -866,12 +1043,10 @@ svg {
   display: grid;
   justify-items: center;
   border-radius: 28px;
-  background:
-    radial-gradient(circle at 50% -10%, rgba(203, 183, 255, 0.09), transparent 42%),
-    #302c3a;
+  background: var(--surface-recorder);
   box-shadow:
-    0 28px 80px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    0 28px 80px var(--shadow-recorder),
+    inset 0 1px 0 var(--app-shell-border);
   padding: 30px 24px 28px;
 }
 
@@ -879,12 +1054,12 @@ svg {
   display: grid;
   justify-items: center;
   gap: 4px;
-  color: #efe7ff;
+  color: var(--text-primary);
   text-align: center;
 }
 
 .recorder-heading span {
-  color: #cbb7ff;
+  color: var(--accent);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.11em;
@@ -893,7 +1068,7 @@ svg {
 
 .recorder-heading strong {
   max-width: 250px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 16px;
   line-height: 1.35;
   font-weight: 650;
@@ -901,7 +1076,7 @@ svg {
 
 .recorder-timer {
   margin-top: 36px;
-  color: #f5edf8;
+  color: var(--text-primary);
   font-size: 56px;
   line-height: 1;
   font-weight: 300;
@@ -910,7 +1085,7 @@ svg {
 }
 
 .recorder-timer.is-recording {
-  color: #ffc1c1;
+  color: var(--pending-dot);
 }
 
 .recorder-controls {
@@ -928,9 +1103,9 @@ svg {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: #5d3ea1;
-  color: #f5edf8;
-  box-shadow: 0 18px 36px rgba(53, 31, 94, 0.42);
+  background: var(--accent-control);
+  color: var(--topbar-text);
+  box-shadow: 0 18px 36px var(--accent-shadow);
   transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
 }
 
@@ -949,8 +1124,8 @@ svg {
 }
 
 .recorder-round-button.is-stop {
-  background: #a82121;
-  color: #ffd2d2;
+  background: var(--danger-strong);
+  color: var(--danger-strong-text);
 }
 
 .recorder-round-button.is-stop svg rect {
@@ -959,9 +1134,9 @@ svg {
 }
 
 .recorder-round-button.is-play {
-  border: 1.5px solid rgba(245, 237, 248, 0.92);
+  border: 1.5px solid var(--border-strong);
   background: transparent;
-  color: #cbb7ff;
+  color: var(--accent);
   box-shadow: none;
 }
 
@@ -972,7 +1147,7 @@ svg {
 .recorder-helper {
   min-height: 18px;
   margin: 0;
-  color: #bcb2c8;
+  color: var(--text-subtle);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -982,10 +1157,10 @@ svg {
 .recorder-error {
   width: 100%;
   margin-top: 16px;
-  border: 1px solid rgba(255, 138, 122, 0.26);
+  border: 1px solid var(--pending-border);
   border-radius: 16px;
-  background: rgba(58, 13, 13, 0.28);
-  color: #ffc9c0;
+  background: var(--pending-soft);
+  color: var(--pending-text);
   padding: 10px 12px;
   font-size: 12px;
   line-height: 1.45;
@@ -1005,7 +1180,7 @@ svg {
   min-height: 44px;
   border-radius: 999px;
   background: transparent;
-  color: #f0defe;
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 500;
 }
@@ -1013,8 +1188,8 @@ svg {
 .recorder-send-button {
   min-height: 44px;
   border-radius: 12px;
-  background: #cbb7ff;
-  color: #3b256e;
+  background: var(--accent);
+  color: var(--text-inverse);
   padding: 0 16px;
   font-size: 14px;
   font-weight: 650;
@@ -1026,8 +1201,8 @@ svg {
 }
 
 .recorder-send-button:disabled {
-  background: rgba(203, 183, 255, 0.22);
-  color: rgba(245, 237, 248, 0.52);
+  background: var(--accent-soft);
+  color: color-mix(in srgb, var(--text-primary) 52%, transparent);
 }
 
 @keyframes recording-pulse {
@@ -1043,10 +1218,10 @@ svg {
 }
 
 .empty-state {
-  border: 1px dashed rgba(203, 183, 255, 0.28);
+  border: 1px dashed var(--border-soft);
   border-radius: 24px;
-  background: rgba(47, 42, 56, 0.68);
-  color: #d8ccef;
+  background: var(--surface-soft);
+  color: var(--text-secondary);
   padding: 22px;
   text-align: center;
   line-height: 1.5;

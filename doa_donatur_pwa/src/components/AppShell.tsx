@@ -1,6 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
+import type { ThemeMode } from "../lib/theme";
+import ThemeToggle from "./ThemeToggle";
 
-export default function AppShell({ children }: { children: ReactNode }) {
+type AppShellProps = {
+  children: ReactNode;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+};
+
+export default function AppShell({ children, themeMode, onToggleTheme }: AppShellProps) {
   const [online, setOnline] = useState(() => navigator.onLine);
 
   useEffect(() => {
@@ -19,6 +27,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       {!online ? <div className="offline-banner">Mode offline aktif</div> : null}
+      <ThemeToggle themeMode={themeMode} onToggle={onToggleTheme} />
       {children}
     </div>
   );
