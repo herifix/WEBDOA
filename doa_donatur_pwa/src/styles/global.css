@@ -1155,6 +1155,41 @@ svg {
   text-align: center;
 }
 
+.recorder-device-field {
+  width: 100%;
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recorder-device-field span {
+  padding-left: 2px;
+}
+
+.recorder-device-field select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  padding: 0 12px;
+  font: inherit;
+  outline: none;
+}
+
+.recorder-device-field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.recorder-device-field select:disabled {
+  opacity: 0.62;
+}
+
 .recorder-error {
   width: 100%;
   margin-top: 16px;

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DonorCard, { type VoiceDraft } from "../components/DonorCard";
 import IconButton from "../components/IconButton";
-import VoiceRecorderModal, { type RecorderState } from "../components/VoiceRecorderModal";
+import VoiceRecorderModal, { type MicrophoneOption, type RecorderState } from "../components/VoiceRecorderModal";
 import { mockDonors, type Donor } from "../data/donors";
 import {
   getBirthdaysByDate,
@@ -27,6 +27,100 @@ const voiceAudioConstraints: MediaTrackConstraints = {
   sampleRate: { ideal: 48000 },
   sampleSize: { ideal: 16 }
 };
+
+function buildVoiceAudioConstraints(deviceId: string) {
+  const constraints: MediaTrackConstraints = { ...voiceAudioConstraints };
+  if (deviceId) {
+    constraints.deviceId = { exact: deviceId };
+  }
+
+  return constraints;
+}
+
+function getMediaErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "";
+}
+
+function getMediaErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error ?? "");
+}
+
+function isMicrophoneBusyError(error: unknown) {
+  const name = getMediaErrorName(error);
+  const message = getMediaErrorMessage(error);
+
+  return (
+    name === "NotReadableError" ||
+    name === "TrackStartError" ||
+    name === "AbortError" ||
+    /busy|in use|digunakan|could not start|not readable|concurrent/i.test(message)
+  );
+}
+
+function isPermissionDeniedError(error: unknown) {
+  const name = getMediaErrorName(error);
+  return name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError";
+}
+
+function isMicrophoneMissingError(error: unknown) {
+  const name = getMediaErrorName(error);
+  return name === "NotFoundError" || name === "DevicesNotFoundError";
+}
+
+function isConstraintError(error: unknown) {
+  const name = getMediaErrorName(error);
+  return name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError";
+}
+
+function buildRecorderStartErrorMessage(error: unknown) {
+  if (isPermissionDeniedError(error)) {
+    return "Izin microphone ditolak. Izinkan akses microphone untuk aplikasi ini lalu coba rekam lagi.";
+  }
+
+  if (isMicrophoneMissingError(error)) {
+    return "Tidak ada microphone yang tersedia di perangkat ini.";
+  }
+
+  if (isMicrophoneBusyError(error)) {
+    return "Microphone sedang dipakai aplikasi lain atau tidak bisa diakses. Pilih microphone lain jika tersedia, atau tutup aplikasi yang sedang memakai microphone lalu coba lagi.";
+  }
+
+  if (isConstraintError(error)) {
+    return "Microphone terpilih tidak tersedia atau tidak mendukung konfigurasi rekam. Pilih microphone lain lalu coba lagi.";
+  }
+
+  return error instanceof Error ? error.message : "Tidak bisa mulai merekam suara.";
+}
+
+function mapMicrophoneDevices(devices: MediaDeviceInfo[]) {
+  const audioInputs = devices.filter((device) => device.kind === "audioinput");
+  const seen = new Set<string>();
+
+  return audioInputs.flatMap<MicrophoneOption>((device, index) => {
+    if (!device.deviceId && audioInputs.length > 1) {
+      return [];
+    }
+
+    if (device.deviceId && seen.has(device.deviceId)) {
+      return [];
+    }
+
+    if (device.deviceId) {
+      seen.add(device.deviceId);
+    }
+
+    return [
+      {
+        id: device.deviceId,
+        label: device.label.trim() || `Microphone ${index + 1}`
+      }
+    ];
+  });
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 function extensionForMimeType(mimeType: string) {
   if (mimeType.includes("mp4")) return "mp4";
@@ -59,6 +153,8 @@ export default function BirthdayDetailPage() {
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
   const [recordedSeconds, setRecordedSeconds] = useState(0);
   const [recorderError, setRecorderError] = useState("");
+  const [microphones, setMicrophones] = useState<MicrophoneOption[]>([]);
+  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState("");
   const [savingDonorId, setSavingDonorId] = useState<string>("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,6 +172,31 @@ export default function BirthdayDetailPage() {
     () => [...donors].sort(compareDonorsForDisplay),
     [donors]
   );
+
+  const refreshMicrophoneDevices = useCallback(async (preferredDeviceId = "") => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      setMicrophones([]);
+      setSelectedMicrophoneId("");
+      return;
+    }
+
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const options = mapMicrophoneDevices(devices);
+      setMicrophones(options);
+      setSelectedMicrophoneId((current) => {
+        const candidate = preferredDeviceId || current;
+        if (candidate && options.some((option) => option.id === candidate)) {
+          return candidate;
+        }
+
+        return options[0]?.id ?? "";
+      });
+    } catch {
+      setMicrophones([]);
+      setSelectedMicrophoneId("");
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -124,6 +245,27 @@ export default function BirthdayDetailPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!activeDonor || !navigator.mediaDevices) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const refreshIfActive = () => {
+      if (!cancelled) {
+        void refreshMicrophoneDevices();
+      }
+    };
+
+    refreshIfActive();
+    navigator.mediaDevices.addEventListener?.("devicechange", refreshIfActive);
+
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices.removeEventListener?.("devicechange", refreshIfActive);
+    };
+  }, [activeDonor, refreshMicrophoneDevices]);
+
   function stopStream(stream: MediaStream | null) {
     stream?.getTracks().forEach((track) => track.stop());
   }
@@ -153,14 +295,28 @@ export default function BirthdayDetailPage() {
     }
   }
 
-  async function createVoiceOptimizedStream() {
-    let sourceStream: MediaStream;
-
+  async function requestVoiceSourceStream(deviceId: string) {
     try {
-      sourceStream = await navigator.mediaDevices.getUserMedia({ audio: voiceAudioConstraints });
-    } catch {
-      sourceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      return await navigator.mediaDevices.getUserMedia({
+        audio: buildVoiceAudioConstraints(deviceId)
+      });
+    } catch (error) {
+      if (isPermissionDeniedError(error) || isMicrophoneBusyError(error) || isMicrophoneMissingError(error)) {
+        throw error;
+      }
+
+      if (deviceId) {
+        return await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: deviceId } }
+        });
+      }
+
+      return await navigator.mediaDevices.getUserMedia({ audio: true });
     }
+  }
+
+  async function createVoiceOptimizedStream(deviceId: string) {
+    const sourceStream = await requestVoiceSourceStream(deviceId);
 
     sourceStreamRef.current = sourceStream;
 
@@ -239,6 +395,20 @@ export default function BirthdayDetailPage() {
     }
   }
 
+  async function createVoiceOptimizedStreamWithRetry(deviceId: string) {
+    try {
+      return await createVoiceOptimizedStream(deviceId);
+    } catch (error) {
+      if (!isMicrophoneBusyError(error)) {
+        throw error;
+      }
+
+      stopRecordingTracks();
+      await delay(350);
+      return await createVoiceOptimizedStream(deviceId);
+    }
+  }
+
   function createVoiceMediaRecorder(stream: MediaStream, mimeType: string) {
     const options: MediaRecorderOptions = { audioBitsPerSecond: 96000 };
     if (mimeType) options.mimeType = mimeType;
@@ -291,6 +461,8 @@ export default function BirthdayDetailPage() {
     setRecordingStartedAt(null);
     setRecordedSeconds(0);
     setRecorderError("");
+    setMicrophones([]);
+    setSelectedMicrophoneId("");
     chunksRef.current = [];
   }
 
@@ -336,7 +508,8 @@ export default function BirthdayDetailPage() {
       setDraft(null);
       chunksRef.current = [];
 
-      const stream = await createVoiceOptimizedStream();
+      const stream = await createVoiceOptimizedStreamWithRetry(selectedMicrophoneId);
+      void refreshMicrophoneDevices(selectedMicrophoneId);
       const mimeType = chooseMimeType();
       const recorder = createVoiceMediaRecorder(stream, mimeType);
       const startedAt = Date.now();
@@ -382,9 +555,10 @@ export default function BirthdayDetailPage() {
       setRecorderState("recording");
     } catch (error) {
       stopRecordingTracks();
+      void refreshMicrophoneDevices(selectedMicrophoneId);
       setRecordingStartedAt(null);
       setRecorderState(activeDraftRef.current ? "recorded" : "idle");
-      setRecorderError(error instanceof Error ? error.message : "Tidak bisa mulai merekam suara.");
+      setRecorderError(buildRecorderStartErrorMessage(error));
     }
   }
 
@@ -467,6 +641,9 @@ export default function BirthdayDetailPage() {
           draftUrl={activeDraft?.url}
           recordedSeconds={recordedSeconds}
           error={recorderError}
+          microphones={microphones}
+          selectedMicrophoneId={selectedMicrophoneId}
+          onSelectMicrophone={setSelectedMicrophoneId}
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
           onCancel={handleCancelRecorder}

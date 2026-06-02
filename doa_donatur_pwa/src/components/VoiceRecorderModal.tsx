@@ -3,6 +3,11 @@ import type { Donor } from "../data/donors";
 
 export type RecorderState = "idle" | "recording" | "recorded" | "saving";
 
+export type MicrophoneOption = {
+  id: string;
+  label: string;
+};
+
 type VoiceRecorderModalProps = {
   donor: Donor;
   state: RecorderState;
@@ -10,6 +15,9 @@ type VoiceRecorderModalProps = {
   draftUrl?: string;
   recordedSeconds: number;
   error: string;
+  microphones: MicrophoneOption[];
+  selectedMicrophoneId: string;
+  onSelectMicrophone: (deviceId: string) => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onCancel: () => void;
@@ -30,6 +38,9 @@ export default function VoiceRecorderModal({
   draftUrl,
   recordedSeconds,
   error,
+  microphones,
+  selectedMicrophoneId,
+  onSelectMicrophone,
   onStartRecording,
   onStopRecording,
   onCancel,
@@ -171,6 +182,23 @@ export default function VoiceRecorderModal({
                 ? "Ketuk Mic untuk rekam ulang"
                 : "Siap merekam"}
         </p>
+
+        {microphones.length > 1 ? (
+          <label className="recorder-device-field">
+            <span>Microphone</span>
+            <select
+              value={selectedMicrophoneId}
+              onChange={(event) => onSelectMicrophone(event.target.value)}
+              disabled={isRecording || isSaving}
+            >
+              {microphones.map((microphone) => (
+                <option key={microphone.id || microphone.label} value={microphone.id}>
+                  {microphone.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
         {error ? <div className="recorder-error">{error}</div> : null}
 
