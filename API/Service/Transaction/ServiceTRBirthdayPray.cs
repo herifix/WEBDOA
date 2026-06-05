@@ -497,7 +497,7 @@ string pathPesanSuara = "";
                                     {
             idDonatur = targetDonatur.id_donatur,
 idTRBirthdayPray = bodyRequest.idTRBirthdayPray,
-pesan = "",
+pesan = ".",
 pesanSuaraFile = null,
 voiceRecordingId = bodyRequest.voiceRecordingId,
 saveToAllSameBirthdayDate = bodyRequest.saveToAllSameBirthdayDate
