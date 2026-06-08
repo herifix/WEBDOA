@@ -487,28 +487,30 @@ string pathPesanSuara = "";
     
                         if (targetExisting != null && targetExisting.id_TRBirthdayPray > 0)
                             {
-        repo.UpdateVoicePath(targetExisting.id_TRBirthdayPray, pathPesanSuara, conn, tran);
-        response.data = targetExisting.id_TRBirthdayPray;
+                                repo.UpdateVoicePath(targetExisting.id_TRBirthdayPray, pathPesanSuara, conn, tran);
+                                response.data = targetExisting.id_TRBirthdayPray;
                             }
                         else
                             {
-        response.data = repo.Create(
-        new RequestSaveTRBirthdayPray
+                                string psn = "Roma 15 : 13 Semoga Allah sumber pengharapan, memenuhi kamu dengan segala sukacita dan damai sejahtera dalam iman kamu, supaya oleh kekuatan Roh Kudus, Kamu berlimpah-limpah dalam pengharapan.";
+
+                                response.data = repo.Create(
+                                    new RequestSaveTRBirthdayPray
                                     {
-            idDonatur = targetDonatur.id_donatur,
-idTRBirthdayPray = bodyRequest.idTRBirthdayPray,
-pesan = ".",
-pesanSuaraFile = null,
-voiceRecordingId = bodyRequest.voiceRecordingId,
-saveToAllSameBirthdayDate = bodyRequest.saveToAllSameBirthdayDate
-                            },
-targetDonatur,
-defaultPendoa,
-targetBirthdayDate,
-pathPesanSuara,
-conn,
-tran
-                        );
+                                        idDonatur = targetDonatur.id_donatur,
+                                        idTRBirthdayPray = bodyRequest.idTRBirthdayPray,
+                                        pesan = psn,
+                                        pesanSuaraFile = null,
+                                        voiceRecordingId = bodyRequest.voiceRecordingId,
+                                        saveToAllSameBirthdayDate = bodyRequest.saveToAllSameBirthdayDate
+                                    },
+                                    targetDonatur,
+                                    defaultPendoa,
+                                    targetBirthdayDate,
+                                    pathPesanSuara,
+                                    conn,
+                                    tran
+                                );
                             }
                     }
 
