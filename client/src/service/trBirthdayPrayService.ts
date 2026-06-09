@@ -97,10 +97,11 @@ export async function getTRBirthdayPrayMediaDebugInfo(
 
 export async function getTRBirthdayPrayWhatsAppDeliveryStatus(
   idDonatur: number,
-  year?: number
+  year?: number,
+  debug = false
 ): Promise<TRBirthdayPrayWhatsAppDeliveryStatusResponse> {
   const response = await http.get("api/Transaction/TRBirthdayPray/GetWhatsAppDeliveryStatus", {
-    params: { idDonatur, year },
+    params: { idDonatur, year, debug },
   });
 
   return response.data;

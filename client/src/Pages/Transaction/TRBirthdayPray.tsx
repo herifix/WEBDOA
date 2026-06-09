@@ -23,6 +23,7 @@ import { FORM_IDS } from "../../config/formIds";
 import { buildMediaUrl } from "../../config/appConfig";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
 import { convertRecordedBlobToMp3File } from "../../utils/audioMp3";
+import type { TRBirthdayPrayWhatsAppDeliveryStatusResponse } from "../../Model/ModelTRBirthdayPray";
 
 function formatDate(value?: string | null) {
   if (!value) return "";
@@ -54,6 +55,17 @@ function formatDateTime(value?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatWhatsAppStatusDebug(result: TRBirthdayPrayWhatsAppDeliveryStatusResponse) {
+  const debug = result.data?.debug;
+  if (!debug) return "";
+
+  const fallback = debug.usedReplyFallback
+    ? `, fallback=${debug.replyFallbackReason || "reply setelah send"}`
+    : "";
+
+  return ` Debug: path=${debug.messageArrayPath || "-"}, raw=${debug.rawMessageCount}, outbound=${debug.parsedOutboundCount}, inbound=${debug.parsedInboundCount}${fallback}.`;
 }
 
 function formatShortDate(value?: string | null) {
@@ -830,11 +842,11 @@ export default function TRBirthdayPrayPage() {
   const handleCheckWhatsAppStatus = async () => {
     try {
       clearFormMessage();
-      const result = await fetchWhatsAppStatusAsync({ idDonatur, year: currentYear });
+      const result = await fetchWhatsAppStatusAsync({ idDonatur, year: currentYear, debug: true });
       console.log("TRBirthdayPray WhatsApp Status:", result);
 
       if (result.success) {
-        setFormSuccess(result.message || "Status WhatsApp berhasil dicek.");
+        setFormSuccess((result.message || "Status WhatsApp berhasil dicek.") + formatWhatsAppStatusDebug(result));
       } else {
         setFormError("Cek status WA gagal: " + (result.message || "Gateway tidak mengembalikan status."));
       }

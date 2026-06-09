@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
@@ -28,6 +29,7 @@ namespace API.Service.Transaction
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
         private const int MaxWhatsAppPreviewLength = 1024;
         private const int MaxConsecutiveSpaces = 4;
+        private const int WhatsAppConversationLookupLimit = 50;
         private static readonly Regex ExcessiveSpacesRegex = new(" {5,}", RegexOptions.Compiled);
 
         private readonly IDbConnection conn;
@@ -1710,7 +1712,7 @@ CreateNoWindow = true
             }
         }
 
-        public async Task<ResponseData<object>> GetWhatsAppDeliveryStatus(long idDonatur, int? year = null)
+        public async Task<ResponseData<object>> GetWhatsAppDeliveryStatus(long idDonatur, int? year = null, bool debug = false)
         {
             int targetYear = year ?? DateTime.Today.Year;
 
@@ -1750,7 +1752,7 @@ CreateNoWindow = true
 
                 var setting = settingRepo.GetSetting(conn);
                 string gatewayToken = ResolveGatewayToken(setting.whatsappGatewayToken);
-                string messagesUrl = BuildGatewayConversationMessagesUrl(gatewayUrl, phoneNumber, 10);
+                string messagesUrl = BuildGatewayConversationMessagesUrl(gatewayUrl, phoneNumber, WhatsAppConversationLookupLimit);
 
                 using var client = new HttpClient();
                 if (!string.IsNullOrWhiteSpace(gatewayToken))
@@ -1768,7 +1770,9 @@ CreateNoWindow = true
                     };
                 }
 
-                var statusSummary = BuildWhatsAppDeliveryStatusSummary(body, 6);
+                var statusSummary = BuildWhatsAppDeliveryStatusSummary(body, 6, prayData, debug);
+                statusSummary.debug.normalizedPhone = phoneNumber;
+                statusSummary.debug.messagesUrl = debug ? messagesUrl : "";
 
                 return new ResponseData<object>
                 {
@@ -1779,6 +1783,7 @@ CreateNoWindow = true
                         phoneNumber,
                         checkedAt = DateTime.Now,
                         latestOutboundMessages = statusSummary.messages,
+                        debug = debug ? statusSummary.debug : null,
                         gatewayResponse = ParseGatewayResponseBody(body)
                     }
                 };
@@ -1835,6 +1840,42 @@ CreateNoWindow = true
             public string lookupError { get; set; } = "";
         }
 
+        private sealed class GatewayDeliveryStatusAnalysis
+        {
+            public List<GatewayMessageStatus> messages { get; set; } = new();
+            public GatewayDeliveryStatusDebug debug { get; set; } = new();
+        }
+
+        private sealed class GatewayDeliveryStatusDebug
+        {
+            public string normalizedPhone { get; set; } = "";
+            public string messagesUrl { get; set; } = "";
+            public string messageArrayPath { get; set; } = "";
+            public int rawMessageCount { get; set; }
+            public int parsedOutboundCount { get; set; }
+            public int parsedInboundCount { get; set; }
+            public bool usedReplyFallback { get; set; }
+            public string replyFallbackReason { get; set; } = "";
+            public List<GatewayMessageDebugItem> sampledMessages { get; set; } = new();
+        }
+
+        private sealed class GatewayMessageDebugItem
+        {
+            public int index { get; set; }
+            public bool isOutbound { get; set; }
+            public bool isInbound { get; set; }
+            public string direction { get; set; } = "";
+            public string senderType { get; set; } = "";
+            public string messageType { get; set; } = "";
+            public string status { get; set; } = "";
+            public string normalizedStatus { get; set; } = "";
+            public string id { get; set; } = "";
+            public string wamId { get; set; } = "";
+            public string timestamp { get; set; } = "";
+            public bool hasReadMarker { get; set; }
+            public bool hasDeliveredMarker { get; set; }
+        }
+
         private string BuildGatewayConversationMessagesUrl(string gatewayUrl, string phoneNumber, int limit)
         {
             string escapedPhoneNumber = Uri.EscapeDataString(phoneNumber);
@@ -1850,27 +1891,34 @@ CreateNoWindow = true
             return $"{normalizedGatewayUrl.TrimEnd('/')}/conversations/{escapedPhoneNumber}/messages?limit={limit}";
         }
 
-        private (string summary, List<GatewayMessageStatus> messages) BuildWhatsAppDeliveryStatusSummary(
+        private (string summary, List<GatewayMessageStatus> messages, GatewayDeliveryStatusDebug debug) BuildWhatsAppDeliveryStatusSummary(
             string body,
-            int limit)
+            int limit,
+            ResponseModelTRBirthdayPray prayData,
+            bool includeDebug)
         {
-            var messages = ExtractLatestOutboundGatewayMessages(body, limit);
-            if (messages.Count == 0)
+            var analysis = AnalyzeGatewayDeliveryMessages(body, limit, prayData, includeDebug);
+            if (analysis.messages.Count == 0)
             {
-                return ("Belum ada outbound message WhatsApp yang ditemukan untuk donatur ini.", messages);
+                return ("Belum ada outbound message WhatsApp yang ditemukan untuk donatur ini.", analysis.messages, analysis.debug);
             }
 
-            string compactStatus = string.Join(", ", messages.Select(item =>
+            string compactStatus = string.Join(", ", analysis.messages.Select(item =>
             {
                 string type = string.IsNullOrWhiteSpace(item.messageType) ? "UNKNOWN" : item.messageType;
                 string status = string.IsNullOrWhiteSpace(item.status) ? "UNKNOWN" : item.status;
                 return $"{type}:{status}";
             }));
 
-            var latest = messages[0];
+            var latest = analysis.messages[0];
             string latestStatus = string.IsNullOrWhiteSpace(latest.status) ? "UNKNOWN" : latest.status;
             string latestType = string.IsNullOrWhiteSpace(latest.messageType) ? "UNKNOWN" : latest.messageType;
             string summary = $"Status WA terakhir: {compactStatus}. Pesan terbaru {latestType} = {latestStatus}.";
+
+            if (latestType.Equals("REPLY_FALLBACK", StringComparison.OrdinalIgnoreCase))
+            {
+                summary += " Ada reply masuk setelah waktu send, tapi outbound message gateway tidak ditemukan. Ditampilkan sebagai SENT, bukan delivery receipt READ.";
+            }
 
             if (latestStatus.Equals("SENT", StringComparison.OrdinalIgnoreCase))
             {
@@ -1889,59 +1937,533 @@ CreateNoWindow = true
                 summary += $" Error: {latest.error}";
             }
 
-            return (summary, messages);
+            return (summary, analysis.messages, analysis.debug);
         }
 
         private List<GatewayMessageStatus> ExtractLatestOutboundGatewayMessages(string body, int limit)
         {
-            var result = new List<GatewayMessageStatus>();
+            return AnalyzeGatewayDeliveryMessages(body, limit, null, false).messages;
+        }
+
+        private GatewayDeliveryStatusAnalysis AnalyzeGatewayDeliveryMessages(
+            string body,
+            int limit,
+            ResponseModelTRBirthdayPray? prayData,
+            bool includeDebug)
+        {
+            var analysis = new GatewayDeliveryStatusAnalysis();
             if (string.IsNullOrWhiteSpace(body))
             {
-                return result;
+                analysis.debug.messageArrayPath = "(empty response)";
+                return analysis;
             }
 
             try
             {
                 using var document = JsonDocument.Parse(body);
-                if (!document.RootElement.TryGetProperty("data", out var dataElement) ||
-                    !dataElement.TryGetProperty("messages", out var messagesElement) ||
-                    messagesElement.ValueKind != JsonValueKind.Array)
+                if (!TryResolveGatewayMessagesArray(document.RootElement, out var messagesElement, out string messageArrayPath))
                 {
-                    return result;
+                    analysis.debug.messageArrayPath = "(messages array not found)";
+                    return analysis;
                 }
 
+                analysis.debug.messageArrayPath = messageArrayPath;
+                analysis.debug.rawMessageCount = messagesElement.GetArrayLength();
+
+                GatewayMessageStatus? replyFallbackMessage = null;
+                DateTime? latestReplyFallbackTime = null;
+
+                int index = 0;
                 foreach (var messageElement in messagesElement.EnumerateArray())
                 {
-                    string direction = GetJsonString(messageElement, "direction");
-                    if (!direction.Equals("OUTBOUND", StringComparison.OrdinalIgnoreCase))
+                    bool isOutbound = IsOutboundGatewayMessage(messageElement);
+                    bool isInbound = IsInboundGatewayMessage(messageElement);
+
+                    if (isOutbound)
                     {
-                        continue;
+                        analysis.debug.parsedOutboundCount++;
+                        if (analysis.messages.Count < limit)
+                        {
+                            analysis.messages.Add(BuildGatewayMessageStatus(messageElement));
+                        }
                     }
 
-                    result.Add(new GatewayMessageStatus
+                    if (isInbound)
                     {
-                        id = GetJsonString(messageElement, "id"),
-                        messageType = GetJsonString(messageElement, "message_type"),
-                        status = GetJsonString(messageElement, "status"),
-                        content = GetJsonString(messageElement, "content"),
-                        mediaUrl = GetJsonString(messageElement, "media_url"),
-                        wamId = GetJsonString(messageElement, "wam_id"),
-                        timestamp = GetJsonString(messageElement, "timestamp"),
-                        error = GetJsonString(messageElement, "error")
-                    });
-
-                    if (result.Count >= limit)
-                    {
-                        break;
+                        analysis.debug.parsedInboundCount++;
+                        if (TryBuildReplyFallbackMessage(prayData, messageElement, out var fallbackMessage, out var fallbackTime) &&
+                            (!latestReplyFallbackTime.HasValue || fallbackTime > latestReplyFallbackTime.Value))
+                        {
+                            replyFallbackMessage = fallbackMessage;
+                            latestReplyFallbackTime = fallbackTime;
+                        }
                     }
+
+                    if (includeDebug && analysis.debug.sampledMessages.Count < 10)
+                    {
+                        analysis.debug.sampledMessages.Add(BuildGatewayMessageDebugItem(index, messageElement, isOutbound, isInbound));
+                    }
+
+                    index++;
+                }
+
+                if (analysis.messages.Count == 0 && replyFallbackMessage != null)
+                {
+                    analysis.messages.Add(replyFallbackMessage);
+                    analysis.debug.usedReplyFallback = true;
+                    analysis.debug.replyFallbackReason =
+                        "Ada inbound reply setelah WASentDate, tetapi outbound message gateway tidak ditemukan.";
                 }
             }
             catch
             {
-                return new List<GatewayMessageStatus>();
+                analysis.debug.messageArrayPath = "(invalid json)";
+                return new GatewayDeliveryStatusAnalysis
+                {
+                    debug = analysis.debug
+                };
             }
 
-            return result;
+            return analysis;
+        }
+
+        private bool TryResolveGatewayMessagesArray(JsonElement root, out JsonElement messagesElement, out string messageArrayPath)
+        {
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                messagesElement = root;
+                messageArrayPath = "$";
+                return true;
+            }
+
+            foreach (string path in new[] { "data.messages", "messages", "data.items", "items", "data.data", "data" })
+            {
+                if (TryGetJsonProperty(root, path, out messagesElement) &&
+                    messagesElement.ValueKind == JsonValueKind.Array)
+                {
+                    messageArrayPath = path;
+                    return true;
+                }
+            }
+
+            messagesElement = default;
+            messageArrayPath = "";
+            return false;
+        }
+
+        private GatewayMessageDebugItem BuildGatewayMessageDebugItem(
+            int index,
+            JsonElement messageElement,
+            bool isOutbound,
+            bool isInbound)
+        {
+            return new GatewayMessageDebugItem
+            {
+                index = index,
+                isOutbound = isOutbound,
+                isInbound = isInbound,
+                direction = GetGatewayDirection(messageElement),
+                senderType = GetGatewaySenderType(messageElement),
+                messageType = GetGatewayMessageType(messageElement),
+                status = GetJsonStringAny(messageElement, "status", "delivery_status", "deliveryStatus", "delivery.status", "meta.status", "whatsapp.status"),
+                normalizedStatus = NormalizeGatewayDeliveryStatus(messageElement),
+                id = GetGatewayMessageId(messageElement),
+                wamId = GetGatewayWamId(messageElement),
+                timestamp = GetGatewayTimestamp(messageElement),
+                hasReadMarker = HasGatewayReadMarker(messageElement),
+                hasDeliveredMarker = HasGatewayDeliveredMarker(messageElement)
+            };
+        }
+
+        private GatewayMessageStatus BuildGatewayMessageStatus(JsonElement messageElement)
+        {
+            return new GatewayMessageStatus
+            {
+                id = GetGatewayMessageId(messageElement),
+                messageType = GetGatewayMessageType(messageElement),
+                status = NormalizeGatewayDeliveryStatus(messageElement),
+                content = GetJsonStringAny(messageElement, "content", "text", "body", "message.content", "message.text", "message.body"),
+                mediaUrl = GetGatewayMediaUrl(messageElement),
+                wamId = GetGatewayWamId(messageElement),
+                timestamp = GetGatewayTimestamp(messageElement),
+                error = GetJsonStringAny(messageElement, "error", "error_message", "errorMessage", "error.message", "failure.reason")
+            };
+        }
+
+        private bool IsOutboundGatewayMessage(JsonElement messageElement)
+        {
+            string direction = GetGatewayDirection(messageElement);
+            if (IsGatewayValueOneOf(direction, "OUTBOUND", "OUTGOING", "SENT"))
+            {
+                return true;
+            }
+
+            if (GetJsonBooleanAny(
+                    messageElement,
+                    "from_me",
+                    "fromMe",
+                    "is_from_me",
+                    "isFromMe",
+                    "sender.from_me",
+                    "sender.fromMe",
+                    "message.from_me",
+                    "message.fromMe",
+                    "outgoing",
+                    "is_outgoing",
+                    "isOutgoing",
+                    "message.outgoing"))
+            {
+                return true;
+            }
+
+            string senderType = GetGatewaySenderType(messageElement);
+            return IsGatewayValueOneOf(senderType, "business", "agent", "operator", "outbound", "outgoing");
+        }
+
+        private bool IsInboundGatewayMessage(JsonElement messageElement)
+        {
+            string direction = GetGatewayDirection(messageElement);
+            if (IsGatewayValueOneOf(direction, "INBOUND", "INCOMING", "RECEIVED"))
+            {
+                return true;
+            }
+
+            if (GetJsonBooleanAny(messageElement, "incoming", "is_incoming", "isIncoming", "message.incoming"))
+            {
+                return true;
+            }
+
+            string senderType = GetGatewaySenderType(messageElement);
+            if (IsGatewayValueOneOf(senderType, "customer", "contact", "user", "inbound", "incoming"))
+            {
+                return true;
+            }
+
+            bool? fromMe = GetJsonBooleanNullableAny(
+                messageElement,
+                "from_me",
+                "fromMe",
+                "is_from_me",
+                "isFromMe",
+                "sender.from_me",
+                "sender.fromMe",
+                "message.from_me",
+                "message.fromMe");
+
+            return fromMe.HasValue &&
+                !fromMe.Value &&
+                HasGatewayOutboundEvidence(messageElement) &&
+                !IsOutboundGatewayMessage(messageElement);
+        }
+
+        private string NormalizeGatewayDeliveryStatus(JsonElement messageElement)
+        {
+            string status = GetJsonStringAny(
+                messageElement,
+                "status",
+                "delivery_status",
+                "deliveryStatus",
+                "delivery.status",
+                "meta.status",
+                "whatsapp.status");
+            if (IsGatewayValueOneOf(status, "READ"))
+            {
+                return "READ";
+            }
+
+            if (IsGatewayValueOneOf(status, "DELIVERED"))
+            {
+                return "DELIVERED";
+            }
+
+            if (IsGatewayValueOneOf(status, "SENT"))
+            {
+                return "SENT";
+            }
+
+            if (IsGatewayValueOneOf(status, "FAILED"))
+            {
+                return "FAILED";
+            }
+
+            if (HasGatewayReadMarker(messageElement))
+            {
+                return "READ";
+            }
+
+            if (HasGatewayDeliveredMarker(messageElement))
+            {
+                return "DELIVERED";
+            }
+
+            if (IsOutboundGatewayMessage(messageElement) && HasGatewayOutboundEvidence(messageElement))
+            {
+                return "SENT";
+            }
+
+            return "UNKNOWN";
+        }
+
+        private bool HasGatewayOutboundEvidence(JsonElement messageElement)
+        {
+            return !string.IsNullOrWhiteSpace(GetGatewayMessageId(messageElement)) ||
+                !string.IsNullOrWhiteSpace(GetGatewayWamId(messageElement)) ||
+                !string.IsNullOrWhiteSpace(GetGatewayTimestamp(messageElement)) ||
+                !string.IsNullOrWhiteSpace(GetGatewayMessageType(messageElement));
+        }
+
+        private string GetGatewayDirection(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "direction",
+                "message_direction",
+                "messageDirection",
+                "message.direction",
+                "metadata.direction");
+        }
+
+        private string GetGatewaySenderType(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "sender_type",
+                "senderType",
+                "sender.type",
+                "sender.role",
+                "from.type",
+                "from.role",
+                "message.sender_type",
+                "message.senderType");
+        }
+
+        private string GetGatewayMessageId(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "id",
+                "message_id",
+                "messageId",
+                "message.id",
+                "data.id");
+        }
+
+        private string GetGatewayMessageType(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "message_type",
+                "messageType",
+                "type",
+                "message.type",
+                "message.message_type",
+                "message.messageType");
+        }
+
+        private string GetGatewayMediaUrl(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "media_url",
+                "mediaUrl",
+                "media.url",
+                "media.link",
+                "attachment.url",
+                "message.media_url",
+                "message.mediaUrl",
+                "url");
+        }
+
+        private string GetGatewayWamId(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "wam_id",
+                "wamId",
+                "wa_message_id",
+                "waMessageId",
+                "whatsapp_message_id",
+                "whatsappMessageId",
+                "message.wam_id",
+                "message.wamId",
+                "metadata.wam_id",
+                "metadata.wamId");
+        }
+
+        private string GetGatewayTimestamp(JsonElement messageElement)
+        {
+            return GetJsonStringAny(
+                messageElement,
+                "timestamp",
+                "created_at",
+                "createdAt",
+                "sent_at",
+                "sentAt",
+                "received_at",
+                "receivedAt",
+                "updated_at",
+                "updatedAt",
+                "message.timestamp",
+                "metadata.timestamp");
+        }
+
+        private bool IsGatewayValueOneOf(string value, params string[] expectedValues)
+        {
+            string normalized = (value ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return false;
+            }
+
+            return expectedValues.Any(expected =>
+                normalized.Equals(expected, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private bool TryBuildReplyFallbackMessage(
+            ResponseModelTRBirthdayPray? prayData,
+            JsonElement messageElement,
+            out GatewayMessageStatus fallbackMessage,
+            out DateTime fallbackTime)
+        {
+            fallbackMessage = new GatewayMessageStatus();
+            fallbackTime = DateTime.MinValue;
+
+            if (prayData == null ||
+                !prayData.isWASent ||
+                !prayData.waSentDate.HasValue ||
+                !TryParseGatewayTimestamp(GetGatewayTimestamp(messageElement), out DateTime inboundTime) ||
+                inboundTime <= prayData.waSentDate.Value)
+            {
+                return false;
+            }
+
+            fallbackTime = inboundTime;
+            fallbackMessage = new GatewayMessageStatus
+            {
+                id = GetGatewayMessageId(messageElement),
+                messageType = "REPLY_FALLBACK",
+                status = "SENT",
+                timestamp = prayData.waSentDate.Value.ToString("o", CultureInfo.InvariantCulture),
+                wamId = GetGatewayWamId(messageElement)
+            };
+
+            return true;
+        }
+
+        private bool TryParseGatewayTimestamp(string value, out DateTime timestamp)
+        {
+            timestamp = DateTime.MinValue;
+            string raw = (value ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long unixValue))
+            {
+                try
+                {
+                    DateTimeOffset parsed = raw.Length >= 13
+                        ? DateTimeOffset.FromUnixTimeMilliseconds(unixValue)
+                        : DateTimeOffset.FromUnixTimeSeconds(unixValue);
+                    timestamp = parsed.LocalDateTime;
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var offsetValue))
+            {
+                timestamp = offsetValue.LocalDateTime;
+                return true;
+            }
+
+            if (DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dateValue))
+            {
+                timestamp = dateValue;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool HasGatewayReadMarker(JsonElement messageElement)
+        {
+            return HasGatewayMarker(
+                messageElement,
+                "read_at",
+                "readAt",
+                "read_timestamp",
+                "readTimestamp",
+                "recipient_read_at",
+                "recipientReadAt",
+                "delivery.read_at",
+                "delivery.readAt",
+                "status.read_at",
+                "status.readAt",
+                "is_read",
+                "isRead",
+                "read");
+        }
+
+        private bool HasGatewayDeliveredMarker(JsonElement messageElement)
+        {
+            return HasGatewayMarker(
+                messageElement,
+                "delivered_at",
+                "deliveredAt",
+                "delivered_timestamp",
+                "deliveredTimestamp",
+                "recipient_delivered_at",
+                "recipientDeliveredAt",
+                "delivery.delivered_at",
+                "delivery.deliveredAt",
+                "status.delivered_at",
+                "status.deliveredAt",
+                "is_delivered",
+                "isDelivered",
+                "delivered");
+        }
+
+        private bool HasGatewayMarker(JsonElement element, params string[] propertyNames)
+        {
+            foreach (string propertyName in propertyNames)
+            {
+                if (!TryGetJsonProperty(element, propertyName, out var property))
+                {
+                    continue;
+                }
+
+                if (property.ValueKind == JsonValueKind.True)
+                {
+                    return true;
+                }
+
+                if (property.ValueKind == JsonValueKind.False ||
+                    property.ValueKind == JsonValueKind.Null ||
+                    property.ValueKind == JsonValueKind.Undefined)
+                {
+                    continue;
+                }
+
+                string markerValue = property.ValueKind == JsonValueKind.String
+                    ? property.GetString() ?? ""
+                    : property.ToString() ?? "";
+
+                markerValue = markerValue.Trim();
+                if (!string.IsNullOrWhiteSpace(markerValue) &&
+                    !markerValue.Equals("false", StringComparison.OrdinalIgnoreCase) &&
+                    !markerValue.Equals("null", StringComparison.OrdinalIgnoreCase) &&
+                    !markerValue.Equals("0", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private async Task<GatewayMessageStatus> TryGetLatestOutboundGatewayMessageStatusAsync(
@@ -1955,7 +2477,7 @@ CreateNoWindow = true
 
             try
             {
-                string messagesUrl = BuildGatewayConversationMessagesUrl(gatewayUrl, phoneNumber, 10);
+                string messagesUrl = BuildGatewayConversationMessagesUrl(gatewayUrl, phoneNumber, WhatsAppConversationLookupLimit);
 
                 using var client = new HttpClient();
                 if (!string.IsNullOrWhiteSpace(token))
@@ -1970,9 +2492,7 @@ CreateNoWindow = true
                 }
 
                 using var document = JsonDocument.Parse(body);
-                if (!document.RootElement.TryGetProperty("data", out var dataElement) ||
-                    !dataElement.TryGetProperty("messages", out var messagesElement) ||
-                    messagesElement.ValueKind != JsonValueKind.Array)
+                if (!TryResolveGatewayMessagesArray(document.RootElement, out var messagesElement, out _))
                 {
                     result.lookupError = "Response conversation gateway tidak berisi daftar messages.";
                     return result;
@@ -1983,11 +2503,10 @@ CreateNoWindow = true
 
                 foreach (var messageElement in messagesElement.EnumerateArray())
                 {
-                    string direction = GetJsonString(messageElement, "direction");
-                    string currentType = GetJsonString(messageElement, "message_type");
-                    string currentMediaUrl = GetJsonString(messageElement, "media_url");
+                    string currentType = GetGatewayMessageType(messageElement);
+                    string currentMediaUrl = GetGatewayMediaUrl(messageElement);
 
-                    if (!direction.Equals("OUTBOUND", StringComparison.OrdinalIgnoreCase))
+                    if (!IsOutboundGatewayMessage(messageElement))
                     {
                         continue;
                     }
@@ -2004,14 +2523,7 @@ CreateNoWindow = true
                         continue;
                     }
 
-                    result.id = GetJsonString(messageElement, "id");
-                    result.messageType = currentType;
-                    result.status = GetJsonString(messageElement, "status");
-                    result.mediaUrl = currentMediaUrl;
-                    result.wamId = GetJsonString(messageElement, "wam_id");
-                    result.timestamp = GetJsonString(messageElement, "timestamp");
-                    result.error = GetJsonString(messageElement, "error");
-                    return result;
+                    return BuildGatewayMessageStatus(messageElement);
                 }
 
                 result.lookupError = "Message media terbaru belum ditemukan di conversation gateway.";
@@ -2558,7 +3070,7 @@ CreateNoWindow = true
 
         private string GetJsonString(JsonElement element, string propertyName)
         {
-            if (!element.TryGetProperty(propertyName, out var property))
+            if (!TryGetJsonProperty(element, propertyName, out var property))
             {
                 return "";
             }
@@ -2571,9 +3083,69 @@ CreateNoWindow = true
             return property.ToString() ?? "";
         }
 
+        private bool TryGetJsonProperty(JsonElement element, string propertyName, out JsonElement property)
+        {
+            property = default;
+            if (string.IsNullOrWhiteSpace(propertyName))
+            {
+                return false;
+            }
+
+            JsonElement current = element;
+            foreach (string pathPart in propertyName.Split('.', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (current.ValueKind != JsonValueKind.Object)
+                {
+                    return false;
+                }
+
+                if (!TryGetJsonObjectProperty(current, pathPart, out current))
+                {
+                    return false;
+                }
+            }
+
+            property = current;
+            return true;
+        }
+
+        private bool TryGetJsonObjectProperty(JsonElement element, string propertyName, out JsonElement property)
+        {
+            if (element.TryGetProperty(propertyName, out property))
+            {
+                return true;
+            }
+
+            foreach (var jsonProperty in element.EnumerateObject())
+            {
+                if (jsonProperty.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    property = jsonProperty.Value;
+                    return true;
+                }
+            }
+
+            property = default;
+            return false;
+        }
+
+        private string GetJsonStringAny(JsonElement element, params string[] propertyNames)
+        {
+            foreach (string propertyName in propertyNames)
+            {
+                string value = GetJsonString(element, propertyName);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return "";
+        }
+
         private bool GetJsonBoolean(JsonElement element, string propertyName)
         {
-            if (!element.TryGetProperty(propertyName, out var property))
+            if (!TryGetJsonProperty(element, propertyName, out var property))
             {
                 return false;
             }
@@ -2594,6 +3166,51 @@ CreateNoWindow = true
             }
 
             return false;
+        }
+
+        private bool GetJsonBooleanAny(JsonElement element, params string[] propertyNames)
+        {
+            return propertyNames.Any(propertyName => GetJsonBoolean(element, propertyName));
+        }
+
+        private bool? GetJsonBooleanNullable(JsonElement element, string propertyName)
+        {
+            if (!TryGetJsonProperty(element, propertyName, out var property))
+            {
+                return null;
+            }
+
+            if (property.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+
+            if (property.ValueKind == JsonValueKind.False)
+            {
+                return false;
+            }
+
+            if (property.ValueKind == JsonValueKind.String &&
+                bool.TryParse(property.GetString(), out bool parsed))
+            {
+                return parsed;
+            }
+
+            return null;
+        }
+
+        private bool? GetJsonBooleanNullableAny(JsonElement element, params string[] propertyNames)
+        {
+            foreach (string propertyName in propertyNames)
+            {
+                bool? value = GetJsonBooleanNullable(element, propertyName);
+                if (value.HasValue)
+                {
+                    return value;
+                }
+            }
+
+            return null;
         }
 
         private int CountTemplateBodyVariables(string templateContent)

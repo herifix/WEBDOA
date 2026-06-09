@@ -7,7 +7,10 @@ import {
   useFetchTRBirthdayPrayWhatsAppDeliveryStatus,
   useSendWhatsAppBirthdayPray,
 } from "../hooks/react_query/useFetchTRBirthdayPray";
-import type { DashboardBirthdayItem } from "../Model/ModelTRBirthdayPray";
+import type {
+  DashboardBirthdayItem,
+  TRBirthdayPrayWhatsAppMessageStatus,
+} from "../Model/ModelTRBirthdayPray";
 import StatusBanner from "../components/StatusBanner";
 
 type DashboardRow =
@@ -128,7 +131,21 @@ function getDeliveryLookupKey(row: DashboardDetailRow) {
   return `${row.id_donatur}|${row.dateKey}`;
 }
 
-function normalizeGatewayDeliveryStatus(value?: string | null): WhatsAppDeliveryStatus {
+function hasGatewayOutboundEvidence(message?: TRBirthdayPrayWhatsAppMessageStatus) {
+  if (!message) return false;
+
+  return Boolean(
+    message.id?.trim() ||
+      message.wamId?.trim() ||
+      message.timestamp?.trim() ||
+      message.messageType?.trim()
+  );
+}
+
+function normalizeGatewayDeliveryStatus(
+  value?: string | null,
+  message?: TRBirthdayPrayWhatsAppMessageStatus
+): WhatsAppDeliveryStatus {
   const normalized = (value ?? "").trim().toUpperCase();
 
   if (
@@ -138,6 +155,10 @@ function normalizeGatewayDeliveryStatus(value?: string | null): WhatsAppDelivery
     normalized === "FAILED"
   ) {
     return normalized;
+  }
+
+  if (hasGatewayOutboundEvidence(message)) {
+    return "SENT";
   }
 
   return "UNKNOWN";
@@ -409,7 +430,7 @@ export default function DashboardPage() {
         }
 
         const latestMessage = result.data?.latestOutboundMessages?.[0];
-        const latestStatus = normalizeGatewayDeliveryStatus(latestMessage?.status);
+        const latestStatus = normalizeGatewayDeliveryStatus(latestMessage?.status, latestMessage);
         const latestError =
           latestMessage?.error ||
           (!latestMessage ? result.message || "Belum ada outbound message." : "");

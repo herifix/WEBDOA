@@ -70,10 +70,39 @@ export interface TRBirthdayPrayWhatsAppMessageStatus {
   error: string;
 }
 
+export interface TRBirthdayPrayWhatsAppDeliveryDebugItem {
+  index: number;
+  isOutbound: boolean;
+  isInbound: boolean;
+  direction: string;
+  senderType: string;
+  messageType: string;
+  status: string;
+  normalizedStatus: string;
+  id: string;
+  wamId: string;
+  timestamp: string;
+  hasReadMarker: boolean;
+  hasDeliveredMarker: boolean;
+}
+
+export interface TRBirthdayPrayWhatsAppDeliveryDebug {
+  normalizedPhone: string;
+  messagesUrl: string;
+  messageArrayPath: string;
+  rawMessageCount: number;
+  parsedOutboundCount: number;
+  parsedInboundCount: number;
+  usedReplyFallback: boolean;
+  replyFallbackReason: string;
+  sampledMessages: TRBirthdayPrayWhatsAppDeliveryDebugItem[];
+}
+
 export interface TRBirthdayPrayWhatsAppDeliveryStatusData {
   phoneNumber: string;
   checkedAt: string | null;
   latestOutboundMessages: TRBirthdayPrayWhatsAppMessageStatus[];
+  debug?: TRBirthdayPrayWhatsAppDeliveryDebug | null;
   gatewayResponse?: unknown;
 }
 

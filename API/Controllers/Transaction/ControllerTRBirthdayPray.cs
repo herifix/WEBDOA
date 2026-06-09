@@ -116,9 +116,12 @@ namespace API.Controllers
 
         [HttpGet]
         [Route("Transaction/TRBirthdayPray/GetWhatsAppDeliveryStatus")]
-        public async Task<ResponseData<object>> GetWhatsAppDeliveryStatus([FromQuery] long idDonatur, [FromQuery] int? year = null)
+        public async Task<ResponseData<object>> GetWhatsAppDeliveryStatus(
+            [FromQuery] long idDonatur,
+            [FromQuery] int? year = null,
+            [FromQuery] bool debug = false)
         {
-            return await service.GetWhatsAppDeliveryStatus(idDonatur, year);
+            return await service.GetWhatsAppDeliveryStatus(idDonatur, year, debug);
         }
     }
 }

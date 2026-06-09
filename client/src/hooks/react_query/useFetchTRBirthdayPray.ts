@@ -84,7 +84,7 @@ export function useFetchTRBirthdayPrayMediaDebugInfo() {
 
 export function useFetchTRBirthdayPrayWhatsAppDeliveryStatus() {
   return useMutation({
-    mutationFn: (payload: { idDonatur: number; year?: number }) =>
-      getTRBirthdayPrayWhatsAppDeliveryStatus(payload.idDonatur, payload.year),
+    mutationFn: (payload: { idDonatur: number; year?: number; debug?: boolean }) =>
+      getTRBirthdayPrayWhatsAppDeliveryStatus(payload.idDonatur, payload.year, payload.debug),
   });
 }
