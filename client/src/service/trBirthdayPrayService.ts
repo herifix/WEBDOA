@@ -4,6 +4,7 @@ import type {
   TRBirthdayPrayDetail,
   TRBirthdayPrayHistoryItem,
   TRBirthdayPrayMediaDebugInfo,
+  TRBirthdayPrayWhatsAppDeliveryStatusResponse,
   VoiceRecordingUploadResult,
 } from "../Model/ModelTRBirthdayPray";
 
@@ -97,7 +98,7 @@ export async function getTRBirthdayPrayMediaDebugInfo(
 export async function getTRBirthdayPrayWhatsAppDeliveryStatus(
   idDonatur: number,
   year?: number
-) {
+): Promise<TRBirthdayPrayWhatsAppDeliveryStatusResponse> {
   const response = await http.get("api/Transaction/TRBirthdayPray/GetWhatsAppDeliveryStatus", {
     params: { idDonatur, year },
   });

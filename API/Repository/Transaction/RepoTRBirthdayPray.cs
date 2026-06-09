@@ -89,10 +89,11 @@ SELECT
     ) AS sudahAdaPesanSuara,
     pray.id_TRBirthdayPray,
     pray.CreatedDate AS prayCreatedDate,
-    ISNULL(pray.IsWASent, 0) AS isWASent
+    ISNULL(pray.IsWASent, 0) AS isWASent,
+    pray.WASentDate AS waSentDate
 FROM UpcomingBirthday b
 OUTER APPLY (
-    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent
+    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent, t.WASentDate
     FROM TRBirthdayPray t
     WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(b.Nama))
       AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
@@ -155,10 +156,12 @@ ORDER BY b.birthdayDate, b.Nama;";
                 END AS bit
             ) AS sudahAdaPesanSuara,
             isnull(pray.id_TRBirthdayPray,0) id_TRBirthdayPray,
-            pray.CreatedDate AS prayCreatedDate
+            pray.CreatedDate AS prayCreatedDate,
+            ISNULL(pray.IsWASent, 0) AS isWASent,
+            pray.WASentDate AS waSentDate
         FROM DonaturBirthday b
         OUTER APPLY (
-            SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara
+            SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent, t.WASentDate
             FROM TRBirthdayPray t
             WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(b.Nama))
               AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)

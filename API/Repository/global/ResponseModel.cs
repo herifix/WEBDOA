@@ -170,6 +170,7 @@ public class ResponseModelDashboardBirthday
     public long? id_TRBirthdayPray { get; set; }
     public DateTime? prayCreatedDate { get; set; }
     public bool isWASent { get; set; }
+    public DateTime? waSentDate { get; set; }
 }
 
 public class ResponseModelTRBirthdayPray

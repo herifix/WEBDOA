@@ -10,6 +10,20 @@ import { safeGetJSON } from "../lib/storage";
 
 type PrayerStatus = Record<string, Record<string, boolean>>;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const indonesiaTimeZone = "Asia/Jakarta";
+const indonesiaDateFormatter = new Intl.DateTimeFormat("id-ID", {
+  timeZone: indonesiaTimeZone,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric"
+});
+const indonesiaTimeFormatter = new Intl.DateTimeFormat("id-ID", {
+  timeZone: indonesiaTimeZone,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
 
 function monthStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -34,8 +48,13 @@ function getDashboardFocusDateKey() {
   return isValidDateKey(queryDate) ? queryDate : formatDateKey(getToday());
 }
 
+function formatIndonesiaTime(date: Date) {
+  return `${indonesiaDateFormatter.format(date)} · ${indonesiaTimeFormatter.format(date)} WIB`;
+}
+
 export default function DashboardPage() {
   const focusDateKey = getDashboardFocusDateKey();
+  const [now, setNow] = useState(() => new Date());
   const [currentMonth, setCurrentMonth] = useState(() => monthStart(parseDateKey(focusDateKey)));
   const [selectedDate, setSelectedDate] = useState(focusDateKey);
   const [donors, setDonors] = useState<Donor[]>(() =>
@@ -46,7 +65,14 @@ export default function DashboardPage() {
   const prayerStatus = safeGetJSON<PrayerStatus>("doa.prayerStatus", {});
 
   const todayKey = formatDateKey(new Date());
+  const indonesiaTimeText = formatIndonesiaTime(now);
   const currentMonthKey = useMemo(() => getMonthKey(currentMonth), [currentMonth]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const nextMonth = monthStart(parseDateKey(focusDateKey));
@@ -115,8 +141,11 @@ export default function DashboardPage() {
 
   return (
     <main>
-      <header className="topbar">
+      <header className="topbar dashboard-topbar">
         <h1>DASHBOARD</h1>
+        <time className="dashboard-clock" dateTime={now.toISOString()}>
+          {indonesiaTimeText}
+        </time>
       </header>
 
       <div className="page dashboard-page">

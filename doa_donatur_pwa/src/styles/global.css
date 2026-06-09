@@ -286,6 +286,26 @@ svg {
   letter-spacing: 0.18em;
 }
 
+.dashboard-topbar {
+  min-height: 86px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  padding-right: 78px;
+}
+
+.dashboard-clock {
+  max-width: 100%;
+  color: color-mix(in srgb, var(--topbar-text) 86%, transparent);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 750;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
 .detail-topbar h1 {
   font-size: 20px;
   letter-spacing: 0;

@@ -12,6 +12,7 @@ export interface DashboardBirthdayItem {
   id_TRBirthdayPray: number | null;
   prayCreatedDate: string | null;
   isWASent: boolean;
+  waSentDate: string | null;
 }
 
 export interface TRBirthdayPrayDetail {
@@ -56,6 +57,30 @@ export interface TRBirthdayPrayMediaDebugInfo {
   pathPesanSuaraUrl: string;
   audioUrl: string;
   hasAudioFile: boolean;
+}
+
+export interface TRBirthdayPrayWhatsAppMessageStatus {
+  id: string;
+  messageType: string;
+  status: string;
+  content: string;
+  mediaUrl: string;
+  wamId: string;
+  timestamp: string;
+  error: string;
+}
+
+export interface TRBirthdayPrayWhatsAppDeliveryStatusData {
+  phoneNumber: string;
+  checkedAt: string | null;
+  latestOutboundMessages: TRBirthdayPrayWhatsAppMessageStatus[];
+  gatewayResponse?: unknown;
+}
+
+export interface TRBirthdayPrayWhatsAppDeliveryStatusResponse {
+  success: boolean;
+  message: string;
+  data?: TRBirthdayPrayWhatsAppDeliveryStatusData;
 }
 
 export interface VoiceRecordingUploadResult {

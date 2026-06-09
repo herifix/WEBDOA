@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ExternalLink, RefreshCcw, Send } from "lucide-react";
 import ERPGridTable, { type Column } from "../components/GridFullParent";
 import {
   useFetchBirthdayDashboard,
+  useFetchTRBirthdayPrayWhatsAppDeliveryStatus,
   useSendWhatsAppBirthdayPray,
 } from "../hooks/react_query/useFetchTRBirthdayPray";
 import type { DashboardBirthdayItem } from "../Model/ModelTRBirthdayPray";
@@ -45,7 +46,33 @@ type DashboardRow =
       sudahAdaPesanDoa: boolean;
       sudahAdaPesanSuara: boolean;
       isWASent: boolean;
+      waSentDate: string | null;
     };
+
+type DashboardDetailRow = Extract<DashboardRow, { rowType: "detail" }>;
+
+type WhatsAppDeliveryStatus = "SENT" | "DELIVERED" | "READ" | "FAILED" | "UNKNOWN";
+
+type WhatsAppDeliveryLookup = {
+  loading: boolean;
+  status?: WhatsAppDeliveryStatus;
+  messageType?: string;
+  timestamp?: string;
+  error?: string;
+  checkedAt?: string | null;
+};
+
+const dashboardDateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
+  timeZone: "Asia/Jakarta",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const DELIVERY_STATUS_REFRESH_DELAY_MS = 5000;
 
 function getDatePart(dateString?: string | null) {
   if (!dateString) return "";
@@ -92,24 +119,97 @@ function getTodayLocalDate() {
   return `${year}-${month}-${day}`;
 }
 
+function getBirthdayYear(row: DashboardDetailRow) {
+  const year = Number(getDatePart(row.birthdayDate).slice(0, 4));
+  return Number.isFinite(year) && year > 0 ? year : undefined;
+}
+
+function getDeliveryLookupKey(row: DashboardDetailRow) {
+  return `${row.id_donatur}|${row.dateKey}`;
+}
+
+function normalizeGatewayDeliveryStatus(value?: string | null): WhatsAppDeliveryStatus {
+  const normalized = (value ?? "").trim().toUpperCase();
+
+  if (
+    normalized === "SENT" ||
+    normalized === "DELIVERED" ||
+    normalized === "READ" ||
+    normalized === "FAILED"
+  ) {
+    return normalized;
+  }
+
+  return "UNKNOWN";
+}
+
+function formatSendDateTime(value?: string | null) {
+  if (!value) return "";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+
+  return `${dashboardDateTimeFormatter.format(parsed).replace(",", "")} WIB`;
+}
+
+function getDeliveryStatusLabel(row: DashboardDetailRow, lookup?: WhatsAppDeliveryLookup) {
+  if (lookup?.loading && !lookup.status) return "Cek...";
+  if (lookup?.status) return lookup.status;
+  return row.isWASent ? "Belum dicek" : "Belum Kirim";
+}
+
+function getDeliveryStatusClass(status: string) {
+  const normalized = String(status ?? "").trim().toUpperCase();
+
+  if (normalized === "READ" || normalized === "DELIVERED") {
+    return "bg-emerald-100 text-emerald-700";
+  }
+
+  if (normalized === "SENT") {
+    return "bg-blue-100 text-blue-700";
+  }
+
+  if (normalized === "FAILED") {
+    return "bg-red-100 text-red-700";
+  }
+
+  if (normalized === "CEK...") {
+    return "bg-sky-100 text-sky-700";
+  }
+
+  if (status === "Belum dicek") {
+    return "bg-amber-100 text-amber-700";
+  }
+
+  return "bg-slate-100 text-slate-600";
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const today = getTodayLocalDate();
   const dashboardQuery = useFetchBirthdayDashboard(today);
   const { mutateAsync: sendWAAsync, isPending: isSendingWA } = useSendWhatsAppBirthdayPray();
+  const { mutateAsync: fetchWhatsAppStatusAsync } = useFetchTRBirthdayPrayWhatsAppDeliveryStatus();
 
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const autoRequestedDeliveryKeysRef = useRef<Set<string>>(new Set());
+  const delayedDeliveryStatusTimeoutsRef = useRef<Record<string, number>>({});
 
-  const clearFormMessage = () => {
+  const clearFormMessage = useCallback(() => {
     setFormError(null);
     setFormSuccess(null);
-  };
+  }, []);
 
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [deliveryLookupByRow, setDeliveryLookupByRow] = useState<
+    Record<string, WhatsAppDeliveryLookup>
+  >({});
 
   const sourceRows = useMemo<DashboardBirthdayItem[]>(
     () => dashboardQuery.data ?? [],
@@ -218,6 +318,7 @@ export default function DashboardPage() {
             sudahAdaPesanDoa: item.sudahAdaPesanDoa,
             sudahAdaPesanSuara: item.sudahAdaPesanSuara,
             isWASent: item.isWASent,
+            waSentDate: item.waSentDate,
           });
         }
       }
@@ -265,11 +366,139 @@ export default function DashboardPage() {
     }
   }, [flatRows, focusDonaturId, location.pathname, navigate]);
 
+  const handleCheckDeliveryStatus = useCallback(
+    async (row: DashboardDetailRow, options: { silent?: boolean } = {}) => {
+      const key = getDeliveryLookupKey(row);
+      autoRequestedDeliveryKeysRef.current.add(key);
+
+      if (!options.silent) {
+        clearFormMessage();
+      }
+
+      setDeliveryLookupByRow((prev) => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          loading: true,
+          error: "",
+        },
+      }));
+
+      try {
+        const result = await fetchWhatsAppStatusAsync({
+          idDonatur: row.id_donatur,
+          year: getBirthdayYear(row),
+        });
+
+        if (!result.success) {
+          const errorMessage = result.message || "Gateway tidak mengembalikan status.";
+          setDeliveryLookupByRow((prev) => ({
+            ...prev,
+            [key]: {
+              loading: false,
+              status: "UNKNOWN",
+              error: errorMessage,
+              checkedAt: new Date().toISOString(),
+            },
+          }));
+
+          if (!options.silent) {
+            setFormError(`Cek status WA gagal: ${errorMessage}`);
+          }
+          return;
+        }
+
+        const latestMessage = result.data?.latestOutboundMessages?.[0];
+        const latestStatus = normalizeGatewayDeliveryStatus(latestMessage?.status);
+        const latestError =
+          latestMessage?.error ||
+          (!latestMessage ? result.message || "Belum ada outbound message." : "");
+
+        setDeliveryLookupByRow((prev) => ({
+          ...prev,
+          [key]: {
+            loading: false,
+            status: latestStatus,
+            messageType: latestMessage?.messageType ?? "",
+            timestamp: latestMessage?.timestamp ?? "",
+            error: latestError,
+            checkedAt: result.data?.checkedAt ?? new Date().toISOString(),
+          },
+        }));
+
+        if (!options.silent) {
+          if (latestStatus === "FAILED") {
+            setFormError(latestError || result.message || "Status WA FAILED.");
+          } else {
+            setFormSuccess(result.message || "Status WhatsApp berhasil dicek.");
+          }
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setDeliveryLookupByRow((prev) => ({
+          ...prev,
+          [key]: {
+            loading: false,
+            status: "UNKNOWN",
+            error: errorMessage,
+            checkedAt: new Date().toISOString(),
+          },
+        }));
+
+        if (!options.silent) {
+          setFormError(`Error Cek Status WA: ${errorMessage}`);
+        }
+      }
+    },
+    [clearFormMessage, fetchWhatsAppStatusAsync]
+  );
+
+  const scheduleDelayedDeliveryStatusCheck = useCallback(
+    (row: DashboardDetailRow) => {
+      const key = getDeliveryLookupKey(row);
+      const existingTimeoutId = delayedDeliveryStatusTimeoutsRef.current[key];
+      autoRequestedDeliveryKeysRef.current.add(key);
+
+      if (existingTimeoutId) {
+        window.clearTimeout(existingTimeoutId);
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        delete delayedDeliveryStatusTimeoutsRef.current[key];
+        void handleCheckDeliveryStatus(row, { silent: true });
+      }, DELIVERY_STATUS_REFRESH_DELAY_MS);
+
+      delayedDeliveryStatusTimeoutsRef.current[key] = timeoutId;
+    },
+    [handleCheckDeliveryStatus]
+  );
+
+  useEffect(() => {
+    return () => {
+      Object.values(delayedDeliveryStatusTimeoutsRef.current).forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      delayedDeliveryStatusTimeoutsRef.current = {};
+    };
+  }, []);
+
+  useEffect(() => {
+    for (const row of flatRows) {
+      if (row.rowType !== "detail") continue;
+      if (!row.id_TRBirthdayPray || !row.isWASent) continue;
+
+      const key = getDeliveryLookupKey(row);
+      if (autoRequestedDeliveryKeysRef.current.has(key)) continue;
+
+      void handleCheckDeliveryStatus(row, { silent: true });
+    }
+  }, [flatRows, handleCheckDeliveryStatus]);
+
   const columns: Column<DashboardRow>[] = [
     {
       key: "group1",
       label: "Bulan / Tanggal",
-      width: "280px",
+      width: "130px",
       render: (row) => {
         if (row.rowType === "month") {
           return <span className="font-semibold">{row.monthLabel}</span>;
@@ -285,15 +514,15 @@ export default function DashboardPage() {
     {
       key: "nama",
       label: "Nama / Group",
-      width: "1.8fr",
+      width: "minmax(380px, 1.8fr)",
       render: (row) => {
         if (row.rowType === "month") {
           const isComplete = row.totalCount > 0 && row.completeCount === row.totalCount;
       return (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-3">
           <button
             type="button"
-            className="rounded px-2 py-1 text-left font-semibold text-cyan-700 hover:bg-cyan-100"
+            className="min-w-0 flex-1 truncate rounded px-2 py-1 text-left font-semibold text-cyan-700 hover:bg-cyan-100"
             onClick={(e) => {
               e.stopPropagation();
               setExpandedMonths((prev) => ({
@@ -305,7 +534,7 @@ export default function DashboardPage() {
             {row.groupLabel}
           </button>
           <span
-            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-white ${
+            className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold text-white ${
               isComplete ? "bg-emerald-600" : "bg-rose-500"
             }`}
           >
@@ -320,10 +549,10 @@ export default function DashboardPage() {
 
           const isComplete = row.totalCount > 0 && row.completeCount === row.totalCount;
         return (
-          <div className="ml-6 flex items-center justify-between gap-3">
+          <div className="ml-6 flex min-w-0 items-center justify-between gap-3">
             <button
               type="button"
-              className="rounded px-2 py-1 text-left font-medium text-sky-700 hover:bg-sky-100"
+              className="min-w-0 flex-1 truncate rounded px-2 py-1 text-left font-medium text-sky-700 hover:bg-sky-100"
               onClick={(e) => {
                 e.stopPropagation();
                 setExpandedDates((prev) => ({
@@ -335,7 +564,7 @@ export default function DashboardPage() {
               {row.groupLabel}
             </button>
             <span
-              className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-white ${
+              className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold text-white ${
                 isComplete ? "bg-emerald-600" : "bg-rose-500"
               }`}
             >
@@ -390,7 +619,7 @@ export default function DashboardPage() {
     {
       key: "aksi",
       label: "Aksi",
-      width: "150px",
+      width: "110px",
       render: (row) => {
         if (row.rowType !== "detail") return null;
 
@@ -405,6 +634,81 @@ export default function DashboardPage() {
           >
             Edit
           </button>
+        );
+      },
+      cellClassName: "text-center",
+      headerClassName: "text-center",
+    },
+    {
+      key: "waSentTime",
+      label: "Waktu Send",
+      width: "190px",
+      render: (row) => {
+        if (row.rowType !== "detail") return null;
+
+        const lookup = deliveryLookupByRow[getDeliveryLookupKey(row)];
+        const formattedGatewayTime = formatSendDateTime(lookup?.timestamp);
+        const formattedDbTime = formatSendDateTime(row.waSentDate);
+        const displayText =
+          lookup?.loading && !formattedGatewayTime && !formattedDbTime
+            ? "Cek..."
+            : formattedGatewayTime || formattedDbTime || "-";
+
+        return (
+          <span
+            className={displayText === "-" ? "text-slate-400" : "font-medium text-slate-700"}
+            title={formattedGatewayTime ? "Timestamp gateway WhatsApp" : "Timestamp lokal database"}
+          >
+            {displayText}
+          </span>
+        );
+      },
+      cellClassName: "text-center",
+      headerClassName: "text-center",
+    },
+    {
+      key: "sendStatus",
+      label: "Status Kirim",
+      width: "200px",
+      render: (row) => {
+        if (row.rowType !== "detail") return null;
+
+        const lookup = deliveryLookupByRow[getDeliveryLookupKey(row)];
+        const statusLabel = getDeliveryStatusLabel(row, lookup);
+        const canCheckStatus = Boolean(row.id_TRBirthdayPray) && !lookup?.loading;
+        const statusTitle = lookup?.error
+          ? lookup.error
+          : lookup?.checkedAt
+            ? `Dicek: ${formatSendDateTime(lookup.checkedAt)}`
+            : "Cek status delivery WhatsApp";
+
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <span
+              className={`inline-flex min-w-[82px] justify-center rounded px-2 py-1 text-xs font-semibold ${getDeliveryStatusClass(
+                statusLabel
+              )}`}
+              title={statusTitle}
+            >
+              {statusLabel}
+            </span>
+            <button
+              type="button"
+              className="inline-grid h-7 w-7 place-items-center rounded bg-slate-100 text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-45"
+              title={
+                row.id_TRBirthdayPray
+                  ? "Cek status delivery WhatsApp"
+                  : "Data birthday pray belum tersimpan"
+              }
+              disabled={!canCheckStatus}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleCheckDeliveryStatus(row);
+              }}
+            >
+              <RefreshCcw className={`h-3.5 w-3.5 ${lookup?.loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         );
       },
       cellClassName: "text-center",
@@ -454,8 +758,10 @@ export default function DashboardPage() {
                   const msg = result.message || `Berhasil kirim WA ke ${row.nama}`;
                   setFormSuccess(msg);
                   alert(msg);
-                  // Refresh data dashboard to update the UI status
-                  dashboardQuery.refetch();
+                  // Refresh local send timestamp, then give Meta/gateway time to publish delivery status.
+                  autoRequestedDeliveryKeysRef.current.add(getDeliveryLookupKey(row));
+                  await dashboardQuery.refetch();
+                  scheduleDelayedDeliveryStatusCheck(row);
                 } else {
                   const errMsg = result.message || "";
                   let friendlyMsg = "Gagal mengirim WhatsApp. ";

@@ -23,6 +23,11 @@ export interface Row {
   [key: string]: unknown;
 }
 
+function normalizeGridColumnWidth(width?: string) {
+  const value = String(width ?? "1fr").trim();
+  return /^\d*\.?\d+fr$/.test(value) ? `minmax(0, ${value})` : value;
+}
+
 export interface ERPGridTableRef {
   focusGrid: () => void;
   blurGrid: () => void;
@@ -126,7 +131,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
 
   const gridStyle = useMemo(
     () => ({
-      gridTemplateColumns: visibleColumns.map((c) => c.width ?? "1fr").join(" "),
+      gridTemplateColumns: visibleColumns.map((c) => normalizeGridColumnWidth(c.width)).join(" "),
     }),
     [visibleColumns]
   );
@@ -134,7 +139,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
   const contentGridStyle = useMemo(
     () => ({
       ...gridStyle,
-      width: "max-content",
+      width: "100%",
       minWidth: "100%",
     }),
     [gridStyle]
@@ -443,7 +448,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                         <div
                           key={col.key}
                           className={`truncate border-b border-slate-200 px-3 py-2 ${
-                            colIndex !== visibleColumns.length - 1 ? "border-r" : ""
+                            colIndex !== visibleColumns.length - 1 ? "border-r border-slate-200" : ""
                           } ${isSelected ? selectedRowCellClassName : ""} ${customCellClass}`}
                           title={
                             typeof col.render === "function"
@@ -589,7 +594,7 @@ const ERPGridTable = forwardRef(function ERPGridTableInner<T extends Row = Row>(
                         <div
                           key={col.key}
                           className={`truncate border-b border-slate-200 px-3 py-2 ${
-                            colIndex !== visibleColumns.length - 1 ? "border-r" : ""
+                            colIndex !== visibleColumns.length - 1 ? "border-r border-slate-200" : ""
                           } ${isSelected ? selectedRowCellClassName : ""} ${customCellClass}`}
                           title={
                             typeof col.render === "function"
