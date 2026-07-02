@@ -99,7 +99,7 @@ OUTER APPLY (
       AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
     ORDER BY t.CreatedDate DESC, t.id_TRBirthdayPray DESC
 ) pray
-WHERE CAST(b.birthdayDate AS date) >= CAST(@currentDate AS date)
+WHERE CAST(b.birthdayDate AS date) >= CAST(dateadd(d,-2,@currentDate) AS date)
   AND CAST(b.birthdayDate AS date) <= CAST(DATEADD(MONTH, 6, @currentDate) AS date)
 ORDER BY b.birthdayDate, b.Nama;";
 
