@@ -4,7 +4,7 @@ using System.Data;
 
 internal interface iRepoTRBirthdayPray
 {
-    List<ResponseModelDashboardBirthday> GetUpcomingBirthdayDashboard(DateTime currentDate, IDbConnection conn);
+    List<ResponseModelDashboardBirthday> GetUpcomingBirthdayDashboard(DateTime anchorDate, DateTime beginDate, IDbConnection conn);
     List<ResponseModelDashboardBirthday> GetUpcomingBirthdayByDate(DateTime targetDate, IDbConnection conn);
     List<ResponseModelTRBirthdayPrayDateStatus> GetDateStatuses( IDbConnection conn);
     ResponseData<ResponseModelTRBirthdayPray> GetDataByDonaturId(long idDonatur, int targetYear, IDbConnection conn, IDbTransaction? tran = null);
@@ -21,7 +21,7 @@ internal interface iRepoTRBirthdayPray
 
 public class RepoTRBirthdayPray : iRepoTRBirthdayPray
 {
-    public List<ResponseModelDashboardBirthday> GetUpcomingBirthdayDashboard(DateTime currentDate, IDbConnection conn)
+    public List<ResponseModelDashboardBirthday> GetUpcomingBirthdayDashboard(DateTime anchorDate, DateTime beginDate, IDbConnection conn)
     {
         const string sql = @"
 WITH DonaturBirthday AS (
@@ -33,9 +33,9 @@ WITH DonaturBirthday AS (
         d.Status,
         d.LastDonation,
         CASE
-            WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@currentDate), 2, 1))) < 29
-                THEN EOMONTH(DATEFROMPARTS(YEAR(@currentDate), 2, 1))
-            ELSE DATEFROMPARTS(YEAR(@currentDate), MONTH(d.TglLahir), DAY(d.TglLahir))
+            WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@beginDate), 2, 1))) < 29
+                THEN EOMONTH(DATEFROMPARTS(YEAR(@beginDate), 2, 1))
+            ELSE DATEFROMPARTS(YEAR(@beginDate), MONTH(d.TglLahir), DAY(d.TglLahir))
         END AS birthdayDateThisYear
     FROM Donatur d
 ),
@@ -48,11 +48,11 @@ UpcomingBirthday AS (
         b.Status,
         b.LastDonation,
         CASE
-            WHEN CAST(b.birthdayDateThisYear AS date) >= CAST(@currentDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
+            WHEN CAST(b.birthdayDateThisYear AS date) >= CAST(@beginDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
             ELSE CAST(CASE
-                WHEN MONTH(b.TglLahir) = 2 AND DAY(b.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@currentDate) + 1, 2, 1))) < 29
-                    THEN EOMONTH(DATEFROMPARTS(YEAR(@currentDate) + 1, 2, 1))
-                ELSE DATEFROMPARTS(YEAR(@currentDate) + 1, MONTH(b.TglLahir), DAY(b.TglLahir))
+                WHEN MONTH(b.TglLahir) = 2 AND DAY(b.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@beginDate) + 1, 2, 1))) < 29
+                    THEN EOMONTH(DATEFROMPARTS(YEAR(@beginDate) + 1, 2, 1))
+                ELSE DATEFROMPARTS(YEAR(@beginDate) + 1, MONTH(b.TglLahir), DAY(b.TglLahir))
             END AS date)
         END AS birthdayDate
     FROM DonaturBirthday b
@@ -99,11 +99,11 @@ OUTER APPLY (
       AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
     ORDER BY t.CreatedDate DESC, t.id_TRBirthdayPray DESC
 ) pray
-WHERE CAST(b.birthdayDate AS date) >= CAST(@currentDate AS date)
-  AND CAST(b.birthdayDate AS date) <= CAST(DATEADD(MONTH, 6, @currentDate) AS date)
+WHERE CAST(b.birthdayDate AS date) >= CAST(@beginDate AS date)
+  AND CAST(b.birthdayDate AS date) <= CAST(DATEADD(MONTH, 6, @anchorDate) AS date)
 ORDER BY b.birthdayDate, b.Nama;";
 
-        return conn.Query<ResponseModelDashboardBirthday>(sql, new { currentDate }).ToList();
+        return conn.Query<ResponseModelDashboardBirthday>(sql, new { anchorDate, beginDate }).ToList();
     }
 
     public List<ResponseModelDashboardBirthday> GetUpcomingBirthdayByDate(DateTime targetDate, IDbConnection conn)

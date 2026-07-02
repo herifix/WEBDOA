@@ -20,7 +20,8 @@ namespace API.Controllers
         [Route("Transaction/TRBirthdayPray/GetDashboard")]
         public ResponseData<List<ResponseModelDashboardBirthday>> GetDashboard([FromQuery] DateTime? tgl = null)
         {
-            return service.GetUpcomingBirthdayDashboard((tgl ?? DateTime.Today).Date);
+            DateTime anchorDate = (tgl ?? DateTime.Today).Date;
+            return service.GetUpcomingBirthdayDashboard(anchorDate);
         }
 
         [HttpGet]

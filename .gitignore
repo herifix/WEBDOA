@@ -36,3 +36,9 @@ out-*/
 File Support/
 *.msi
 *.exe
+
+# Codex temp artifacts
+.codex-tmp/*
+!.codex-tmp/f5/
+.codex-tmp/f5/*
+!.codex-tmp/f5/*.ps1

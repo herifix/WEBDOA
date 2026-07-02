@@ -29,3 +29,12 @@ Keep these rules when working on voice or WhatsApp media:
 
 Before changing code around this area, inspect current config and storage output
 first. Prefer config-only fixes when the problem is a local/public URL mismatch.
+
+## Module Knowledge Bases
+
+- `docs/module-agents/TRBirthdayPray/AGENTS.md` is the canonical module
+  rulebook for the `TRBirthdayPray` cluster.
+- Keep this root file focused on cross-module guardrails for voice storage and
+  WhatsApp media.
+- Put workflow, tracing, dependency, and module-specific update notes for
+  `TRBirthdayPray` in the scoped knowledge base instead of duplicating them here.

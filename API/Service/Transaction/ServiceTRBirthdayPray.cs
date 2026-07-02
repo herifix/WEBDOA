@@ -30,6 +30,7 @@ namespace API.Service.Transaction
         private const int MaxWhatsAppPreviewLength = 1024;
         private const int MaxConsecutiveSpaces = 4;
         private const int WhatsAppConversationLookupLimit = 50;
+        private const int BirthdayDashboardBeginDateOffsetDays = 0;
         private static readonly Regex ExcessiveSpacesRegex = new(" {5,}", RegexOptions.Compiled);
 
         private readonly IDbConnection conn;
@@ -64,8 +65,11 @@ namespace API.Service.Transaction
             this.configuration = configuration;
         }
 
-        public ResponseData<List<ResponseModelDashboardBirthday>> GetUpcomingBirthdayDashboard(DateTime currentDate)
+        public ResponseData<List<ResponseModelDashboardBirthday>> GetUpcomingBirthdayDashboard(DateTime anchorDate)
         {
+            DateTime effectiveAnchorDate = anchorDate.Date;
+            DateTime beginDate = effectiveAnchorDate.AddDays(BirthdayDashboardBeginDateOffsetDays);
+
             try
             {
                 if (conn.State == ConnectionState.Closed)
@@ -75,7 +79,7 @@ namespace API.Service.Transaction
                 {
                     success = true,
                     message = "OK",
-                    data = repo.GetUpcomingBirthdayDashboard(currentDate.Date, conn)
+                    data = repo.GetUpcomingBirthdayDashboard(effectiveAnchorDate, beginDate, conn)
                 };
             }
             catch (Exception ex)
