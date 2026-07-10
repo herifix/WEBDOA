@@ -6,6 +6,7 @@ import {
   saveTRBirthdayPray,
   uploadVoiceMp3,
   sendWhatsAppBirthdayPray,
+  debugSendWhatsAppBirthdayPray,
   sendTestWhatsAppText,
   sendTestWhatsAppVoice,
   getPhoneNumbers,
@@ -52,6 +53,17 @@ export function useSendWhatsAppBirthdayPray() {
   return useMutation({
     mutationFn: (payload: { idDonatur: number; year?: number }) =>
       sendWhatsAppBirthdayPray(payload),
+  });
+}
+
+export function useDebugSendWhatsAppBirthdayPray() {
+  return useMutation({
+    mutationFn: (payload: {
+      idDonatur: number;
+      year?: number;
+      runLive?: boolean;
+      includeFollowUpVoice?: boolean;
+    }) => debugSendWhatsAppBirthdayPray(payload),
   });
 }
 

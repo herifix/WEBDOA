@@ -1,6 +1,7 @@
 import http from "../api/http";
 import type {
   DashboardBirthdayItem,
+  TRBirthdayPrayDebugSendResponse,
   TRBirthdayPrayDetail,
   TRBirthdayPrayHistoryItem,
   TRBirthdayPrayMediaDebugInfo,
@@ -58,6 +59,16 @@ export async function uploadVoiceMp3(formData: FormData): Promise<VoiceRecording
 
 export async function sendWhatsAppBirthdayPray(payload: { idDonatur: number; year?: number }) {
   const response = await http.post("api/Transaction/TRBirthdayPray/SendWhatsApp", payload);
+  return response.data;
+}
+
+export async function debugSendWhatsAppBirthdayPray(payload: {
+  idDonatur: number;
+  year?: number;
+  runLive?: boolean;
+  includeFollowUpVoice?: boolean;
+}): Promise<TRBirthdayPrayDebugSendResponse> {
+  const response = await http.post("api/Transaction/TRBirthdayPray/DebugSendWhatsApp", payload);
   return response.data;
 }
 

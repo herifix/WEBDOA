@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Mic, RefreshCcw, Send, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, Mic, RefreshCcw, Send, Square, Trash2 } from "lucide-react";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import ERPToolbar from "../../components/ToolbarHR";
 import StatusBanner from "../../components/StatusBanner";
@@ -13,6 +13,7 @@ import {
   useSaveTRBirthdayPray,
   useUploadVoiceMp3,
   useSendWhatsAppBirthdayPray,
+  useDebugSendWhatsAppBirthdayPray,
   useSendTestWhatsAppText,
   useSendTestWhatsAppVoice,
   useFetchPhoneNumbers,
@@ -23,7 +24,11 @@ import { FORM_IDS } from "../../config/formIds";
 import { buildMediaUrl } from "../../config/appConfig";
 import { useFormMenuPermissions } from "../../utils/menuAccess";
 import { convertRecordedBlobToMp3File } from "../../utils/audioMp3";
-import type { TRBirthdayPrayWhatsAppDeliveryStatusResponse } from "../../Model/ModelTRBirthdayPray";
+import type {
+  TRBirthdayPrayDebugSendResponse,
+  TRBirthdayPrayDebugSendStage,
+  TRBirthdayPrayWhatsAppDeliveryStatusResponse,
+} from "../../Model/ModelTRBirthdayPray";
 
 function formatDate(value?: string | null) {
   if (!value) return "";
@@ -110,6 +115,12 @@ type PreviewMessageReplacements = {
   pendoa: string;
   link: string;
 };
+
+type PhoneNumbersResultState = Readonly<{
+  success: boolean;
+  message: string;
+  rawJson: string;
+}>;
 
 function buildBirthdayPreviewMessage(
   template: string,
@@ -270,6 +281,60 @@ function validateWhatsAppTemplateSend(params: {
   return "";
 }
 
+function buildWhatsAppSendErrorMessage(rawMessage?: string | null) {
+  const errMsg = rawMessage?.trim() ?? "";
+  if (!errMsg) {
+    return "Gagal mengirim WhatsApp. Gateway tidak mengembalikan detail error.";
+  }
+
+  const normalizedMessage = errMsg.toLowerCase();
+
+  if (
+    normalizedMessage.includes("133010") ||
+    normalizedMessage.includes("phonenotregistered") ||
+    normalizedMessage.includes("account not registered") ||
+    normalizedMessage.includes("nomor whatsapp bisnis pengirim") ||
+    normalizedMessage.includes("nomor telepon tidak terdaftar")
+  ) {
+    return `Gagal mengirim WhatsApp. Nomor WhatsApp bisnis pengirim di gateway/Meta belum terdaftar atau belum sinkron. Ini bukan indikasi bahwa nomor donatur penerima salah. Detail gateway: ${errMsg}`;
+  }
+
+  if (normalizedMessage.includes("401") || normalizedMessage.includes("unauthorized")) {
+    return `Gagal mengirim WhatsApp. Token API gateway tidak valid atau sudah kedaluwarsa. Detail gateway: ${errMsg}`;
+  }
+
+  if (
+    normalizedMessage.includes("template whatsapp tidak ditemukan") ||
+    normalizedMessage.includes("template tidak ditemukan") ||
+    normalizedMessage.includes("belum disetujui") ||
+    normalizedMessage.includes("parameter template tidak cocok")
+  ) {
+    return `Gagal mengirim WhatsApp. Template WA di gateway belum cocok atau belum siap dipakai. Periksa nama template, status approval, dan parameter template di Pengaturan. Detail gateway: ${errMsg}`;
+  }
+
+  if (normalizedMessage.includes("badrequest")) {
+    return `Gagal mengirim WhatsApp. Data ditolak oleh gateway. Detail gateway: ${errMsg}`;
+  }
+
+  return `Gagal mengirim WhatsApp. ${errMsg}`;
+}
+
+function formatDebugJson(value: unknown) {
+  if (value == null || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
 export default function TRBirthdayPrayPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -290,6 +355,7 @@ export default function TRBirthdayPrayPage() {
   const { mutateAsync: saveAsync, isPending: isSaving } = useSaveTRBirthdayPray();
   const { mutateAsync: uploadVoiceMp3Async, isPending: isUploadingVoice } = useUploadVoiceMp3();
   const { mutateAsync: sendWAAsync, isPending: isSendingWA } = useSendWhatsAppBirthdayPray();
+  const { mutateAsync: debugSendWAAsync, isPending: isDebugSendingWA } = useDebugSendWhatsAppBirthdayPray();
   const { mutateAsync: sendTestTextAsync, isPending: isSendingTestText } = useSendTestWhatsAppText();
   const { mutateAsync: sendTestVoiceAsync, isPending: isSendingTestVoice } = useSendTestWhatsAppVoice();
   const { mutateAsync: fetchPhoneNumbersAsync, isPending: isFetchingPhones } = useFetchPhoneNumbers();
@@ -300,6 +366,7 @@ export default function TRBirthdayPrayPage() {
   } = useFetchTRBirthdayPrayWhatsAppDeliveryStatus();
   const { permissions } = useFormMenuPermissions(FORM_IDS.transaksiBirthdayPray);
   const currentUserId = localStorage.getItem("userid") ?? "";
+  const isAdminDebugUser = currentUserId === "1";
 
   const [pesan, setPesan] = useState("");
   const [pesanDoaInputMessage, setPesanDoaInputMessage] = useState("");
@@ -310,6 +377,10 @@ export default function TRBirthdayPrayPage() {
   const [recordingStatus, setRecordingStatus] = useState("");
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [saveToAllSameBirthdayDate, setSaveToAllSameBirthdayDate] = useState(true);
+  const [debugSendMode, setDebugSendMode] = useState<"dry_run" | "live">("dry_run");
+  const [debugSendResult, setDebugSendResult] = useState<TRBirthdayPrayDebugSendResponse | null>(null);
+  const [phoneNumbersResult, setPhoneNumbersResult] = useState<PhoneNumbersResultState | null>(null);
+  const [showDebugSendConfirm, setShowDebugSendConfirm] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordedChunksRef = useRef<BlobPart[]>([]);
@@ -432,6 +503,133 @@ export default function TRBirthdayPrayPage() {
     savedPrayerTextAvailable &&
     !hasUnsavedChanges
   );
+
+  const debugStageCards = useMemo(
+    () =>
+      debugSendResult?.data
+        ? [
+            {
+              key: "main-template",
+              title: "Main Template",
+              stage: debugSendResult.data.mainTemplate,
+            },
+            {
+              key: "follow-up-voice",
+              title: "Follow-up Voice",
+              stage: debugSendResult.data.followUpVoiceTemplate,
+            },
+          ]
+        : [],
+    [debugSendResult]
+  );
+
+  function getWhatsAppSendValidationMessage() {
+    if (idDonatur <= 0) {
+      return "Data donatur tidak valid.";
+    }
+
+    if (hasUnsavedChanges) {
+      return "Silakan simpan perubahan terlebih dahulu sebelum mengirim WhatsApp.";
+    }
+
+    if (!effectivePreviewLink.trim()) {
+      return "Rekaman audio belum tersedia. Simpan pesan suara terlebih dahulu sebelum mengirim WhatsApp.";
+    }
+
+    if (isPesanDoaOverLimit) {
+      return `Pesan Doa terlalu panjang (${pesan.length}/${maxPesanDoaLength}). Kurangi teks sebelum kirim WhatsApp.`;
+    }
+
+    return validateWhatsAppTemplateSend({
+      templateName: applicationSettingQuery.data?.whatsappTemplateName,
+      namaPenerima: pageData?.namaDonatur,
+      namaPendoa: pageData?.namaPendoa,
+      link: effectivePreviewLink,
+      isiDoa: pageData?.pesan,
+    });
+  }
+
+  function renderDebugStageCard(title: string, stage: TRBirthdayPrayDebugSendStage) {
+    const toneClass = stage.success
+      ? "border-emerald-200 bg-emerald-50"
+      : stage.skipped
+        ? "border-amber-200 bg-amber-50"
+        : "border-rose-200 bg-rose-50";
+
+    return (
+      <div key={`${stage.stageName}-${title}`} className={`rounded-2xl border p-4 ${toneClass}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-slate-800">{title}</div>
+          <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-wide">
+            <span className="rounded-full bg-white/80 px-2 py-1 text-slate-700">
+              {stage.success ? "success" : "failed"}
+            </span>
+            {stage.skipped ? (
+              <span className="rounded-full bg-white/80 px-2 py-1 text-amber-700">
+                skipped
+              </span>
+            ) : null}
+            {stage.statusCode ? (
+              <span className="rounded-full bg-white/80 px-2 py-1 text-slate-700">
+                HTTP {stage.statusCode}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2">
+          <div>
+            <span className="font-semibold text-slate-700">Template:</span>{" "}
+            {stage.templateName || "-"}
+          </div>
+          <div>
+            <span className="font-semibold text-slate-700">Language:</span>{" "}
+            {stage.languageCode || "-"}
+          </div>
+          <div>
+            <span className="font-semibold text-slate-700">Attempted:</span>{" "}
+            {stage.attempted ? "Ya" : "Tidak"}
+          </div>
+          <div>
+            <span className="font-semibold text-slate-700">Skip Reason:</span>{" "}
+            {stage.skippedReason || "-"}
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-sm text-slate-700">
+          {stage.message || "-"}
+        </div>
+
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Payload Summary
+            </div>
+            <pre className="max-h-64 overflow-auto rounded-xl bg-slate-950 px-3 py-3 text-[11px] leading-5 text-slate-100">
+              {formatDebugJson(stage.payloadSummary)}
+            </pre>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Gateway Response
+            </div>
+            <pre className="max-h-64 overflow-auto rounded-xl bg-slate-950 px-3 py-3 text-[11px] leading-5 text-slate-100">
+              {formatDebugJson(stage.gatewayResponse)}
+            </pre>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Raw Response Body
+          </div>
+          <pre className="max-h-56 overflow-auto rounded-xl bg-slate-900 px-3 py-3 text-[11px] leading-5 text-slate-100">
+            {stage.responseBody || "-"}
+          </pre>
+        </div>
+      </div>
+    );
+  }
 
   function handlePesanChange(value: string) {
     const formatMessage = validateWhatsAppTextFormat(value);
@@ -710,36 +908,7 @@ export default function TRBirthdayPrayPage() {
 
   async function handleSendWhatsApp() {
     clearFormMessage();
-
-    if (idDonatur <= 0) {
-      setFormError("Data donatur tidak valid.");
-      return;
-    }
-
-    if (hasUnsavedChanges) {
-      setFormError("Silakan simpan perubahan terlebih dahulu sebelum mengirim WhatsApp.");
-      return;
-    }
-
-    if (!effectivePreviewLink.trim()) {
-      setFormError("Rekaman audio belum tersedia. Simpan pesan suara terlebih dahulu sebelum mengirim WhatsApp.");
-      return;
-    }
-
-    if (isPesanDoaOverLimit) {
-      setFormError(
-        `Pesan Doa terlalu panjang (${pesan.length}/${maxPesanDoaLength}). Kurangi teks sebelum kirim WhatsApp.`
-      );
-      return;
-    }
-
-    const validationMessage = validateWhatsAppTemplateSend({
-      templateName: applicationSettingQuery.data?.whatsappTemplateName,
-      namaPenerima: pageData?.namaDonatur,
-      namaPendoa: pageData?.namaPendoa,
-      link: effectivePreviewLink,
-      isiDoa: pageData?.pesan,
-    });
+    const validationMessage = getWhatsAppSendValidationMessage();
 
     if (validationMessage) {
       setFormError(validationMessage);
@@ -750,18 +919,7 @@ export default function TRBirthdayPrayPage() {
       const result = await sendWAAsync({ idDonatur, year: currentYear });
 
       if (!result?.success) {
-        let friendlyMsg = "Gagal mengirim WhatsApp. ";
-        const errMsg = result?.message || "";
-
-        if (errMsg.includes("BadRequest")) {
-          friendlyMsg += "Data tidak diterima sistem. Mohon periksa nama Template WA di Pengaturan.";
-        } else if (errMsg.includes("401") || errMsg.includes("Unauthorized")) {
-          friendlyMsg += "Token API tidak valid atau kadaluarsa.";
-        } else {
-          friendlyMsg += "Terjadi kesalahan pada koneksi ke Gateway.";
-        }
-        
-        throw new Error(friendlyMsg + (errMsg ? ` (${errMsg})` : ""));
+        throw new Error(buildWhatsAppSendErrorMessage(result.message));
       }
 
       setFormSuccess(result.message || "Pesan WhatsApp berhasil dikirim.");
@@ -773,6 +931,59 @@ export default function TRBirthdayPrayPage() {
       setFormError(message);
       alert("Error: " + message);
     }
+  }
+
+  async function runDebugSendWhatsApp(runLive: boolean) {
+    clearFormMessage();
+    const validationMessage = getWhatsAppSendValidationMessage();
+
+    if (validationMessage) {
+      setFormError(validationMessage);
+      return;
+    }
+
+    setDebugSendResult(null);
+
+    try {
+      const result = await debugSendWAAsync({
+        idDonatur,
+        year: currentYear,
+        runLive,
+        includeFollowUpVoice: true,
+      });
+
+      setDebugSendResult(result);
+
+      if (result.success) {
+        const successLabel = runLive ? "Debug send live selesai." : "Debug send simulasi selesai.";
+        setFormSuccess(`${successLabel} ${result.data?.finalSummary || result.message || ""}`.trim());
+      } else {
+        setFormError(result.message || "Debug send WhatsApp gagal.");
+      }
+
+      void detailQuery.refetch();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Debug send WhatsApp gagal dijalankan.";
+      setFormError(message);
+    }
+  }
+
+  function handleDebugSendWhatsApp() {
+    clearFormMessage();
+    const validationMessage = getWhatsAppSendValidationMessage();
+
+    if (validationMessage) {
+      setFormError(validationMessage);
+      return;
+    }
+
+    if (debugSendMode === "live") {
+      setShowDebugSendConfirm(true);
+      return;
+    }
+
+    void runDebugSendWhatsApp(false);
   }
 
   const handleSendTestText = async () => {
@@ -817,14 +1028,45 @@ export default function TRBirthdayPrayPage() {
     try {
       clearFormMessage();
       const result = await fetchPhoneNumbersAsync();
+      const rawJson = formatDebugJson(result.data);
+      setPhoneNumbersResult({
+        success: Boolean(result.success),
+        message: result.message || "",
+        rawJson,
+      });
+
       if (result.success) {
-        console.log("Phone Numbers Data:", result.data);
-        alert("Data Nomor Telepon (cek console untuk detail):\n\n" + JSON.stringify(result.data, null, 2));
+        setFormSuccess("Data phone numbers berhasil diambil.");
       } else {
-        alert("Gagal ambil nomor: " + result.message);
+        setFormError("Gagal ambil nomor: " + (result.message || "Gateway tidak mengembalikan data nomor."));
       }
     } catch (error) {
-      alert("Error: " + (error instanceof Error ? error.message : String(error)));
+      const message = error instanceof Error ? error.message : String(error);
+      setPhoneNumbersResult({
+        success: false,
+        message,
+        rawJson: "-",
+      });
+      setFormError("Error Get Phones: " + message);
+    }
+  };
+
+  const handleCopyPhoneNumbersResult = async () => {
+    if (!phoneNumbersResult || !phoneNumbersResult.rawJson || phoneNumbersResult.rawJson === "-") {
+      setFormError("Belum ada hasil Get Phones yang bisa dicopy.");
+      return;
+    }
+
+    try {
+      if (typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
+        throw new Error("Clipboard browser tidak tersedia.");
+      }
+
+      await navigator.clipboard.writeText(phoneNumbersResult.rawJson);
+      setFormSuccess("Hasil Get Phones berhasil dicopy.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setFormError("Gagal copy hasil Get Phones: " + message);
     }
   };
 
@@ -1021,8 +1263,75 @@ export default function TRBirthdayPrayPage() {
                     {pageData.isWASent ? "Resend to WhatsApp" : "Send to WhatsApp"}
                   </button>
 
-                  {currentUserId === "1" && (
+                  {isAdminDebugUser && (
                     <div className="flex flex-wrap gap-2">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+                        <span>Debug Send WA</span>
+                        <div className="inline-flex rounded-full border border-amber-300 bg-white p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setDebugSendMode("dry_run")}
+                            className={`rounded-full px-3 py-1 transition ${
+                              debugSendMode === "dry_run"
+                                ? "bg-amber-500 text-white"
+                                : "text-amber-700 hover:bg-amber-100"
+                            }`}
+                          >
+                            Simulasi
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDebugSendMode("live")}
+                            className={`rounded-full px-3 py-1 transition ${
+                              debugSendMode === "live"
+                                ? "bg-rose-600 text-white"
+                                : "text-amber-700 hover:bg-amber-100"
+                            }`}
+                          >
+                            Live
+                          </button>
+                        </div>
+                      </div>
+                      <div className="group relative">
+                        <button
+                          type="button"
+                          onClick={handleDebugSendWhatsApp}
+                          disabled={isDebugSendingWA || !isWhatsAppReady}
+                          aria-describedby="debug-send-wa-tooltip"
+                          className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-amber-200 transition hover:bg-amber-700 disabled:opacity-60"
+                        >
+                          {isDebugSendingWA ? (
+                            <RefreshCcw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                          Debug Send WA
+                        </button>
+                        <div
+                          id="debug-send-wa-tooltip"
+                          role="tooltip"
+                          className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden w-[320px] rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-left text-[11px] leading-5 text-slate-100 shadow-2xl group-hover:block group-focus-within:block"
+                        >
+                          <div className="font-bold text-amber-300">Fungsi</div>
+                          <div className="mt-1">
+                            Menjalankan flow kirim WhatsApp yang sama seperti tombol kirim utama,
+                            tetapi khusus untuk debug. Hasilnya menampilkan payload, respons
+                            gateway, dan status tiap tahap tanpa mengubah <code>IsWASent</code>.
+                          </div>
+                          <div className="mt-3 font-bold text-amber-300">Cara Pakai</div>
+                          <div className="mt-1">
+                            1. Simpan dulu perubahan dan pastikan preview audio sudah tersedia.
+                            <br />
+                            2. Pilih <code>Simulasi</code> untuk cek payload tanpa kirim ke gateway.
+                            <br />
+                            3. Pilih <code>Live</code> untuk kirim sungguhan dan lihat error/sukses
+                            gateway yang sebenarnya.
+                            <br />
+                            4. Saat mode <code>Live</code>, sistem akan meminta konfirmasi sebelum
+                            mengirim.
+                          </div>
+                        </div>
+                      </div>
                       <button
                         type="button"
                         onClick={() => void handleSendTestText()}
@@ -1076,6 +1385,109 @@ export default function TRBirthdayPrayPage() {
                     </div>
                   )}
                 </div>
+
+                {isAdminDebugUser && debugSendResult?.data ? (
+                  <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">Hasil Debug Send WA</h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Jalur ini memakai flow gateway yang sama, tetapi tidak mengubah
+                          `IsWASent`.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-wide">
+                        <span
+                          className={`rounded-full px-3 py-1 ${
+                            debugSendResult.data.mode === "live"
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {debugSendResult.data.mode === "live" ? "live" : "dry run"}
+                        </span>
+                        <span className="rounded-full bg-sky-100 px-3 py-1 text-sky-700">
+                          persist skipped: {debugSendResult.data.persistSkipped ? "yes" : "no"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          Normalized Phone
+                        </div>
+                        <div className="mt-2 text-sm font-semibold text-slate-800">
+                          {debugSendResult.data.normalizedPhone || "-"}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 md:col-span-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          Effective Audio URL
+                        </div>
+                        <div className="mt-2 break-all text-sm font-medium text-slate-800">
+                          {debugSendResult.data.effectiveAudioUrl || "-"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                      <span className="font-semibold text-slate-900">Final Summary:</span>{" "}
+                      {debugSendResult.data.finalSummary || debugSendResult.message || "-"}
+                    </div>
+
+                    <div className="mt-4 grid gap-4">
+                      {debugStageCards.map((item) => renderDebugStageCard(item.title, item.stage))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {isAdminDebugUser && phoneNumbersResult ? (
+                  <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">Hasil Get Phones</h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Payload gateway ditampilkan apa adanya dan bisa langsung dicopy.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                            phoneNumbersResult.success
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-rose-100 text-rose-700"
+                          }`}
+                        >
+                          {phoneNumbersResult.success ? "success" : "failed"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyPhoneNumbersResult()}
+                          disabled={!phoneNumbersResult.rawJson || phoneNumbersResult.rawJson === "-"}
+                          className="inline-flex items-center gap-2 rounded-full bg-slate-800 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-slate-200 transition hover:bg-slate-900 disabled:opacity-60"
+                        >
+                          <Copy className="h-3 w-3" />
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                      <span className="font-semibold text-slate-900">Message:</span>{" "}
+                      {phoneNumbersResult.message || "-"}
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Raw Gateway Data
+                      </div>
+                      <pre className="max-h-72 overflow-auto rounded-2xl bg-slate-950 px-4 py-4 text-[11px] leading-5 text-slate-100">
+                        {phoneNumbersResult.rawJson}
+                      </pre>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-900/80 bg-[#0b141a] shadow-[0_22px_60px_rgba(15,23,42,0.25)]">
                   <div className="bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_35%),linear-gradient(180deg,#0b141a,#111b21)] px-5 py-5">
@@ -1356,6 +1768,20 @@ export default function TRBirthdayPrayPage() {
           });
         }}
         onClose={() => setShowLeaveConfirm(false)}
+      />
+      <ConfirmDialog
+        open={showDebugSendConfirm}
+        title="Kirim Debug Send WA Live?"
+        message={`Akan mengirim WhatsApp sungguhan ke ${pageData?.noHPDonatur || "-"} dalam mode Live. Jalur debug ini tidak akan mengubah status IsWASent. Lanjutkan?`}
+        confirmLabel="Ya, Kirim Live"
+        cancelLabel="Batal"
+        confirmClassName="bg-rose-600 hover:bg-rose-700"
+        loading={isDebugSendingWA}
+        onConfirm={() => {
+          setShowDebugSendConfirm(false);
+          void runDebugSendWhatsApp(true);
+        }}
+        onClose={() => setShowDebugSendConfirm(false)}
       />
     </div>
   );

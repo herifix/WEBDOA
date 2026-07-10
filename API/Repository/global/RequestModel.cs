@@ -210,6 +210,8 @@ public class RequestSendWhatsApp
     public long idDonatur { get; set; }
     public int? year { get; set; }
     public string? messageText { get; set; }
+    public bool? runLive { get; set; }
+    public bool? includeFollowUpVoice { get; set; }
 }
 
 # endregion

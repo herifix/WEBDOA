@@ -65,6 +65,30 @@ namespace API.Service.Transaction
             this.configuration = configuration;
         }
 
+        private sealed class WhatsAppSendExecutionOptions
+        {
+            public bool RunLive { get; init; }
+            public bool PersistWASent { get; init; }
+            public bool IncludeFollowUpVoice { get; init; } = true;
+            public bool ReturnDebugResult { get; init; }
+        }
+
+        private sealed class WhatsAppDebugStageResult
+        {
+            public string StageName { get; set; } = "";
+            public bool Attempted { get; set; }
+            public bool Success { get; set; }
+            public bool Skipped { get; set; }
+            public string SkippedReason { get; set; } = "";
+            public string Message { get; set; } = "";
+            public string TemplateName { get; set; } = "";
+            public string LanguageCode { get; set; } = "";
+            public object PayloadSummary { get; set; } = "";
+            public int? StatusCode { get; set; }
+            public string ResponseBody { get; set; } = "";
+            public object GatewayResponse { get; set; } = "";
+        }
+
         public ResponseData<List<ResponseModelDashboardBirthday>> GetUpcomingBirthdayDashboard(DateTime anchorDate)
         {
             DateTime effectiveAnchorDate = anchorDate.Date;
@@ -1172,7 +1196,46 @@ CreateNoWindow = true
 
         public async Task<ResponseData<object>> SendWhatsApp(long idDonatur, int? year = null)
         {
+            return await ExecuteWhatsAppSendAsync(
+                idDonatur,
+                year,
+                new WhatsAppSendExecutionOptions
+                {
+                    RunLive = true,
+                    PersistWASent = true,
+                    IncludeFollowUpVoice = true,
+                    ReturnDebugResult = false
+                });
+        }
+
+        public async Task<ResponseData<object>> DebugSendWhatsApp(
+            long idDonatur,
+            int? year = null,
+            bool? runLive = null,
+            bool? includeFollowUpVoice = null)
+        {
+            return await ExecuteWhatsAppSendAsync(
+                idDonatur,
+                year,
+                new WhatsAppSendExecutionOptions
+                {
+                    RunLive = ResolveDebugRunLive(runLive),
+                    PersistWASent = false,
+                    IncludeFollowUpVoice = includeFollowUpVoice ?? true,
+                    ReturnDebugResult = true
+                });
+        }
+
+        private async Task<ResponseData<object>> ExecuteWhatsAppSendAsync(
+            long idDonatur,
+            int? year,
+            WhatsAppSendExecutionOptions options)
+        {
             int targetYear = year ?? DateTime.Today.Year;
+            var mainTemplateStage = CreateStageResult("main_template");
+            var followUpVoiceStage = CreateStageResult("follow_up_voice_template");
+            string normalizedPhoneNumber = "";
+            string effectiveAudioUrl = "";
 
             try
             {
@@ -1184,21 +1247,41 @@ CreateNoWindow = true
 
                 if (prayData == null || prayData.id_donatur <= 0)
                 {
-                    return new ResponseData<object> { success = false, message = "Data birthday pray tidak ditemukan." };
+                    return CreateSendResponse(
+                        false,
+                        "Data birthday pray tidak ditemukan.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 if (string.IsNullOrWhiteSpace(prayData.noHPDonatur))
                 {
-                    return new ResponseData<object> { success = false, message = "Nomor HP donatur tidak tersedia." };
+                    return CreateSendResponse(
+                        false,
+                        "Nomor HP donatur tidak tersedia.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 if (string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = "Rekaman audio belum tersedia. Simpan pesan suara terlebih dahulu sebelum kirim WhatsApp."
-                    };
+                    return CreateSendResponse(
+                        false,
+                        "Rekaman audio belum tersedia. Simpan pesan suara terlebih dahulu sebelum kirim WhatsApp.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
@@ -1207,19 +1290,32 @@ CreateNoWindow = true
 
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
                 {
-                    return new ResponseData<object> { success = false, message = "WhatsApp gateway URL belum diatur." };
+                    return CreateSendResponse(
+                        false,
+                        "WhatsApp gateway URL belum diatur.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 string effectiveTemplateLink = await EnsureWhatsAppMp4VoiceAsync(prayData);
+                effectiveAudioUrl = effectiveTemplateLink;
                 bool requiresPublicBaseUrl = StoredAudioRequiresPublicBaseUrl(prayData.pathPesanSuara);
 
                 if (requiresPublicBaseUrl && string.IsNullOrWhiteSpace(publicBaseUrl))
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = "Runtime.PublicBaseUrl belum diatur untuk mengirim pesan suara."
-                    };
+                    return CreateSendResponse(
+                        false,
+                        "Runtime.PublicBaseUrl belum diatur untuk mengirim pesan suara.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 if (requiresPublicBaseUrl)
@@ -1227,21 +1323,29 @@ CreateNoWindow = true
                     var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
                     if (!publicBaseUrlValidation.isValid)
                     {
-                        return new ResponseData<object>
-                        {
-                            success = false,
-                            message = $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}"
-                        };
+                        return CreateSendResponse(
+                            false,
+                            $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}",
+                            "",
+                            options,
+                            normalizedPhoneNumber,
+                            effectiveAudioUrl,
+                            mainTemplateStage,
+                            followUpVoiceStage);
                     }
                 }
 
                 if (string.IsNullOrWhiteSpace(effectiveTemplateLink))
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = "URL rekaman audio belum valid untuk dikirim. Periksa konfigurasi Runtime.PublicBaseUrl atau data file audio."
-                    };
+                    return CreateSendResponse(
+                        false,
+                        "URL rekaman audio belum valid untuk dikirim. Periksa konfigurasi Runtime.PublicBaseUrl atau data file audio.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 string templateName = setting.whatsappTemplateName;
@@ -1264,14 +1368,19 @@ CreateNoWindow = true
 
                 if (!templateValidation.success)
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = templateValidation.message
-                    };
+                    return CreateSendResponse(
+                        false,
+                        templateValidation.message,
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 string phoneNumber = FormatPhoneNumber(prayData.noHPDonatur);
+                normalizedPhoneNumber = phoneNumber;
 
                 using var httpClient = new HttpClient();
                 if (!string.IsNullOrWhiteSpace(gatewayToken))
@@ -1294,25 +1403,32 @@ CreateNoWindow = true
                         prayData.namaDonatur,
                         prayData.namaPendoa,
                         prayData.pesan ?? "");
+                    mainTemplateStage.TemplateName = NewTemplateName;
+                    mainTemplateStage.LanguageCode = NewTemplateLanguageCode;
+                    bool mainTemplateSuccess = await ExecuteGatewayStageAsync(
+                        httpClient,
+                        gatewayUrl,
+                        payload,
+                        mainTemplateStage,
+                        options.RunLive,
+                        "Dry run aktif. Payload template utama tidak dikirim ke gateway.");
 
-                    using var content = new StringContent(
-                        JsonSerializer.Serialize(payload),
-                        Encoding.UTF8,
-                        "application/json"
-                    );
+                    latestStatusCode = mainTemplateStage.StatusCode.HasValue
+                        ? (HttpStatusCode)mainTemplateStage.StatusCode.Value
+                        : HttpStatusCode.OK;
+                    latestResponseBody = mainTemplateStage.ResponseBody;
 
-                    using var response = await httpClient.PostAsync(gatewayUrl, content);
-                    latestStatusCode = response.StatusCode;
-                    latestResponseBody = await response.Content.ReadAsStringAsync();
-
-                    if (!response.IsSuccessStatusCode)
+                    if (!mainTemplateSuccess)
                     {
-                        return new ResponseData<object>
-                        {
-                            success = false,
-                            message = BuildGatewayErrorMessage(latestStatusCode, latestResponseBody),
-                            data = ParseGatewayResponseBody(latestResponseBody)
-                        };
+                        return CreateSendResponse(
+                            false,
+                            mainTemplateStage.Message,
+                            mainTemplateStage.GatewayResponse,
+                            options,
+                            normalizedPhoneNumber,
+                            effectiveAudioUrl,
+                            mainTemplateStage,
+                            followUpVoiceStage);
                     }
 
                     usedTemplateName = NewTemplateName;
@@ -1372,17 +1488,21 @@ CreateNoWindow = true
                             prayData.pesan ?? "",
                             bodyVariableCount);
 
-                        using var content = new StringContent(
-                            JsonSerializer.Serialize(payload),
-                            Encoding.UTF8,
-                            "application/json"
-                        );
+                        mainTemplateStage.TemplateName = candidateTemplateName;
+                        mainTemplateStage.LanguageCode = candidateLanguageCode;
+                        bool mainTemplateSuccess = await ExecuteGatewayStageAsync(
+                            httpClient,
+                            gatewayUrl,
+                            payload,
+                            mainTemplateStage,
+                            options.RunLive,
+                            "Dry run aktif. Payload template utama tidak dikirim ke gateway.");
+                        latestStatusCode = mainTemplateStage.StatusCode.HasValue
+                            ? (HttpStatusCode)mainTemplateStage.StatusCode.Value
+                            : HttpStatusCode.OK;
+                        latestResponseBody = mainTemplateStage.ResponseBody;
 
-                        using var response = await httpClient.PostAsync(gatewayUrl, content);
-                        latestStatusCode = response.StatusCode;
-                        latestResponseBody = await response.Content.ReadAsStringAsync();
-
-                        if (response.IsSuccessStatusCode)
+                        if (mainTemplateSuccess)
                         {
                             usedTemplateName = candidateTemplateName;
                             usedLanguageCode = candidateLanguageCode;
@@ -1405,17 +1525,21 @@ CreateNoWindow = true
                                     isiDoa: prayData.pesan ?? "",
                                     bodyVariableCount: bodyVariableCount);
 
-                                using var fallbackContent = new StringContent(
-                                    JsonSerializer.Serialize(fallbackPayload),
-                                    Encoding.UTF8,
-                                    "application/json"
-                                );
+                                mainTemplateStage.TemplateName = candidateTemplateName;
+                                mainTemplateStage.LanguageCode = candidateLanguageCode;
+                                bool fallbackSuccess = await ExecuteGatewayStageAsync(
+                                    httpClient,
+                                    gatewayUrl,
+                                    fallbackPayload,
+                                    mainTemplateStage,
+                                    options.RunLive,
+                                    "Dry run aktif. Payload fallback template utama tidak dikirim ke gateway.");
+                                latestStatusCode = mainTemplateStage.StatusCode.HasValue
+                                    ? (HttpStatusCode)mainTemplateStage.StatusCode.Value
+                                    : HttpStatusCode.OK;
+                                latestResponseBody = mainTemplateStage.ResponseBody;
 
-                                using var fallbackResponse = await httpClient.PostAsync(gatewayUrl, fallbackContent);
-                                latestStatusCode = fallbackResponse.StatusCode;
-                                latestResponseBody = await fallbackResponse.Content.ReadAsStringAsync();
-
-                                if (fallbackResponse.IsSuccessStatusCode)
+                                if (fallbackSuccess)
                                 {
                                     usedTemplateName = candidateTemplateName;
                                     usedLanguageCode = candidateLanguageCode;
@@ -1429,51 +1553,70 @@ CreateNoWindow = true
                                 headerTypeHint = "(tanpa header)";
                             }
 
-                            return new ResponseData<object>
-                            {
-                                success = false,
-                                message =
-                                    "Gagal mengirim template WhatsApp: parameter template tidak cocok. " +
-                                    $"Template: {candidateTemplateName}:{candidateLanguageCode}. " +
-                                    $"Header template gateway: {headerTypeHint}. " +
-                                    $"Body variable template: {bodyVariableCount}. " +
-                                    "Saran: jika template tidak punya header, kosongkan `Image Pesan` di Application Setting atau gunakan template yang punya image header. " +
-                                    $"Detail: {BuildGatewayErrorMessage(latestStatusCode, latestResponseBody)}",
-                                data = ParseGatewayResponseBody(latestResponseBody)
-                            };
+                            mainTemplateStage.TemplateName = candidateTemplateName;
+                            mainTemplateStage.LanguageCode = candidateLanguageCode;
+                            mainTemplateStage.Message =
+                                "Gagal mengirim template WhatsApp: parameter template tidak cocok. " +
+                                $"Template: {candidateTemplateName}:{candidateLanguageCode}. " +
+                                $"Header template gateway: {headerTypeHint}. " +
+                                $"Body variable template: {bodyVariableCount}. " +
+                                "Saran: jika template tidak punya header, kosongkan `Image Pesan` di Application Setting atau gunakan template yang punya image header. " +
+                                $"Detail: {BuildGatewayErrorMessage(latestStatusCode, latestResponseBody)}";
+
+                            return CreateSendResponse(
+                                false,
+                                mainTemplateStage.Message,
+                                ParseGatewayResponseBody(latestResponseBody),
+                                options,
+                                normalizedPhoneNumber,
+                                effectiveAudioUrl,
+                                mainTemplateStage,
+                                followUpVoiceStage);
                         }
 
                         if (!IsTemplateNotFoundGatewayError(latestResponseBody))
                         {
-                            return new ResponseData<object>
-                            {
-                                success = false,
-                                message = BuildGatewayErrorMessage(latestStatusCode, latestResponseBody),
-                                data = ParseGatewayResponseBody(latestResponseBody)
-                            };
+                            mainTemplateStage.TemplateName = candidateTemplateName;
+                            mainTemplateStage.LanguageCode = candidateLanguageCode;
+                            mainTemplateStage.Message = BuildGatewayErrorMessage(latestStatusCode, latestResponseBody);
+
+                            return CreateSendResponse(
+                                false,
+                                mainTemplateStage.Message,
+                                ParseGatewayResponseBody(latestResponseBody),
+                                options,
+                                normalizedPhoneNumber,
+                                effectiveAudioUrl,
+                                mainTemplateStage,
+                                followUpVoiceStage);
                         }
                     }
                 }
 
-                return new ResponseData<object>
-                {
-                    success = false,
-                    message =
-                        "Template WhatsApp tidak ditemukan atau belum disetujui. " +
-                        $"Template setting: `{templateName}`. " +
-                        $"Percobaan: {string.Join(", ", attemptedCombinations)}. " +
-                        (templateLookup.success
-                            ? "Lookup template gateway: OK. "
-                            : $"Lookup template gateway tidak tersedia ({templateLookup.statusHint}). ") +
-                        $"Template/language APPROVED tersedia: {FormatAvailableTemplateHints(availableApprovedTemplateHints)}. " +
-                        "Saran: cek `WA Template Name` dan language config (`WhatsAppGateway:TemplateLanguageCode` / `TemplateLanguageFallbacks`). " +
-                        $"Response terakhir ({latestStatusCode}): {latestResponseBody}",
-                    data = ParseGatewayResponseBody(latestResponseBody)
-                };
+                mainTemplateStage.Message =
+                    "Template WhatsApp tidak ditemukan atau belum disetujui. " +
+                    $"Template setting: `{templateName}`. " +
+                    $"Percobaan: {string.Join(", ", attemptedCombinations)}. " +
+                    (templateLookup.success
+                        ? "Lookup template gateway: OK. "
+                        : $"Lookup template gateway tidak tersedia ({templateLookup.statusHint}). ") +
+                    $"Template/language APPROVED tersedia: {FormatAvailableTemplateHints(availableApprovedTemplateHints)}. " +
+                    "Saran: cek `WA Template Name` dan language config (`WhatsAppGateway:TemplateLanguageCode` / `TemplateLanguageFallbacks`). " +
+                    $"Response terakhir ({latestStatusCode}): {latestResponseBody}";
+
+                return CreateSendResponse(
+                    false,
+                    mainTemplateStage.Message,
+                    ParseGatewayResponseBody(latestResponseBody),
+                    options,
+                    normalizedPhoneNumber,
+                    effectiveAudioUrl,
+                    mainTemplateStage,
+                    followUpVoiceStage);
 
             TemplateMessageSent:
 
-                if (prayData.id_TRBirthdayPray > 0)
+                if (options.PersistWASent && options.RunLive && prayData.id_TRBirthdayPray > 0)
                 {
                     repo.MarkWASent(prayData.id_TRBirthdayPray, conn);
                 }
@@ -1481,71 +1624,128 @@ CreateNoWindow = true
                 // Template lama/fallback: selesai setelah template sukses tanpa kirim media follow-up.
                 if (!useNewTemplateFormat)
                 {
-                    return new ResponseData<object>
-                    {
-                        success = true,
-                        message = $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}).",
-                        data = ParseGatewayResponseBody(latestResponseBody)
-                    };
+                    followUpVoiceStage.Skipped = true;
+                    followUpVoiceStage.Success = true;
+                    followUpVoiceStage.Message = "Follow-up voice hanya dikirim untuk template baru.";
+                    followUpVoiceStage.SkippedReason = "legacy_template_flow";
+
+                    return CreateSendResponse(
+                        true,
+                        $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}).",
+                        ParseGatewayResponseBody(latestResponseBody),
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
+                if (!options.IncludeFollowUpVoice)
+                {
+                    followUpVoiceStage.Skipped = true;
+                    followUpVoiceStage.Success = true;
+                    followUpVoiceStage.Message = "Follow-up voice dilewati sesuai opsi request debug.";
+                    followUpVoiceStage.SkippedReason = "disabled_by_request";
+
+                    return CreateSendResponse(
+                        true,
+                        $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}). Follow-up voice dilewati.",
+                        ParseGatewayResponseBody(latestResponseBody),
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 if (string.IsNullOrWhiteSpace(prayData.namaDonatur))
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = "Nama donatur wajib diisi untuk template doa suara."
-                    };
+                    followUpVoiceStage.Message = "Nama donatur wajib diisi untuk template doa suara.";
+
+                    return CreateSendResponse(
+                        false,
+                        followUpVoiceStage.Message,
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
                 if (string.IsNullOrWhiteSpace(effectiveTemplateLink) ||
                     !Uri.TryCreate(effectiveTemplateLink, UriKind.Absolute, out _))
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = "URL rekaman suara tidak valid untuk header template doa."
-                    };
+                    followUpVoiceStage.Message = "URL rekaman suara tidak valid untuk header template doa.";
+
+                    return CreateSendResponse(
+                        false,
+                        followUpVoiceStage.Message,
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(3));
+                if (options.RunLive)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                }
 
                 var voiceTemplatePayload = BuildVoiceTemplatePayload(
                     phoneNumber,
                     prayData.namaDonatur,
                     effectiveTemplateLink);
 
-                using var voiceTemplateContent = new StringContent(
-                    JsonSerializer.Serialize(voiceTemplatePayload),
-                    Encoding.UTF8,
-                    "application/json"
-                );
+                followUpVoiceStage.TemplateName = VoiceTemplateName;
+                followUpVoiceStage.LanguageCode = VoiceTemplateLanguageCode;
+                bool followUpVoiceSuccess = await ExecuteGatewayStageAsync(
+                    httpClient,
+                    gatewayUrl,
+                    voiceTemplatePayload,
+                    followUpVoiceStage,
+                    options.RunLive,
+                    "Dry run aktif. Payload follow-up voice template tidak dikirim ke gateway.");
 
-                using var voiceTemplateResponse = await httpClient.PostAsync(gatewayUrl, voiceTemplateContent);
-                string voiceTemplateResponseBody = await voiceTemplateResponse.Content.ReadAsStringAsync();
-
-                if (!voiceTemplateResponse.IsSuccessStatusCode)
+                if (!followUpVoiceSuccess)
                 {
-                    return new ResponseData<object>
-                    {
-                        success = false,
-                        message = BuildGatewayErrorMessage(voiceTemplateResponse.StatusCode, voiceTemplateResponseBody),
-                        data = ParseGatewayResponseBody(voiceTemplateResponseBody)
-                    };
+                    return CreateSendResponse(
+                        false,
+                        followUpVoiceStage.Message,
+                        followUpVoiceStage.GatewayResponse,
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
                 }
 
-                return new ResponseData<object>
-                {
-                    success = true,
-                    message =
-                        $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}) " +
-                        $"dan template follow-up {VoiceTemplateName} berhasil dikirim.",
-                    data = ParseGatewayResponseBody(voiceTemplateResponseBody)
-                };
+                return CreateSendResponse(
+                    true,
+                    $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}) " +
+                        $"dan template follow-up {VoiceTemplateName} berhasil diproses.",
+                    followUpVoiceStage.GatewayResponse,
+                    options,
+                    normalizedPhoneNumber,
+                    effectiveAudioUrl,
+                    mainTemplateStage,
+                    followUpVoiceStage);
             }
             catch (Exception ex)
             {
-                return new ResponseData<object> { success = false, message = ex.Message };
+                mainTemplateStage.Message = ex.Message;
+
+                return CreateSendResponse(
+                    false,
+                    ex.Message,
+                    "",
+                    options,
+                    normalizedPhoneNumber,
+                    effectiveAudioUrl,
+                    mainTemplateStage,
+                    followUpVoiceStage);
             }
             finally
             {
@@ -1554,7 +1754,7 @@ CreateNoWindow = true
             }
         }
 
-        public async Task<ResponseData<object>> SendTestWhatsAppText(long idDonatur, int? year = null, string? messageText = null)
+        public async Task<ResponseData<object>> SendTestWhatsAppText(long idDonatur, int? year = null, string? messageText = null, bool? runLive = null)
         {
             int targetYear = year ?? DateTime.Today.Year;
             try
@@ -1596,13 +1796,18 @@ CreateNoWindow = true
                     content = testMessage
                 };
 
-                return await PostToGateway(gatewayUrl, gatewayToken, payload);
+                return await PostToGateway(
+                    gatewayUrl,
+                    gatewayToken,
+                    payload,
+                    ResolveDebugRunLive(runLive),
+                    "Dry run aktif. Payload Test Text tidak dikirim ke gateway.");
             }
             catch (Exception ex) { return new ResponseData<object> { success = false, message = ex.Message }; }
             finally { if (conn.State == ConnectionState.Open) conn.Close(); }
         }
 
-        public async Task<ResponseData<object>> SendTestWhatsAppVoice(long idDonatur, int? year = null)
+        public async Task<ResponseData<object>> SendTestWhatsAppVoice(long idDonatur, int? year = null, bool? runLive = null)
         {
             int targetYear = year ?? DateTime.Today.Year;
             try
@@ -1636,8 +1841,19 @@ CreateNoWindow = true
                     media_url = audioUrl
                 };
 
-                var sendResult = await PostToGateway(gatewayUrl, gatewayToken, payload);
+                bool effectiveRunLive = ResolveDebugRunLive(runLive);
+                var sendResult = await PostToGateway(
+                    gatewayUrl,
+                    gatewayToken,
+                    payload,
+                    effectiveRunLive,
+                    "Dry run aktif. Payload Test Voice tidak dikirim ke gateway.");
                 if (!sendResult.success)
+                {
+                    return sendResult;
+                }
+
+                if (!effectiveRunLive)
                 {
                     return sendResult;
                 }
@@ -1811,13 +2027,130 @@ CreateNoWindow = true
             return cleaned;
         }
 
-        private async Task<ResponseData<object>> PostToGateway(string url, string token, object payload)
+        private bool ResolveDebugRunLive(bool? runLive)
         {
+            if (runLive.HasValue)
+            {
+                return runLive.Value;
+            }
+
+            bool defaultDryRun = configuration.GetValue<bool>("WhatsAppGateway:DryRun");
+            return !defaultDryRun;
+        }
+
+        private WhatsAppDebugStageResult CreateStageResult(string stageName)
+        {
+            return new WhatsAppDebugStageResult
+            {
+                StageName = stageName,
+                PayloadSummary = ""
+            };
+        }
+
+        private ResponseData<object> CreateSendResponse(
+            bool success,
+            string message,
+            object data,
+            WhatsAppSendExecutionOptions options,
+            string normalizedPhoneNumber,
+            string effectiveAudioUrl,
+            WhatsAppDebugStageResult mainTemplateStage,
+            WhatsAppDebugStageResult followUpVoiceStage)
+        {
+            if (!options.ReturnDebugResult)
+            {
+                return new ResponseData<object>
+                {
+                    success = success,
+                    message = message,
+                    data = data
+                };
+            }
+
+            return new ResponseData<object>
+            {
+                success = success,
+                message = message,
+                data = new
+                {
+                    mode = options.RunLive ? "live" : "dry_run",
+                    normalizedPhone = normalizedPhoneNumber,
+                    effectiveAudioUrl,
+                    mainTemplate = mainTemplateStage,
+                    followUpVoiceTemplate = followUpVoiceStage,
+                    persistSkipped = !options.PersistWASent,
+                    finalSummary = message
+                }
+            };
+        }
+
+        private async Task<bool> ExecuteGatewayStageAsync(
+            HttpClient httpClient,
+            string gatewayUrl,
+            object payload,
+            WhatsAppDebugStageResult stage,
+            bool runLive,
+            string dryRunMessage)
+        {
+            string serializedPayload = JsonSerializer.Serialize(payload);
+            stage.Attempted = true;
+            stage.PayloadSummary = ParseGatewayResponseBody(serializedPayload);
+
+            if (!runLive)
+            {
+                stage.Success = true;
+                stage.Skipped = true;
+                stage.SkippedReason = "dry_run";
+                stage.Message = dryRunMessage;
+                stage.GatewayResponse = new
+                {
+                    mode = "dry_run",
+                    note = dryRunMessage
+                };
+                stage.ResponseBody = serializedPayload;
+                return true;
+            }
+
+            using var content = new StringContent(serializedPayload, Encoding.UTF8, "application/json");
+            using var response = await httpClient.PostAsync(gatewayUrl, content);
+            stage.StatusCode = (int)response.StatusCode;
+            stage.ResponseBody = await response.Content.ReadAsStringAsync();
+            stage.GatewayResponse = ParseGatewayResponseBody(stage.ResponseBody);
+            stage.Success = response.IsSuccessStatusCode;
+            stage.Message = response.IsSuccessStatusCode
+                ? "Gateway menerima request."
+                : BuildGatewayErrorMessage(response.StatusCode, stage.ResponseBody);
+
+            return stage.Success;
+        }
+
+        private async Task<ResponseData<object>> PostToGateway(
+            string url,
+            string token,
+            object payload,
+            bool runLive,
+            string dryRunMessage)
+        {
+            string serializedPayload = JsonSerializer.Serialize(payload);
+            if (!runLive)
+            {
+                return new ResponseData<object>
+                {
+                    success = true,
+                    message = dryRunMessage,
+                    data = new
+                    {
+                        mode = "dry_run",
+                        payload = ParseGatewayResponseBody(serializedPayload)
+                    }
+                };
+            }
+
             using var client = new HttpClient();
             if (!string.IsNullOrWhiteSpace(token))
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var content = new StringContent(serializedPayload, Encoding.UTF8, "application/json");
             using var response = await client.PostAsync(url, content);
             string body = await response.Content.ReadAsStringAsync();
 
@@ -2596,6 +2929,13 @@ CreateNoWindow = true
                     if (code.Equals("WindowClosed", StringComparison.OrdinalIgnoreCase))
                     {
                         return "Jendela chat 24 jam sudah lewat. Wajib kirim pesan template terlebih dahulu.";
+                    }
+
+                    if (code.Equals("133010", StringComparison.OrdinalIgnoreCase) ||
+                        code.Equals("PhoneNotRegistered", StringComparison.OrdinalIgnoreCase) ||
+                        originalMessage.Contains("Account not registered", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "Nomor WhatsApp bisnis pengirim belum terdaftar atau belum sinkron di gateway/WhatsApp Business Platform.";
                     }
 
                     if (code.Equals("NotFound", StringComparison.OrdinalIgnoreCase) &&

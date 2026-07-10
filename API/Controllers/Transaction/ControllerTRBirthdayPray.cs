@@ -80,6 +80,17 @@ namespace API.Controllers
             return await service.SendWhatsApp(bodyRequest.idDonatur, bodyRequest.year);
         }
 
+        [HttpPost]
+        [Route("Transaction/TRBirthdayPray/DebugSendWhatsApp")]
+        public async Task<ResponseData<object>> DebugSendWhatsApp([FromBody] RequestSendWhatsApp bodyRequest)
+        {
+            return await service.DebugSendWhatsApp(
+                bodyRequest.idDonatur,
+                bodyRequest.year,
+                bodyRequest.runLive,
+                bodyRequest.includeFollowUpVoice);
+        }
+
         [HttpGet]
         [Route("Transaction/TRBirthdayPray/SendNextTodayWhatsApp")]
         public async Task<ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>> SendNextTodayWhatsApp()
@@ -91,14 +102,18 @@ namespace API.Controllers
         [Route("Transaction/TRBirthdayPray/SendTestWhatsAppText")]
         public async Task<ResponseData<object>> SendTestWhatsAppText([FromBody] RequestSendWhatsApp bodyRequest)
         {
-            return await service.SendTestWhatsAppText(bodyRequest.idDonatur, bodyRequest.year, bodyRequest.messageText);
+            return await service.SendTestWhatsAppText(
+                bodyRequest.idDonatur,
+                bodyRequest.year,
+                bodyRequest.messageText,
+                bodyRequest.runLive);
         }
 
         [HttpPost]
         [Route("Transaction/TRBirthdayPray/SendTestWhatsAppVoice")]
         public async Task<ResponseData<object>> SendTestWhatsAppVoice([FromBody] RequestSendWhatsApp bodyRequest)
         {
-            return await service.SendTestWhatsAppVoice(bodyRequest.idDonatur, bodyRequest.year);
+            return await service.SendTestWhatsAppVoice(bodyRequest.idDonatur, bodyRequest.year, bodyRequest.runLive);
         }
 
         [HttpGet]

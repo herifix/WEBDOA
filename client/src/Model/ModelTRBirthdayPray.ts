@@ -112,6 +112,37 @@ export interface TRBirthdayPrayWhatsAppDeliveryStatusResponse {
   data?: TRBirthdayPrayWhatsAppDeliveryStatusData;
 }
 
+export interface TRBirthdayPrayDebugSendStage {
+  stageName: string;
+  attempted: boolean;
+  success: boolean;
+  skipped: boolean;
+  skippedReason: string;
+  message: string;
+  templateName: string;
+  languageCode: string;
+  payloadSummary?: unknown;
+  statusCode?: number | null;
+  responseBody: string;
+  gatewayResponse?: unknown;
+}
+
+export interface TRBirthdayPrayDebugSendData {
+  mode: "dry_run" | "live";
+  normalizedPhone: string;
+  effectiveAudioUrl: string;
+  mainTemplate: TRBirthdayPrayDebugSendStage;
+  followUpVoiceTemplate: TRBirthdayPrayDebugSendStage;
+  persistSkipped: boolean;
+  finalSummary: string;
+}
+
+export interface TRBirthdayPrayDebugSendResponse {
+  success: boolean;
+  message: string;
+  data?: TRBirthdayPrayDebugSendData;
+}
+
 export interface VoiceRecordingUploadResult {
   id: number;
   provider: string;
