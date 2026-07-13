@@ -96,6 +96,7 @@ IF @sendTime IS NULL
 BEGIN
     SELECT TOP 0
         CAST(0 AS BIGINT) AS id_TRBirthdayPray,
+        CAST(0 AS BIGINT) AS id_donatur,
         CAST(0 AS BIGINT) AS id_pendoa,
         CAST('' AS varchar(255)) AS namaDonatur,
         CAST('' AS varchar(30)) AS noHPDonatur,
@@ -109,6 +110,7 @@ END;
 
 SELECT
     t.id_TRBirthdayPray,
+    ISNULL(d.id_donatur, 0) AS id_donatur,
     ISNULL(t.id_pendoa, 0) AS id_pendoa,
     ISNULL(t.Nama, '') AS namaDonatur,
     ISNULL(d.NoHP, '') AS noHPDonatur,
@@ -124,6 +126,7 @@ LEFT JOIN Pendoa p
     ON p.id_pendoa = t.id_pendoa
 WHERE CAST(t.BirthdayDate AS date) = CAST(@runAt AS date)
   AND CAST(@runAt AS time) >= @sendTime
+  AND ISNULL(t.IsWASent, 0) = 0
   AND NOT EXISTS (
       SELECT 1
       FROM dbo.TRBirthdayPrayWASendLog log

@@ -20,7 +20,9 @@ export default function ApplicationSettingPage() {
   const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
   const [msgImagePreviewUrl, setMsgImagePreviewUrl] = useState("");
   const [whatsappTemplateName, setWhatsappTemplateName] = useState("");
+  const [whatsappVoiceTemplateName, setWhatsappVoiceTemplateName] = useState("");
   const [whatsappGatewayToken, setWhatsappGatewayToken] = useState("");
+  const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState("");
   const [storageType, setStorageType] = useState("LocalServer");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
@@ -33,7 +35,9 @@ export default function ApplicationSettingPage() {
     setMsgLink(settingQuery.data.msgLink || "");
     setMsgImage(settingQuery.data.msgImage || "");
     setWhatsappTemplateName(settingQuery.data.whatsappTemplateName || "");
+    setWhatsappVoiceTemplateName(settingQuery.data.whatsappVoiceTemplateName || "");
     setWhatsappGatewayToken(settingQuery.data.whatsappGatewayToken || "");
+    setWhatsappPhoneNumberId(settingQuery.data.whatsappPhoneNumberId || "");
     setStorageType(settingQuery.data.storageType || "LocalServer");
     setMsgImageFile(null);
     setMsgImagePreviewUrl("");
@@ -64,7 +68,9 @@ export default function ApplicationSettingPage() {
       (settingQuery.data.msgLink || "") !== msgLink ||
       (settingQuery.data.msgImage || "") !== msgImage ||
       (settingQuery.data.whatsappTemplateName || "") !== whatsappTemplateName ||
+      (settingQuery.data.whatsappVoiceTemplateName || "") !== whatsappVoiceTemplateName ||
       (settingQuery.data.whatsappGatewayToken || "") !== whatsappGatewayToken ||
+      (settingQuery.data.whatsappPhoneNumberId || "") !== whatsappPhoneNumberId ||
       (settingQuery.data.storageType || "LocalServer") !== storageType ||
       msgImageFile !== null
     );
@@ -76,7 +82,9 @@ export default function ApplicationSettingPage() {
     settingQuery.data,
     storageType,
     whatsappGatewayToken,
+    whatsappPhoneNumberId,
     whatsappTemplateName,
+    whatsappVoiceTemplateName,
   ]);
 
   if (!permissions.canView) {
@@ -96,6 +104,21 @@ export default function ApplicationSettingPage() {
       return;
     }
 
+    if (!whatsappTemplateName.trim()) {
+      setFormError("WA Template Name wajib diisi.");
+      return;
+    }
+
+    if (!whatsappVoiceTemplateName.trim()) {
+      setFormError("WA Voice Template Name wajib diisi.");
+      return;
+    }
+
+    if (!whatsappPhoneNumberId.trim()) {
+      setFormError("WA Phone Number ID wajib diisi.");
+      return;
+    }
+
     try {
       const response = await updateMutation.mutateAsync({
         msgTemplate: msgTemplate.trim(),
@@ -103,7 +126,9 @@ export default function ApplicationSettingPage() {
         existingMsgImage: msgImage,
         msgImageFile,
         whatsappTemplateName: whatsappTemplateName.trim(),
+        whatsappVoiceTemplateName: whatsappVoiceTemplateName.trim(),
         whatsappGatewayToken: whatsappGatewayToken.trim(),
+        whatsappPhoneNumberId: whatsappPhoneNumberId.trim(),
         storageType,
       });
       setFormSuccess(response.message || "Application setting berhasil disimpan.");
@@ -191,11 +216,14 @@ export default function ApplicationSettingPage() {
                 </p>
               </div>
 
-              <label className="pt-3 text-sm font-semibold text-slate-700">WA Template Name</label>
+              <label htmlFor="whatsapp-template-name" className="pt-3 text-sm font-semibold text-slate-700">
+                WA Template Name (Main, WABA/Meta Approved)
+              </label>
               <div className="space-y-2">
                 <div className="relative">
                   <MessageSquareText className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
                   <input
+                    id="whatsapp-template-name"
                     type="text"
                     value={whatsappTemplateName}
                     onChange={(e) => setWhatsappTemplateName(e.target.value)}
@@ -204,7 +232,28 @@ export default function ApplicationSettingPage() {
                   />
                 </div>
                 <p className="text-xs text-slate-500">
-                  Nama template WhatsApp yang sudah didaftarkan di Meta.
+                  Nama template pesan utama yang sudah di-approve di WABA/Meta; payload memakai bahasa en_US.
+                </p>
+              </div>
+
+              <label htmlFor="whatsapp-voice-template-name" className="pt-3 text-sm font-semibold text-slate-700">
+                WA Voice Template Name (Audio, WABA/Meta Approved)
+              </label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <MessageSquareText className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+                  <input
+                    id="whatsapp-voice-template-name"
+                    type="text"
+                    value={whatsappVoiceTemplateName}
+                    onChange={(e) => setWhatsappVoiceTemplateName(e.target.value)}
+                    className="h-12 w-full rounded-2xl border border-amber-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    placeholder="e.g. doa_selamat_ulang_tahun"
+                    aria-describedby="whatsapp-voice-template-name-help"
+                  />
+                </div>
+                <p id="whatsapp-voice-template-name-help" className="text-xs text-slate-500">
+                  Nama template audio kedua yang sudah di-approve di WABA/Meta; payload memakai bahasa en.
                 </p>
               </div>
 
@@ -273,6 +322,28 @@ export default function ApplicationSettingPage() {
                     Hapus Gambar
                   </button>
                 </div>
+              </div>
+
+              <label htmlFor="whatsapp-phone-number-id" className="pt-3 text-sm font-semibold text-slate-700">
+                WA Phone Number ID
+              </label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+                  <input
+                    id="whatsapp-phone-number-id"
+                    type="text"
+                    value={whatsappPhoneNumberId}
+                    onChange={(e) => setWhatsappPhoneNumberId(e.target.value)}
+                    autoComplete="off"
+                    className="h-12 w-full rounded-2xl border border-amber-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    placeholder="WhatsApp phone number ID dari gateway"
+                    aria-describedby="whatsapp-phone-number-id-help"
+                  />
+                </div>
+                <p id="whatsapp-phone-number-id-help" className="text-xs text-slate-500">
+                  ID pengirim WhatsApp yang dikirim bersama setiap payload gateway birthday pray.
+                </p>
               </div>
 
               <label className="pt-3 text-sm font-semibold text-slate-700">WA Gateway Token</label>

@@ -38,7 +38,9 @@ export async function updateApplicationSetting(payload: {
   existingMsgImage: string;
   msgImageFile?: File | null;
   whatsappTemplateName: string;
+  whatsappVoiceTemplateName: string;
   whatsappGatewayToken: string;
+  whatsappPhoneNumberId: string;
   storageType: string;
 }): Promise<UpdateResponse> {
   try {
@@ -47,7 +49,9 @@ export async function updateApplicationSetting(payload: {
     formData.append("msgLink", payload.msgLink);
     formData.append("existingMsgImage", payload.existingMsgImage);
     formData.append("whatsappTemplateName", payload.whatsappTemplateName);
+    formData.append("whatsappVoiceTemplateName", payload.whatsappVoiceTemplateName);
     formData.append("whatsappGatewayToken", payload.whatsappGatewayToken);
+    formData.append("whatsappPhoneNumberId", payload.whatsappPhoneNumberId);
     formData.append("storageType", payload.storageType);
 
     if (payload.msgImageFile) {

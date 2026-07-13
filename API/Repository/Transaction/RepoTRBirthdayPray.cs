@@ -17,6 +17,7 @@ internal interface iRepoTRBirthdayPray
     void Update(long idTRBirthdayPray, string pesan, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
     void UpdateVoicePath(long idTRBirthdayPray, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
     void MarkWASent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null);
+    bool TryMarkWASentFromUnsent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null);
 }
 
 public class RepoTRBirthdayPray : iRepoTRBirthdayPray
@@ -524,5 +525,18 @@ ORDER BY d.namaDonatur, d.id_donatur;";
             WHERE id_TRBirthdayPray = @idTRBirthdayPray";
 
         conn.Execute(sql, new { idTRBirthdayPray }, transaction: tran);
+    }
+
+    public bool TryMarkWASentFromUnsent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null)
+    {
+        const string sql = @"
+            UPDATE TRBirthdayPray
+            SET
+                IsWASent = 1,
+                WASentDate = GETDATE()
+            WHERE id_TRBirthdayPray = @idTRBirthdayPray
+              AND ISNULL(IsWASent, 0) = 0";
+
+        return conn.Execute(sql, new { idTRBirthdayPray }, transaction: tran) == 1;
     }
 }

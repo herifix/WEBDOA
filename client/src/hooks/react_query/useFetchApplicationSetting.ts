@@ -19,7 +19,9 @@ export function useUpdateApplicationSetting() {
       existingMsgImage: string;
       msgImageFile?: File | null;
       whatsappTemplateName: string;
+      whatsappVoiceTemplateName: string;
       whatsappGatewayToken: string;
+      whatsappPhoneNumberId: string;
       storageType: string;
     }) => updateApplicationSetting(payload),
   });

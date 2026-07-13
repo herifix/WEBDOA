@@ -201,7 +201,9 @@ public class RequestUpdateApplicationSetting
     public string? existingMsgImage { get; set; }
     public IFormFile? msgImageFile { get; set; }
     public string? whatsappTemplateName { get; set; }
+    public string? whatsappVoiceTemplateName { get; set; }
     public string? whatsappGatewayToken { get; set; }
+    public string? whatsappPhoneNumberId { get; set; }
     public string? storageType { get; set; }
 }
 

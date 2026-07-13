@@ -5,6 +5,40 @@ cluster in `WEB DOA`. Use it as the first stop for tracing, modifying, and
 reviewing dashboard, transaction, voice handoff, WhatsApp send/status/debug,
 and autosend behavior.
 
+> **Living knowledge base:** Read this file before changing the module. In the
+> same task, record code-verified changes and proven bug findings here so the
+> next investigation starts from evidence rather than rediscovering behavior.
+
+## 0. Knowledge Base Charter
+
+This is the operational memory for the birthday-pray and WhatsApp send system.
+Code and runtime evidence take precedence over chat recollection, assumptions,
+or provider folklore.
+
+Before changing or diagnosing a send flow, answer these questions:
+
+1. Which path is affected: manual send, test text, test voice, service-driven
+   auto-send, or `WhatsAppSchedulerWorker`?
+2. Is the symptom application logic, configuration/storage, data, or a
+   downstream gateway/Meta/provider condition?
+3. What source-of-truth path, persisted state, and side effects are involved?
+4. What regression guard prevents this exact problem from returning?
+
+### Learning boundaries
+
+- Learn only from source inspection, reproducible runtime evidence, approved
+  behavior changes, or documented provider responses. Label unproven ideas as
+  hypotheses; never promote them to rules.
+- A learned note must state the trace, confirmed condition or root cause, safe
+  prevention rule, verification level, and date.
+- Never store donor PII, gateway tokens, cookies, credentials, request headers,
+  or full provider payloads. Mask values when an identifier is needed.
+- A knowledge-base note guides future work but does not authorize a behavior
+  change; root guardrails and explicit user scope still control code edits.
+- Re-check drift-prone provider behavior, including response shapes,
+  registration state, and media-fetch requirements, before relying on an older
+  note.
+
 ## 1. Scope And Current Source Of Truth
 
 This module cluster includes:
@@ -43,7 +77,7 @@ Check these files first before making changes:
 | Dashboard | `/dashboard` | `client/src/Pages/Dashboard.tsx` | Loads grouped birthday window from `GetDashboard`. |
 | Birthday pray detail | `/transaksi-birthday-pray/:idDonatur` | `client/src/Pages/Transaction/TRBirthdayPray.tsx` | Main edit/save/send/debug screen. |
 | WhatsApp scheduler tool | `/tools-whatsapp-schedule` | `client/src/Pages/Tools/WhatsAppSchedule.tsx` | Controls send time and active flag. |
-| Application setting tool | `/tools-application-setting` | `client/src/Pages/Tools/ApplicationSetting.tsx` | Controls template, storage type, link, image, and gateway token fields. |
+| Application setting tool | `/tools-application-setting` | `client/src/Pages/Tools/ApplicationSetting.tsx` | Controls the WABA main/voice template names, storage type, link, image, gateway token, and WhatsApp sender phone-number ID fields. |
 
 ### Form IDs and permission anchors
 
@@ -104,7 +138,8 @@ Check these files first before making changes:
   data used during save and send flows.
 - `RepoApplicationSetting` reads and upserts `MsProg`, which stores
   `MsgTemplate`, `MsgLink`, `MsgImage`, `MsgWA_TemplateName`,
-  `MsgWA_Token`, and `StorageType`.
+  `MsgWA_VoiceTemplateName`, `MsgWA_Token`, `MsgWA_PhoneNumberId`, and
+  `StorageType`.
 - `ServiceVoiceStorage` and `RepoVoiceRecording` own uploaded-audio storage,
   metadata persistence, signed/public playback URL resolution, and provider
   switching between `LocalServer` and `GoogleCloud`.
@@ -200,14 +235,17 @@ Check these files first before making changes:
    audio, or invalid template inputs.
 2. `SendWhatsApp` loads the latest detail row plus current application setting.
 3. The service validates phone number, audio presence, gateway URL, template
-   data, and public-base-URL requirements.
+   data, configured WhatsApp sender phone-number ID, the pendoa's international
+   phone number, and public-base-URL requirements.
 4. `EnsureWhatsAppMp4VoiceAsync` prepares a delivery-safe media URL and
    conversion output when needed.
-5. For the new template path, the service sends the main template first, calls
-   `repo.MarkWASent(...)` after template success, waits briefly, then sends the
-   follow-up voice template.
-6. For the legacy/fallback template path, the flow ends after the successful
-   template send without the follow-up voice template.
+5. A live `SendWhatsApp` attempt marks `IsWASent` before gateway validation,
+   media conversion, or HTTP delivery; this status records that the procedure
+   started and does not block a manual resend.
+6. The service sends the WABA-approved `MsgWA_TemplateName` first with language
+   `en_US`, waits briefly, then sends `MsgWA_VoiceTemplateName` as the audio
+   follow-up with language `en`. There is no legacy template, catalog lookup,
+   fallback branch, or hardcoded runtime template name in this procedure.
 
 ### 4.7 Test send, media debug, and delivery-status lookup
 
@@ -240,8 +278,9 @@ by assumption:
   This path finds one complete unsent candidate for today after 05:00 and then
   reuses the main `SendWhatsApp` flow.
 - `WhatsAppSchedulerWorker` is the background worker path.
-  It reads due items from `RepoWhatsAppSchedule.GetDueDispatches(DateTime.Now)`
-  and logs each attempt into `TRBirthdayPrayWASendLog`.
+  It reads unsent due items from `RepoWhatsAppSchedule.GetDueDispatches(DateTime.Now)`,
+  calls `ServiceTRBirthdayPray.SendScheduledWhatsApp`, and logs each attempt
+  into `TRBirthdayPrayWASendLog`.
 
 ### 4.10 Scheduler setting flow
 
@@ -249,8 +288,8 @@ by assumption:
 2. `RepoWhatsAppSchedule` auto-creates `WhatsAppScheduleSetting` and
    `TRBirthdayPrayWASendLog` if missing.
 3. The worker dispatches only when `IsActive = 1`, the run time is past
-   `SendTime`, and there is no prior successful log row for the same
-   `id_TRBirthdayPray` and birthday date.
+   `SendTime`, `IsWASent = 0`, and there is no prior successful log row for the
+   same `id_TRBirthdayPray` and birthday date.
 
 ## 5. Stable Rules / Sharp Edges
 
@@ -287,6 +326,26 @@ by assumption:
   `SendWhatsApp` can mark `TRBirthdayPray.IsWASent`,
   while `WhatsAppSchedulerWorker` writes `TRBirthdayPrayWASendLog`.
   Do not assume the log table is a mirror of `IsWASent`.
+- `MsgWA_PhoneNumberId` is the non-secret sender ID used by
+  `ServiceTRBirthdayPray` gateway payloads. Keep the field as
+  `whatsapp_phone_number_id` directly after `message_type` in those payloads.
+- `MsgWA_TemplateName` is the required WABA/Meta-approved main greeting
+  template name and always serializes with `language.code = en_US`.
+  `MsgWA_VoiceTemplateName` is the required WABA/Meta-approved second audio
+  template name and always serializes with `language.code = en`. The audio
+  setting defaults to `doa_selamat_ulang_tahun` on new and migrated `MsProg`
+  tables. A missing relevant name blocks the send before conversion or HTTP.
+- `IsWASent` records that a live send procedure started. Manual resend is
+  intentionally allowed even when it is already `1`; only scheduler selection
+  and the scheduled-send claim require `IsWASent = 0`.
+- `WhatsAppSchedulerWorker` must delegate delivery to
+  `ServiceTRBirthdayPray.SendScheduledWhatsApp`; it has no independent gateway
+  payload contract.
+- The main birthday greeting template has exactly five body parameters in this
+  order: donor name, pendoa name, link, prayer text, then pendoa phone number.
+  `Pendoa.nohp` must be a valid international value such as `+628123456789`.
+  The scheduler uses this same greeting payload; test text/voice and the
+  voice follow-up do not add this body parameter.
 - `GetDateStatuses` and `UpcomingBirthdayByTgl` are API contracts that should
   stay behaviorally stable even though current dashboard rendering is driven by
   `GetDashboard`.
@@ -305,7 +364,7 @@ by assumption:
 | Delivery status | `TRBirthdayPray.tsx` or `Dashboard.tsx` -> `GetWhatsAppDeliveryStatus` -> `ServiceTRBirthdayPray.GetWhatsAppDeliveryStatus` | Uses gateway conversation messages, not the send log table. |
 | Scheduler worker | hosted service -> `WhatsAppSchedulerWorker` -> `RepoWhatsAppSchedule.GetDueDispatches` -> gateway -> `InsertSendLog` | Separate from manual send status tracking. |
 | Scheduler config | `WhatsAppSchedule.tsx` -> schedule hook/service -> `RepoWhatsAppSchedule` | Controls send time and activation only. |
-| Application config | `ApplicationSetting.tsx` -> setting hook/service -> `RepoApplicationSetting` | Feeds template, token, image, link, and storage-type behavior. |
+| Application config | `ApplicationSetting.tsx` -> setting hook/service -> `RepoApplicationSetting` | Feeds template, token, image, link, storage type, and sender phone-number ID behavior. |
 
 ## 7. Quality Gate Checklist
 
@@ -328,24 +387,86 @@ Before shipping any TRBirthdayPray change, verify these points:
 - If touching media delivery, test the generated URL as a public downloadable
   asset, not only as a local preview.
 - If adding or renaming dependencies, update this file in the same task.
+- For a resolved defect, update the incident ledger with a prevention rule and
+  the verification evidence obtained in the task.
+- For a suspected provider failure, record the classification and evidence
+  separately from application bugs; do not change application flow merely to
+  hide an external condition.
 
-## 8. How This File Learns / Update Protocol
+## 8. Self-Learning And Update Protocol
 
-When the module changes, update this file in the same task using these rules:
+When the module changes or an investigation produces a proven finding, update
+this file in the same task. This is the module's self-learning mechanism.
 
-- Update the section that changed, not only a generic summary at the bottom.
-- Add new routes, hooks, endpoints, service helpers, config keys, and tables to
-  the dependency map when they become part of the module contract.
-- Record new sharp edges when a bug fix reveals a fragile join, fallback,
-  status distinction, or config dependency.
-- Mark whether a note is code-verified, runtime-verified, or still needs manual
-  QA.
-- If a user explicitly approves a behavior change that breaks an older rule,
-  rewrite the affected rule here instead of leaving conflicting notes.
-- Keep root `AGENTS.md` focused on cross-module guardrails.
-  Put TRBirthdayPray-specific workflow knowledge here.
+### Mandatory update triggers
 
-## 9. Change Entry Template
+Update the relevant section when any of these occur:
+
+- a route, payload field, table, config key, service helper, worker behavior,
+  or dependency changes;
+- a defect's root cause is confirmed, including a gateway/provider or public
+  media-access cause;
+- a failure mode gains a validation, fallback, diagnostic, or regression guard;
+- a manual QA, build, or runtime check exposes a verification gap a future
+  agent must know about;
+- the user approves a behavior change that supersedes an older module rule.
+
+### Required learning workflow
+
+1. **Classify** the observation as application logic, configuration/storage,
+   gateway/provider, data, or unproven hypothesis.
+2. **Trace** the UI/API/service/repository/worker route and the state that can
+   change, such as media output, `IsWASent`, or scheduler logs.
+3. **Prove** it through source, an API/runtime reproduction, public-media
+   fetch, or manual UI evidence. Record the verification level explicitly.
+4. **Prevent recurrence** with one actionable guardrail, diagnostic order, or
+   QA/test check. Add a regression test when an appropriate seam exists;
+   otherwise add a concrete quality-gate item.
+5. **Write the learning** in the affected map/rule section and add a concise,
+   dated incident or change entry. Do not add only a generic end summary.
+
+### Verification labels
+
+Use one or more of these labels in every new entry:
+
+- **Code-verified**: traced in the current source tree.
+- **Runtime-verified**: reproduced against a running API/UI without exposing
+  secrets or donor data.
+- **Provider-confirmed**: confirmed by a gateway/Meta response; re-check before
+  treating it as permanent policy.
+- **Manual QA pending**: source/build evidence exists, but the matching UI or
+  media surface could not be exercised.
+
+## 9. Incident Ledger And Regression Playbook
+
+Start diagnosis with the listed order, then add a dated entry when a new root
+cause is proven.
+
+| Symptom / category | Diagnose first | Confirmed prevention rule |
+| --- | --- | --- |
+| `133010`, `PhoneNotRegistered`, or `Account not registered` on test text | Inspect normalized gateway error and sender/business registration state. | Treat it as sender/business registration or gateway synchronization, not a donor-number or template-path defect. `SendTestWhatsAppText` remains a real `message_type: text` probe. |
+| `WindowClosed` gateway response | Inspect the gateway error mapping and conversation-window context. | This is the 24-hour messaging-window condition; use the established template flow rather than rewriting the text payload. |
+| Meta `131053` or media upload/fetch failure | Call media debug, then verify the exact delivery URL is public, downloadable without login, and returns the intended media. | Fix public URL/storage configuration first. Do not change duration or MP3-to-MP4 behavior until reachability and content are proven. |
+| Delivery status is `UNKNOWN` | Use `GetWhatsAppDeliveryStatus?debug=true` and inspect normalized phone, message-array path, and outbound/inbound parsing counts. | Distinguish no outbound message from parsing fallback; do not infer a gateway result from `IsWASent` alone. |
+| Settings cannot persist `MsgWA_PhoneNumberId` | Confirm the additive `MsProg` column migration completed. | Return the DBA-migration error; never discard the sender ID. A blank ID blocks conversion and gateway HTTP after the live send status is recorded. |
+| Main or audio template name is blank | Inspect `MsgWA_TemplateName` and `MsgWA_VoiceTemplateName` in Application Setting. | Both names must be WABA/Meta-approved. Main uses `en_US`; audio uses `en`. The relevant stage must stop before conversion or gateway HTTP; never substitute a legacy or hardcoded template name. |
+| Main template rejects a body parameter or pendoa phone is missing | Verify `Pendoa.nohp` is normalized/valid and inspect the configured new template. | The greeting template requires exactly five body placeholders; keep pendoa validation in both Master UI and API. |
+
+### Incident entry template
+
+```md
+### YYYY-MM-DD - Incident: short symptom
+
+- Classification: application / configuration-storage / gateway-provider / data
+- Symptom and scope:
+- Trace and affected state:
+- Confirmed root cause or condition:
+- Prevention / regression guard:
+- Evidence: Code-verified / Runtime-verified / Provider-confirmed / Manual QA pending
+- Source of truth:
+```
+
+## 10. Change Entry Template
 
 Use this template for future notes:
 
@@ -359,7 +480,7 @@ Use this template for future notes:
 - Verification:
 ```
 
-## 10. Recent Notes
+## 11. Recent Notes
 
 ### 2026-07-02 - Module knowledge base created
 
@@ -402,3 +523,84 @@ Use this template for future notes:
   `RepoTRBirthdayPray`, and current frontend repo search.
 - Verification: Code-verified; current frontend caller for `GetDateStatuses`
   not found in repo search.
+
+### 2026-07-13 - Configurable WhatsApp sender phone-number ID
+
+- Change: Added `MsProg.MsgWA_PhoneNumberId` and the Application Setting field
+  as the source for `whatsapp_phone_number_id` in every
+  `ServiceTRBirthdayPray` manual and test gateway payload.
+- Why: The gateway requires the sender ID to be supplied with the message.
+- Source of truth: `RepoApplicationSetting`, `ServiceTRBirthdayPray`, and
+  `ApplicationSetting.tsx`.
+- Risk / sharp edge: A blank ID blocks media conversion and gateway HTTP after
+  a live procedure has recorded `IsWASent`. Scheduler uses the shared service
+  package.
+- Verification: API and client builds passed; test-text dry-run serialized the
+  configured field. Template and voice dry-runs still require a saved test
+  recording.
+
+### 2026-07-13 - Unified main-template and audio send package
+
+- Change: Live manual send now marks `IsWASent` at procedure start, always
+  sends the configured main template followed by the configured audio template,
+  and no longer selects a legacy template path. The concrete template names are
+  defined by the later WABA-setting entry.
+  Manual resend remains valid when `IsWASent = 1`.
+- Why: The greeting and audio must be one ordered send procedure, while the
+  status records a started attempt instead of a confirmed gateway delivery.
+- Source of truth: `ServiceTRBirthdayPray`, `WhatsAppSchedulerWorker`,
+  `RepoTRBirthdayPray`, and `RepoWhatsAppSchedule`.
+- Risk / sharp edge: Scheduler dispatch remains restricted to unsent rows and
+  uses an atomic `IsWASent = 0` claim; a gateway failure after status marking
+  requires a deliberate manual resend or business-status reset.
+- Verification: Code-verified; API/client builds passed and local
+  `DebugSendWhatsApp` dry-run verified both ordered template payloads without
+  changing `IsWASent` or contacting the gateway.
+
+### 2026-07-13 - WhatsApp and TRBirthdayPray living knowledge base
+
+- Change: Expanded this rulebook with a learning charter, evidence labels,
+  mandatory update triggers, incident ledger, and regression-playbook template.
+- Why: Future fixes must retain proven workflow, configuration, and
+  gateway/provider findings instead of rediscovering the same issue.
+- Source of truth: Current module source, root voice/media guardrails, and
+  previously runtime-verified gateway diagnosis notes.
+- Risk / sharp edge: Record only proven, non-sensitive evidence. Keep a
+  provider condition separate from an application defect and re-verify
+  drift-prone gateway behavior.
+- Verification: Documentation structure, root guardrails, and prior
+  runtime-verified gateway findings were reviewed; no runtime behavior changed
+  in this documentation-only update.
+
+### 2026-07-13 - Pendoa phone as main-template parameter five
+
+- Change: Added the normalized `Pendoa.nohp` as the fifth and final parameter
+  for the birthday greeting template.
+- Why: The greeting template must expose the pendoa contact after the existing
+  donor, pendoa name, link, and prayer-text values.
+- Source of truth: `ServiceMasterPendoa` validates the stored number;
+  `ServiceTRBirthdayPray` validates it before media work and serializes it in
+  the main-template body.
+- Risk / sharp edge: Keep the video follow-up and test payloads unchanged.
+  Scheduler uses the same main-template contract.
+- Verification: Code-verified; API/client builds passed and the local
+  `DebugSendWhatsApp` dry-run confirmed five body parameters.
+
+### 2026-07-13 - Configurable WABA main and voice template names
+
+- Change: `MsProg.MsgWA_TemplateName` is now the runtime main-template name
+  with `en_US`, while the new `MsProg.MsgWA_VoiceTemplateName` is the runtime
+  audio follow-up name with `en`; the latter defaults to
+  `doa_selamat_ulang_tahun` for new and migrated settings tables.
+- Why: Template names must be managed from Master Setting and must match the
+  WABA/Meta-approved templates instead of being hardcoded in the send service.
+- Source of truth: `RepoApplicationSetting`, `ServiceTRBirthdayPray`, and
+  `ApplicationSetting.tsx`.
+- Risk / sharp edge: A blank relevant name rejects the package before media
+  conversion or gateway HTTP. Preserve the main-to-audio order and do not add a
+  legacy fallback.
+- Verification: Code-verified and Runtime-verified. API/client builds passed;
+  Application Setting GET/PUT round-tripped both names, and local
+  `DebugSendWhatsApp(runLive: false)` confirmed the main setting name with
+  `en_US`, the voice setting name with `en`, the sender ID, five main body
+  parameters, and no gateway HTTP request.

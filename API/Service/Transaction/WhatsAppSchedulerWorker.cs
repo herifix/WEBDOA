@@ -1,34 +1,21 @@
 using API.Repository.Master;
-using API.Repository.global;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Data;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace API.Service.Transaction
 {
     public class WhatsAppSchedulerWorker : BackgroundService
     {
-        private const int MaxWhatsAppPreviewLength = 1024;
-        private const int MaxConsecutiveSpaces = 4;
-        private static readonly Regex ExcessiveSpacesRegex = new(" {5,}", RegexOptions.Compiled);
-
         private readonly IServiceScopeFactory scopeFactory;
-        private readonly IConfiguration configuration;
         private readonly ILogger<WhatsAppSchedulerWorker> logger;
 
         public WhatsAppSchedulerWorker(
             IServiceScopeFactory scopeFactory,
-            IConfiguration configuration,
             ILogger<WhatsAppSchedulerWorker> logger)
         {
             this.scopeFactory = scopeFactory;
-            this.configuration = configuration;
             this.logger = logger;
         }
 
@@ -38,7 +25,7 @@ namespace API.Service.Transaction
             {
                 try
                 {
-                    await ProcessPendingDispatches(stoppingToken);
+                    await ProcessPendingDispatches();
                 }
                 catch (Exception ex)
                 {
@@ -49,37 +36,33 @@ namespace API.Service.Transaction
             }
         }
 
-        private async Task ProcessPendingDispatches(CancellationToken stoppingToken)
+        private async Task ProcessPendingDispatches()
         {
             using var scope = scopeFactory.CreateScope();
             var conn = scope.ServiceProvider.GetRequiredService<IDbConnection>();
             var repo = scope.ServiceProvider.GetRequiredService<RepoWhatsAppSchedule>();
-            var settingRepo = scope.ServiceProvider.GetRequiredService<RepoApplicationSetting>();
+            var birthdayPrayService = scope.ServiceProvider.GetRequiredService<ServiceTRBirthdayPray>();
 
             if (conn.State == ConnectionState.Closed)
+            {
                 conn.Open();
+            }
 
             try
             {
                 var dueItems = repo.GetDueDispatches(DateTime.Now, conn);
-                if (dueItems.Count == 0)
-                {
-                    return;
-                }
-
-                var appSetting = settingRepo.GetSetting(conn);
-                string gatewayToken = ResolveGatewayToken(appSetting.whatsappGatewayToken);
-
                 foreach (var item in dueItems)
                 {
                     bool success = false;
-                    string responseMessage = "";
+                    string responseMessage;
 
                     try
                     {
-                        var result = await SendWhatsAppAsync(item, gatewayToken, stoppingToken);
+                        var result = await birthdayPrayService.SendScheduledWhatsApp(
+                            item.id_donatur,
+                            item.birthdayDate.Year);
                         success = result.success;
-                        responseMessage = result.message;
+                        responseMessage = result.message ?? "";
                     }
                     catch (Exception ex)
                     {
@@ -87,225 +70,26 @@ namespace API.Service.Transaction
                         logger.LogError(ex, "Failed to dispatch WhatsApp for TRBirthdayPray #{Id}.", item.id_TRBirthdayPray);
                     }
 
+                    if (conn.State == ConnectionState.Closed)
+                    {
+                        conn.Open();
+                    }
+
                     repo.InsertSendLog(
                         item.id_TRBirthdayPray,
                         item.birthdayDate,
                         success,
                         responseMessage,
-                        conn
-                    );
+                        conn);
                 }
             }
             finally
             {
                 if (conn.State == ConnectionState.Open)
+                {
                     conn.Close();
-            }
-        }
-
-        private async Task<(bool success, string message)> SendWhatsAppAsync(
-            ResponseModelBirthdayPrayDispatchItem item,
-            string gatewayToken,
-            CancellationToken cancellationToken)
-        {
-            string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
-            string publicBaseUrl = (configuration["Runtime:PublicBaseUrl"] ?? "").Trim();
-
-            if (string.IsNullOrWhiteSpace(gatewayUrl))
-            {
-                return (false, "WhatsApp gateway URL belum diatur.");
-            }
-
-            string audioUrl = "";
-            if (!string.IsNullOrWhiteSpace(item.pathPesanSuara))
-            {
-                if (string.IsNullOrWhiteSpace(publicBaseUrl))
-                {
-                    return (false, "Runtime.PublicBaseUrl belum diatur untuk mengirim pesan suara.");
-                }
-
-                var publicBaseUrlValidation = ValidatePublicBaseUrl(publicBaseUrl);
-                if (!publicBaseUrlValidation.isValid)
-                {
-                    return (false, $"Runtime.PublicBaseUrl belum bisa diakses public untuk gateway pihak ketiga. {publicBaseUrlValidation.message}");
-                }
-
-                audioUrl = BuildAbsoluteAudioUrl(publicBaseUrl, item.pathPesanSuara);
-            }
-
-            using var httpClient = new HttpClient();
-            if (!string.IsNullOrWhiteSpace(gatewayToken))
-            {
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", gatewayToken);
-            }
-
-            string? textValidation =
-                ValidateWhatsAppTextParameter("Nama donatur", item.namaDonatur) ??
-                ValidateWhatsAppTextParameter("Pendoa", item.namaPendoa) ??
-                ValidateWhatsAppTextParameter("Pesan Doa", item.pesan ?? "") ??
-                ValidateWhatsAppTextParameter("URL rekaman suara", audioUrl, validateUrl: true);
-
-            if (!string.IsNullOrWhiteSpace(textValidation))
-            {
-                return (false, textValidation);
-            }
-
-            var payload = new
-            {
-                fromPhone = item.noHPPendoa,
-                toPhone = item.noHPDonatur,
-                donorName = item.namaDonatur,
-                prayerBy = item.namaPendoa,
-                birthdayDate = item.birthdayDate.ToString("yyyy-MM-dd"),
-                message = item.pesan ?? "",
-                audioUrl = audioUrl
-            };
-
-            using var content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json"
-            );
-
-            using var response = await httpClient.PostAsync(gatewayUrl, content, cancellationToken);
-            string body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return (true, string.IsNullOrWhiteSpace(body) ? "OK" : body);
-            }
-
-            return (false, string.IsNullOrWhiteSpace(body)
-                ? $"Gateway error {(int)response.StatusCode}"
-                : body);
-        }
-
-        private string BuildAbsoluteAudioUrl(string publicBaseUrl, string relativePath)
-        {
-            if (string.IsNullOrWhiteSpace(relativePath))
-                return "";
-
-            if (Uri.TryCreate(relativePath, UriKind.Absolute, out var absoluteUri))
-                return absoluteUri.ToString();
-
-            if (string.IsNullOrWhiteSpace(publicBaseUrl))
-                return relativePath.Replace("\\", "/");
-
-            return $"{publicBaseUrl.TrimEnd('/')}/{relativePath.TrimStart('/').Replace("\\", "/")}";
-        }
-
-        private string? ValidateWhatsAppTextParameter(
-            string label,
-            string value,
-            bool validateUrl = false)
-        {
-            string text = value ?? "";
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return $"{label} wajib diisi.";
-            }
-
-            if (text.Contains('\r') || text.Contains('\n'))
-            {
-                return $"{label} tidak boleh mengandung Enter/newline.";
-            }
-
-            if (text.Contains('\t'))
-            {
-                return $"{label} tidak boleh mengandung Tab.";
-            }
-
-            if (text.Any(char.IsControl))
-            {
-                return $"{label} tidak boleh mengandung karakter kontrol tersembunyi.";
-            }
-
-            if (ExcessiveSpacesRegex.IsMatch(text))
-            {
-                return $"{label} maksimal {MaxConsecutiveSpaces} spasi berurutan.";
-            }
-
-            if (text.Length > MaxWhatsAppPreviewLength)
-            {
-                return $"{label} maksimal {MaxWhatsAppPreviewLength} karakter.";
-            }
-
-            if (validateUrl)
-            {
-                if (text.Length > 2048)
-                {
-                    return $"{label} terlalu panjang untuk parameter URL.";
-                }
-
-                if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
-                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                {
-                    return $"{label} harus berupa URL http/https yang valid.";
                 }
             }
-
-            return null;
-        }
-
-        private (bool isValid, string message) ValidatePublicBaseUrl(string publicBaseUrl)
-        {
-            if (string.IsNullOrWhiteSpace(publicBaseUrl))
-            {
-                return (false, "Isi dengan URL tunnel/domain public yang bisa diakses internet.");
-            }
-
-            if (!Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var uri))
-            {
-                return (false, "Nilai bukan URL absolut yang valid.");
-            }
-
-            string host = (uri.Host ?? "").Trim().ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                return (false, "Host pada URL kosong.");
-            }
-
-            if (host == "localhost" || host == "0.0.0.0" || host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
-            {
-                return (false, "Host masih lokal dan tidak dapat diakses gateway pihak ketiga.");
-            }
-
-            if (IPAddress.TryParse(host, out var ipAddress))
-            {
-                if (IPAddress.IsLoopback(ipAddress))
-                {
-                    return (false, "Host masih loopback dan tidak dapat diakses gateway pihak ketiga.");
-                }
-
-                if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                {
-                    byte[] bytes = ipAddress.GetAddressBytes();
-                    bool isPrivate =
-                        bytes[0] == 10 ||
-                        (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-                        (bytes[0] == 192 && bytes[1] == 168);
-
-                    if (isPrivate)
-                    {
-                        return (false, "Host masih private/internal IP dan biasanya tidak bisa diakses internet.");
-                    }
-                }
-            }
-
-            return (true, "OK");
-        }
-
-        private string ResolveGatewayToken(string? tokenFromSetting)
-        {
-            string value = (tokenFromSetting ?? "").Trim();
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-
-            return (configuration["WhatsAppGateway:Token"] ?? "").Trim();
         }
     }
 }

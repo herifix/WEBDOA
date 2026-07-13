@@ -923,13 +923,13 @@ export default function TRBirthdayPrayPage() {
       }
 
       setFormSuccess(result.message || "Pesan WhatsApp berhasil dikirim.");
-      // Refresh data to update IsWASent status
-      void detailQuery.refetch();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Gagal mengirim WhatsApp.";
       setFormError(message);
       alert("Error: " + message);
+    } finally {
+      void detailQuery.refetch();
     }
   }
 

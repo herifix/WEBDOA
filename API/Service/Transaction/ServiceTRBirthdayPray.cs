@@ -21,9 +21,7 @@ namespace API.Service.Transaction
 {
     public class ServiceTRBirthdayPray
     {
-        private const string NewTemplateName = "ucapan_ulang_tahun_new";
-        private const string NewTemplateLanguageCode = "en";
-        private const string VoiceTemplateName = "doa_selamat_ulang_tahun";
+        private const string MainTemplateLanguageCode = "en_US";
         private const string VoiceTemplateLanguageCode = "en";
         private const string NewTemplateLinkPlaceholder = ".";
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
@@ -32,6 +30,7 @@ namespace API.Service.Transaction
         private const int WhatsAppConversationLookupLimit = 50;
         private const int BirthdayDashboardBeginDateOffsetDays = 0;
         private static readonly Regex ExcessiveSpacesRegex = new(" {5,}", RegexOptions.Compiled);
+        private static readonly Regex InternationalPhoneNumberRegex = new(@"^\+\d{8,15}$", RegexOptions.Compiled);
 
         private readonly IDbConnection conn;
         private readonly RepoTRBirthdayPray repo;
@@ -69,6 +68,7 @@ namespace API.Service.Transaction
         {
             public bool RunLive { get; init; }
             public bool PersistWASent { get; init; }
+            public bool OnlySendWhenUnsent { get; init; }
             public bool IncludeFollowUpVoice { get; init; } = true;
             public bool ReturnDebugResult { get; init; }
         }
@@ -1208,6 +1208,21 @@ CreateNoWindow = true
                 });
         }
 
+        public async Task<ResponseData<object>> SendScheduledWhatsApp(long idDonatur, int? year = null)
+        {
+            return await ExecuteWhatsAppSendAsync(
+                idDonatur,
+                year,
+                new WhatsAppSendExecutionOptions
+                {
+                    RunLive = true,
+                    PersistWASent = true,
+                    OnlySendWhenUnsent = true,
+                    IncludeFollowUpVoice = true,
+                    ReturnDebugResult = false
+                });
+        }
+
         public async Task<ResponseData<object>> DebugSendWhatsApp(
             long idDonatur,
             int? year = null,
@@ -1258,6 +1273,30 @@ CreateNoWindow = true
                         followUpVoiceStage);
                 }
 
+                if (options.PersistWASent && options.RunLive && prayData.id_TRBirthdayPray > 0)
+                {
+                    bool sendStarted = !options.OnlySendWhenUnsent ||
+                        repo.TryMarkWASentFromUnsent(prayData.id_TRBirthdayPray, conn);
+
+                    if (!sendStarted)
+                    {
+                        return CreateSendResponse(
+                            false,
+                            "Pengiriman scheduler dilewati karena status WhatsApp sudah tercatat terkirim.",
+                            "",
+                            options,
+                            normalizedPhoneNumber,
+                            effectiveAudioUrl,
+                            mainTemplateStage,
+                            followUpVoiceStage);
+                    }
+
+                    if (!options.OnlySendWhenUnsent)
+                    {
+                        repo.MarkWASent(prayData.id_TRBirthdayPray, conn);
+                    }
+                }
+
                 if (string.IsNullOrWhiteSpace(prayData.noHPDonatur))
                 {
                     return CreateSendResponse(
@@ -1287,12 +1326,68 @@ CreateNoWindow = true
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 string gatewayToken = ResolveGatewayToken(setting.whatsappGatewayToken);
                 string publicBaseUrl = GetPublicBaseUrl();
+                string whatsappPhoneNumberId = (setting.whatsappPhoneNumberId ?? "").Trim();
+                string mainTemplateName = (setting.whatsappTemplateName ?? "").Trim();
+                string voiceTemplateName = (setting.whatsappVoiceTemplateName ?? "").Trim();
 
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
                 {
                     return CreateSendResponse(
                         false,
                         "WhatsApp gateway URL belum diatur.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
+                if (string.IsNullOrWhiteSpace(whatsappPhoneNumberId))
+                {
+                    return CreateSendResponse(
+                        false,
+                        "WA Phone Number ID belum diatur di Application Setting.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
+                if (string.IsNullOrWhiteSpace(mainTemplateName))
+                {
+                    return CreateSendResponse(
+                        false,
+                        "WA Template Name belum diatur di Application Setting.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
+                if (options.IncludeFollowUpVoice && string.IsNullOrWhiteSpace(voiceTemplateName))
+                {
+                    return CreateSendResponse(
+                        false,
+                        "WA Voice Template Name belum diatur di Application Setting.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
+                string pendoaPhoneNumber = (prayData.noHPPendoa ?? "").Trim();
+                if (!InternationalPhoneNumberRegex.IsMatch(pendoaPhoneNumber))
+                {
+                    return CreateSendResponse(
+                        false,
+                        "Nomor telepon pendoa wajib diisi dengan format internasional yang valid di Master Pendoa, misalnya +628123456789.",
                         "",
                         options,
                         normalizedPhoneNumber,
@@ -1348,21 +1443,12 @@ CreateNoWindow = true
                         followUpVoiceStage);
                 }
 
-                string templateName = setting.whatsappTemplateName;
-                if (string.IsNullOrWhiteSpace(templateName))
-                {
-                    templateName = "birthday_pray"; // Default fallback
-                }
-                string normalizedTemplateName = NormalizeTemplateName(templateName);
-                bool useNewTemplateFormat = normalizedTemplateName.Equals(NewTemplateName, StringComparison.OrdinalIgnoreCase);
-                string effectiveBodyLink = useNewTemplateFormat ? NewTemplateLinkPlaceholder : effectiveTemplateLink;
-
                 var templateValidation = ValidateWhatsAppTemplateParameters(
-                    templateName,
+                    mainTemplateName,
                     setting.msgTemplate,
                     prayData.namaDonatur,
                     prayData.namaPendoa,
-                    effectiveBodyLink,
+                    NewTemplateLinkPlaceholder,
                     prayData.pesan
                 );
 
@@ -1389,250 +1475,33 @@ CreateNoWindow = true
                         new AuthenticationHeaderValue("Bearer", gatewayToken);
                 }
 
-                HttpStatusCode latestStatusCode = HttpStatusCode.BadRequest;
-                string latestResponseBody = "";
-                string usedTemplateName = "";
-                string usedLanguageCode = "";
+                string headerImageUrl = ResolveNewTemplateHeaderImageUrl(setting.msgLink, publicBaseUrl);
+                var payload = BuildNewTemplatePayload(
+                    phoneNumber,
+                    whatsappPhoneNumberId,
+                    mainTemplateName,
+                    headerImageUrl,
+                    prayData.namaDonatur,
+                    prayData.namaPendoa,
+                    prayData.pesan ?? "",
+                    pendoaPhoneNumber);
 
-                if (useNewTemplateFormat)
-                {
-                    string headerImageUrl = ResolveNewTemplateHeaderImageUrl(setting.msgLink, publicBaseUrl);
-                    var payload = BuildNewTemplatePayload(
-                        phoneNumber,
-                        headerImageUrl,
-                        prayData.namaDonatur,
-                        prayData.namaPendoa,
-                        prayData.pesan ?? "");
-                    mainTemplateStage.TemplateName = NewTemplateName;
-                    mainTemplateStage.LanguageCode = NewTemplateLanguageCode;
-                    bool mainTemplateSuccess = await ExecuteGatewayStageAsync(
-                        httpClient,
-                        gatewayUrl,
-                        payload,
-                        mainTemplateStage,
-                        options.RunLive,
-                        "Dry run aktif. Payload template utama tidak dikirim ke gateway.");
-
-                    latestStatusCode = mainTemplateStage.StatusCode.HasValue
-                        ? (HttpStatusCode)mainTemplateStage.StatusCode.Value
-                        : HttpStatusCode.OK;
-                    latestResponseBody = mainTemplateStage.ResponseBody;
-
-                    if (!mainTemplateSuccess)
-                    {
-                        return CreateSendResponse(
-                            false,
-                            mainTemplateStage.Message,
-                            mainTemplateStage.GatewayResponse,
-                            options,
-                            normalizedPhoneNumber,
-                            effectiveAudioUrl,
-                            mainTemplateStage,
-                            followUpVoiceStage);
-                    }
-
-                    usedTemplateName = NewTemplateName;
-                    usedLanguageCode = NewTemplateLanguageCode;
-                    goto TemplateMessageSent;
-                }
-
-                string legacyHeaderImageUrl = "";
-                if (!string.IsNullOrWhiteSpace(setting.msgImage))
-                {
-                    legacyHeaderImageUrl = BuildAbsoluteUrl(publicBaseUrl, setting.msgImage);
-                }
-
-                var templateNameCandidates = BuildTemplateNameCandidates(templateName);
-                var templateLanguageCandidates = BuildTemplateLanguageCandidates(GetConfiguredTemplateLanguageCode());
-                var templateLookup = await TryGetGatewayTemplateCatalogAsync(httpClient, gatewayUrl);
-                var availableApprovedTemplateHints = new List<string>();
-                if (templateLookup.success)
-                {
-                    availableApprovedTemplateHints = BuildTemplateHints(templateLookup.approvedTemplates, 12);
-                    var matchedApprovedTemplates = templateLookup.approvedTemplates
-                        .Where(item => TemplateNameMatches(item.templateName, templateNameCandidates))
-                        .ToList();
-
-                    foreach (var matchedTemplate in matchedApprovedTemplates)
-                    {
-                        AddUnique(templateNameCandidates, matchedTemplate.templateName);
-                        AddUnique(templateLanguageCandidates, matchedTemplate.languageCode);
-                    }
-                }
-
-                var attemptedCombinations = new List<string>();
-                foreach (var candidateTemplateName in templateNameCandidates)
-                {
-                    foreach (var candidateLanguageCode in templateLanguageCandidates)
-                    {
-                        var matchedTemplateInfo = TryGetTemplateInfo(
-                            templateLookup.approvedTemplates,
-                            candidateTemplateName,
-                            candidateLanguageCode);
-                        int bodyVariableCount = matchedTemplateInfo?.bodyVariableCount ?? 4;
-                        bool includeHeader = ShouldIncludeHeaderForTemplate(matchedTemplateInfo, legacyHeaderImageUrl);
-
-                        attemptedCombinations.Add(
-                            $"{candidateTemplateName}:{candidateLanguageCode}" +
-                            (includeHeader ? " [header]" : " [no-header]"));
-
-                        var payload = BuildLegacyTemplatePayload(
-                            phoneNumber,
-                            candidateTemplateName,
-                            candidateLanguageCode,
-                            includeHeader,
-                            legacyHeaderImageUrl,
-                            prayData.namaDonatur,
-                            prayData.namaPendoa,
-                            effectiveTemplateLink,
-                            prayData.pesan ?? "",
-                            bodyVariableCount);
-
-                        mainTemplateStage.TemplateName = candidateTemplateName;
-                        mainTemplateStage.LanguageCode = candidateLanguageCode;
-                        bool mainTemplateSuccess = await ExecuteGatewayStageAsync(
-                            httpClient,
-                            gatewayUrl,
-                            payload,
-                            mainTemplateStage,
-                            options.RunLive,
-                            "Dry run aktif. Payload template utama tidak dikirim ke gateway.");
-                        latestStatusCode = mainTemplateStage.StatusCode.HasValue
-                            ? (HttpStatusCode)mainTemplateStage.StatusCode.Value
-                            : HttpStatusCode.OK;
-                        latestResponseBody = mainTemplateStage.ResponseBody;
-
-                        if (mainTemplateSuccess)
-                        {
-                            usedTemplateName = candidateTemplateName;
-                            usedLanguageCode = candidateLanguageCode;
-                            goto TemplateMessageSent;
-                        }
-
-                        if (IsTemplateParameterGatewayError(latestResponseBody))
-                        {
-                            if (includeHeader)
-                            {
-                                var fallbackPayload = BuildLegacyTemplatePayload(
-                                    phoneNumber,
-                                    candidateTemplateName,
-                                    candidateLanguageCode,
-                                    includeHeader: false,
-                                    headerImageUrl: "",
-                                    namaDonatur: prayData.namaDonatur,
-                                    namaPendoa: prayData.namaPendoa,
-                                    link: effectiveTemplateLink,
-                                    isiDoa: prayData.pesan ?? "",
-                                    bodyVariableCount: bodyVariableCount);
-
-                                mainTemplateStage.TemplateName = candidateTemplateName;
-                                mainTemplateStage.LanguageCode = candidateLanguageCode;
-                                bool fallbackSuccess = await ExecuteGatewayStageAsync(
-                                    httpClient,
-                                    gatewayUrl,
-                                    fallbackPayload,
-                                    mainTemplateStage,
-                                    options.RunLive,
-                                    "Dry run aktif. Payload fallback template utama tidak dikirim ke gateway.");
-                                latestStatusCode = mainTemplateStage.StatusCode.HasValue
-                                    ? (HttpStatusCode)mainTemplateStage.StatusCode.Value
-                                    : HttpStatusCode.OK;
-                                latestResponseBody = mainTemplateStage.ResponseBody;
-
-                                if (fallbackSuccess)
-                                {
-                                    usedTemplateName = candidateTemplateName;
-                                    usedLanguageCode = candidateLanguageCode;
-                                    goto TemplateMessageSent;
-                                }
-                            }
-
-                            string headerTypeHint = matchedTemplateInfo?.headerType ?? "";
-                            if (string.IsNullOrWhiteSpace(headerTypeHint))
-                            {
-                                headerTypeHint = "(tanpa header)";
-                            }
-
-                            mainTemplateStage.TemplateName = candidateTemplateName;
-                            mainTemplateStage.LanguageCode = candidateLanguageCode;
-                            mainTemplateStage.Message =
-                                "Gagal mengirim template WhatsApp: parameter template tidak cocok. " +
-                                $"Template: {candidateTemplateName}:{candidateLanguageCode}. " +
-                                $"Header template gateway: {headerTypeHint}. " +
-                                $"Body variable template: {bodyVariableCount}. " +
-                                "Saran: jika template tidak punya header, kosongkan `Image Pesan` di Application Setting atau gunakan template yang punya image header. " +
-                                $"Detail: {BuildGatewayErrorMessage(latestStatusCode, latestResponseBody)}";
-
-                            return CreateSendResponse(
-                                false,
-                                mainTemplateStage.Message,
-                                ParseGatewayResponseBody(latestResponseBody),
-                                options,
-                                normalizedPhoneNumber,
-                                effectiveAudioUrl,
-                                mainTemplateStage,
-                                followUpVoiceStage);
-                        }
-
-                        if (!IsTemplateNotFoundGatewayError(latestResponseBody))
-                        {
-                            mainTemplateStage.TemplateName = candidateTemplateName;
-                            mainTemplateStage.LanguageCode = candidateLanguageCode;
-                            mainTemplateStage.Message = BuildGatewayErrorMessage(latestStatusCode, latestResponseBody);
-
-                            return CreateSendResponse(
-                                false,
-                                mainTemplateStage.Message,
-                                ParseGatewayResponseBody(latestResponseBody),
-                                options,
-                                normalizedPhoneNumber,
-                                effectiveAudioUrl,
-                                mainTemplateStage,
-                                followUpVoiceStage);
-                        }
-                    }
-                }
-
-                mainTemplateStage.Message =
-                    "Template WhatsApp tidak ditemukan atau belum disetujui. " +
-                    $"Template setting: `{templateName}`. " +
-                    $"Percobaan: {string.Join(", ", attemptedCombinations)}. " +
-                    (templateLookup.success
-                        ? "Lookup template gateway: OK. "
-                        : $"Lookup template gateway tidak tersedia ({templateLookup.statusHint}). ") +
-                    $"Template/language APPROVED tersedia: {FormatAvailableTemplateHints(availableApprovedTemplateHints)}. " +
-                    "Saran: cek `WA Template Name` dan language config (`WhatsAppGateway:TemplateLanguageCode` / `TemplateLanguageFallbacks`). " +
-                    $"Response terakhir ({latestStatusCode}): {latestResponseBody}";
-
-                return CreateSendResponse(
-                    false,
-                    mainTemplateStage.Message,
-                    ParseGatewayResponseBody(latestResponseBody),
-                    options,
-                    normalizedPhoneNumber,
-                    effectiveAudioUrl,
+                mainTemplateStage.TemplateName = mainTemplateName;
+                mainTemplateStage.LanguageCode = MainTemplateLanguageCode;
+                bool mainTemplateSuccess = await ExecuteGatewayStageAsync(
+                    httpClient,
+                    gatewayUrl,
+                    payload,
                     mainTemplateStage,
-                    followUpVoiceStage);
+                    options.RunLive,
+                    "Dry run aktif. Payload template utama tidak dikirim ke gateway.");
 
-            TemplateMessageSent:
-
-                if (options.PersistWASent && options.RunLive && prayData.id_TRBirthdayPray > 0)
+                if (!mainTemplateSuccess)
                 {
-                    repo.MarkWASent(prayData.id_TRBirthdayPray, conn);
-                }
-
-                // Template lama/fallback: selesai setelah template sukses tanpa kirim media follow-up.
-                if (!useNewTemplateFormat)
-                {
-                    followUpVoiceStage.Skipped = true;
-                    followUpVoiceStage.Success = true;
-                    followUpVoiceStage.Message = "Follow-up voice hanya dikirim untuk template baru.";
-                    followUpVoiceStage.SkippedReason = "legacy_template_flow";
-
                     return CreateSendResponse(
-                        true,
-                        $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}).",
-                        ParseGatewayResponseBody(latestResponseBody),
+                        false,
+                        mainTemplateStage.Message,
+                        mainTemplateStage.GatewayResponse,
                         options,
                         normalizedPhoneNumber,
                         effectiveAudioUrl,
@@ -1649,8 +1518,8 @@ CreateNoWindow = true
 
                     return CreateSendResponse(
                         true,
-                        $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}). Follow-up voice dilewati.",
-                        ParseGatewayResponseBody(latestResponseBody),
+                        $"Pesan WhatsApp berhasil dikirim (template: {mainTemplateName}, language: {MainTemplateLanguageCode}). Follow-up voice dilewati.",
+                        mainTemplateStage.GatewayResponse,
                         options,
                         normalizedPhoneNumber,
                         effectiveAudioUrl,
@@ -1696,10 +1565,12 @@ CreateNoWindow = true
 
                 var voiceTemplatePayload = BuildVoiceTemplatePayload(
                     phoneNumber,
+                    whatsappPhoneNumberId,
+                    voiceTemplateName,
                     prayData.namaDonatur,
                     effectiveTemplateLink);
 
-                followUpVoiceStage.TemplateName = VoiceTemplateName;
+                followUpVoiceStage.TemplateName = voiceTemplateName;
                 followUpVoiceStage.LanguageCode = VoiceTemplateLanguageCode;
                 bool followUpVoiceSuccess = await ExecuteGatewayStageAsync(
                     httpClient,
@@ -1724,8 +1595,8 @@ CreateNoWindow = true
 
                 return CreateSendResponse(
                     true,
-                    $"Pesan WhatsApp berhasil dikirim (template: {usedTemplateName}, language: {usedLanguageCode}) " +
-                        $"dan template follow-up {VoiceTemplateName} berhasil diproses.",
+                    $"Pesan WhatsApp berhasil dikirim (template: {mainTemplateName}, language: {MainTemplateLanguageCode}) " +
+                        $"dan template follow-up {voiceTemplateName} berhasil diproses.",
                     followUpVoiceStage.GatewayResponse,
                     options,
                     normalizedPhoneNumber,
@@ -1767,6 +1638,9 @@ CreateNoWindow = true
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 var setting = settingRepo.GetSetting(conn);
                 string gatewayToken = ResolveGatewayToken(setting.whatsappGatewayToken);
+                string whatsappPhoneNumberId = (setting.whatsappPhoneNumberId ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(whatsappPhoneNumberId))
+                    return new ResponseData<object> { success = false, message = "WA Phone Number ID belum diatur di Application Setting." };
                 string phoneNumber = FormatPhoneNumber(prayData.noHPDonatur);
                 string testMessage = (messageText ?? "").Trim();
                 if (string.IsNullOrWhiteSpace(testMessage))
@@ -1793,6 +1667,7 @@ CreateNoWindow = true
                     phone_number = phoneNumber,
                     channel = "whatsapp",
                     message_type = "text",
+                    whatsapp_phone_number_id = whatsappPhoneNumberId,
                     content = testMessage
                 };
 
@@ -1820,6 +1695,9 @@ CreateNoWindow = true
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 var setting = settingRepo.GetSetting(conn);
                 string gatewayToken = ResolveGatewayToken(setting.whatsappGatewayToken);
+                string whatsappPhoneNumberId = (setting.whatsappPhoneNumberId ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(whatsappPhoneNumberId))
+                    return new ResponseData<object> { success = false, message = "WA Phone Number ID belum diatur di Application Setting." };
                 string publicBaseUrl = GetPublicBaseUrl();
                 string audioUrl = await EnsureWhatsAppMp4VoiceAsync(prayData);
                 if (StoredAudioRequiresPublicBaseUrl(prayData.pathPesanSuara) && string.IsNullOrWhiteSpace(publicBaseUrl))
@@ -1838,6 +1716,7 @@ CreateNoWindow = true
                     phone_number = phoneNumber,
                     channel = "whatsapp",
                     message_type = mediaMessageType,
+                    whatsapp_phone_number_id = whatsappPhoneNumberId,
                     media_url = audioUrl
                 };
 
@@ -3210,6 +3089,7 @@ CreateNoWindow = true
             string headerImageUrl,
             string namaDonatur,
             string namaPendoa,
+            string noHPPendoa,
             string link,
             string isiDoa,
             int bodyVariableCount)
@@ -3238,7 +3118,8 @@ CreateNoWindow = true
                 namaDonatur ?? "",
                 namaPendoa ?? "",
                 link ?? "",
-                isiDoa ?? ""
+                isiDoa ?? "",
+                noHPPendoa ?? ""
             };
 
             var bodyParameters = new List<object>();
@@ -3259,12 +3140,14 @@ CreateNoWindow = true
 
         private object BuildLegacyTemplatePayload(
             string phoneNumber,
+            string whatsappPhoneNumberId,
             string templateName,
             string languageCode,
             bool includeHeader,
             string headerImageUrl,
             string namaDonatur,
             string namaPendoa,
+            string noHPPendoa,
             string link,
             string isiDoa,
             int bodyVariableCount)
@@ -3274,6 +3157,7 @@ CreateNoWindow = true
                 phone_number = phoneNumber,
                 channel = "whatsapp",
                 message_type = "template",
+                whatsapp_phone_number_id = whatsappPhoneNumberId,
                 template = new
                 {
                     name = templateName,
@@ -3283,6 +3167,7 @@ CreateNoWindow = true
                         headerImageUrl,
                         namaDonatur,
                         namaPendoa,
+                        noHPPendoa,
                         link,
                         isiDoa,
                         bodyVariableCount)
@@ -3292,34 +3177,41 @@ CreateNoWindow = true
 
         private object BuildNewTemplatePayload(
             string phoneNumber,
+            string whatsappPhoneNumberId,
+            string templateName,
             string headerImageUrl,
             string namaDonatur,
             string namaPendoa,
-            string isiDoa)
+            string isiDoa,
+            string noHPPendoa)
         {
             return new
             {
                 phone_number = phoneNumber,
                 channel = "whatsapp",
                 message_type = "template",
+                whatsapp_phone_number_id = whatsappPhoneNumberId,
                 template = new
                 {
-                    name = NewTemplateName,
-                    language = new { code = NewTemplateLanguageCode },
+                    name = templateName,
+                    language = new { code = MainTemplateLanguageCode },
                     components = BuildTemplateComponents(
                         includeHeader: !string.IsNullOrWhiteSpace(headerImageUrl),
                         headerImageUrl: headerImageUrl,
                         namaDonatur: namaDonatur,
                         namaPendoa: namaPendoa,
+                        noHPPendoa: noHPPendoa,
                         link: NewTemplateLinkPlaceholder,
                         isiDoa: isiDoa,
-                        bodyVariableCount: 4)
+                        bodyVariableCount: 5)
                 }
             };
         }
 
         private object BuildVoiceTemplatePayload(
             string phoneNumber,
+            string whatsappPhoneNumberId,
+            string templateName,
             string namaDonatur,
             string voiceUrl)
         {
@@ -3328,9 +3220,10 @@ CreateNoWindow = true
                 phone_number = phoneNumber,
                 channel = "whatsapp",
                 message_type = "template",
+                whatsapp_phone_number_id = whatsappPhoneNumberId,
                 template = new
                 {
-                    name = VoiceTemplateName,
+                    name = templateName,
                     language = new { code = VoiceTemplateLanguageCode },
                     components = new object[]
                     {

@@ -6,6 +6,9 @@ namespace API.Repository.Master
 {
     public class RepoApplicationSetting
     {
+        private const string DefaultWhatsAppPhoneNumberId = "cmp3vlf4z01qnwx9k8k1aduwk";
+        private const string DefaultWhatsAppVoiceTemplateName = "doa_selamat_ulang_tahun";
+
         public void EnsureTable(IDbConnection conn, IDbTransaction? tran = null)
         {
             if (!TableExists(conn, tran))
@@ -19,7 +22,9 @@ CREATE TABLE dbo.MsProg
     MsgLink NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgLink DEFAULT (''),
     MsgImage NVARCHAR(255) NOT NULL CONSTRAINT DF_MsProg_MsgImage DEFAULT (''),
     MsgWA_TemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_TemplateName DEFAULT (''),
+    MsgWA_VoiceTemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_VoiceTemplateName DEFAULT ('doa_selamat_ulang_tahun'),
     MsgWA_Token NVARCHAR(500) NOT NULL CONSTRAINT DF_MsProg_MsgWA_Token DEFAULT (''),
+    MsgWA_PhoneNumberId NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_PhoneNumberId DEFAULT ('cmp3vlf4z01qnwx9k8k1aduwk'),
     StorageType NVARCHAR(50) NOT NULL CONSTRAINT DF_MsProg_StorageType DEFAULT ('LocalServer')
 );";
                     conn.Execute(createSql, transaction: tran);
@@ -34,16 +39,18 @@ CREATE TABLE dbo.MsProg
             }
 
             TryEnsureColumn(conn, tran, "MsgWA_TemplateName", "ALTER TABLE dbo.MsProg ADD MsgWA_TemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_TemplateName_Alter DEFAULT ('')");
+            TryEnsureColumn(conn, tran, "MsgWA_VoiceTemplateName", "ALTER TABLE dbo.MsProg ADD MsgWA_VoiceTemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_VoiceTemplateName_Alter DEFAULT ('doa_selamat_ulang_tahun')");
             TryEnsureColumn(conn, tran, "StorageType", "ALTER TABLE dbo.MsProg ADD StorageType NVARCHAR(50) NOT NULL CONSTRAINT DF_MsProg_StorageType_Alter DEFAULT ('LocalServer')");
             TryEnsureColumn(conn, tran, "MsgWA_Token", "ALTER TABLE dbo.MsProg ADD MsgWA_Token NVARCHAR(500) NOT NULL CONSTRAINT DF_MsProg_MsgWA_Token_Alter DEFAULT ('')");
+            TryEnsureColumn(conn, tran, "MsgWA_PhoneNumberId", "ALTER TABLE dbo.MsProg ADD MsgWA_PhoneNumberId NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_PhoneNumberId_Alter DEFAULT ('cmp3vlf4z01qnwx9k8k1aduwk')");
 
             if (!HasAnyRow(conn, tran))
             {
-                if (ColumnExists(conn, tran, "MsgWA_Token") && ColumnExists(conn, tran, "MsgWA_TemplateName") && ColumnExists(conn, tran, "StorageType"))
+                if (ColumnExists(conn, tran, "MsgWA_Token") && ColumnExists(conn, tran, "MsgWA_TemplateName") && ColumnExists(conn, tran, "MsgWA_VoiceTemplateName") && ColumnExists(conn, tran, "MsgWA_PhoneNumberId") && ColumnExists(conn, tran, "StorageType"))
                 {
                     const string insertSql = @"
-INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_Token, StorageType)
-VALUES ('', '', '', '', '', 'LocalServer')";
+INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_VoiceTemplateName, MsgWA_Token, MsgWA_PhoneNumberId, StorageType)
+VALUES ('', '', '', '', 'doa_selamat_ulang_tahun', '', 'cmp3vlf4z01qnwx9k8k1aduwk', 'LocalServer')";
                     conn.Execute(insertSql, transaction: tran);
                 }
                 else
@@ -61,8 +68,10 @@ VALUES ('', '', '')";
             EnsureTable(conn, tran);
 
             bool hasTemplateName = ColumnExists(conn, tran, "MsgWA_TemplateName");
+            bool hasVoiceTemplateName = ColumnExists(conn, tran, "MsgWA_VoiceTemplateName");
             bool hasStorageType = ColumnExists(conn, tran, "StorageType");
             bool hasToken = ColumnExists(conn, tran, "MsgWA_Token");
+            bool hasPhoneNumberId = ColumnExists(conn, tran, "MsgWA_PhoneNumberId");
 
             string sql = $@"
             SELECT TOP 1
@@ -70,7 +79,9 @@ VALUES ('', '', '')";
                 ISNULL(MsgLink, '') AS msgLink,
                 ISNULL(MsgImage, '') AS msgImage,
                 {(hasTemplateName ? "ISNULL(MsgWA_TemplateName, '')" : "''")} AS whatsappTemplateName,
+                {(hasVoiceTemplateName ? "ISNULL(MsgWA_VoiceTemplateName, '')" : $"'{DefaultWhatsAppVoiceTemplateName}'")} AS whatsappVoiceTemplateName,
                 {(hasToken ? "ISNULL(MsgWA_Token, '')" : "''")} AS whatsappGatewayToken,
+                {(hasPhoneNumberId ? "ISNULL(MsgWA_PhoneNumberId, '')" : $"'{DefaultWhatsAppPhoneNumberId}'")} AS whatsappPhoneNumberId,
                 {(hasStorageType ? "ISNULL(StorageType, 'LocalServer')" : "'LocalServer'")} AS storageType
             FROM dbo.MsProg";
 
@@ -83,10 +94,12 @@ VALUES ('', '', '')";
             EnsureTable(conn, tran);
 
             bool hasTemplateName = ColumnExists(conn, tran, "MsgWA_TemplateName");
+            bool hasVoiceTemplateName = ColumnExists(conn, tran, "MsgWA_VoiceTemplateName");
             bool hasStorageType = ColumnExists(conn, tran, "StorageType");
             bool hasToken = ColumnExists(conn, tran, "MsgWA_Token");
+            bool hasPhoneNumberId = ColumnExists(conn, tran, "MsgWA_PhoneNumberId");
 
-            if (hasTemplateName && hasStorageType && hasToken)
+            if (hasTemplateName && hasVoiceTemplateName && hasStorageType && hasToken && hasPhoneNumberId)
             {
                 const string sql = @"
 UPDATE dbo.MsProg
@@ -95,13 +108,15 @@ SET
     MsgLink = @MsgLink,
     MsgImage = @MsgImage,
     MsgWA_TemplateName = @MsgWA_TemplateName,
+    MsgWA_VoiceTemplateName = @MsgWA_VoiceTemplateName,
     MsgWA_Token = @MsgWA_Token,
+    MsgWA_PhoneNumberId = @MsgWA_PhoneNumberId,
     StorageType = @StorageType;
 
 IF @@ROWCOUNT = 0
 BEGIN
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_Token, StorageType)
-    VALUES (@MsgTemplate, @MsgLink, @MsgImage, @MsgWA_TemplateName, @MsgWA_Token, @StorageType);
+    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_VoiceTemplateName, MsgWA_Token, MsgWA_PhoneNumberId, StorageType)
+    VALUES (@MsgTemplate, @MsgLink, @MsgImage, @MsgWA_TemplateName, @MsgWA_VoiceTemplateName, @MsgWA_Token, @MsgWA_PhoneNumberId, @StorageType);
 END";
 
                 conn.Execute(sql, new
@@ -110,32 +125,29 @@ END";
                     MsgLink = request.msgLink ?? "",
                     MsgImage = request.existingMsgImage ?? "",
                     MsgWA_TemplateName = request.whatsappTemplateName ?? "",
+                    MsgWA_VoiceTemplateName = request.whatsappVoiceTemplateName?.Trim() ?? "",
                     MsgWA_Token = request.whatsappGatewayToken ?? "",
+                    MsgWA_PhoneNumberId = request.whatsappPhoneNumberId?.Trim() ?? "",
                     StorageType = NormalizeStorageType(request.storageType)
                 }, tran);
 
                 return;
             }
 
-            const string legacySql = @"
-UPDATE dbo.MsProg
-SET
-    MsgTemplate = @MsgTemplate,
-    MsgLink = @MsgLink,
-    MsgImage = @MsgImage;
-
-IF @@ROWCOUNT = 0
-BEGIN
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage)
-    VALUES (@MsgTemplate, @MsgLink, @MsgImage);
-END";
-
-            conn.Execute(legacySql, new
+            if (!hasVoiceTemplateName)
             {
-                MsgTemplate = request.msgTemplate ?? "",
-                MsgLink = request.msgLink ?? "",
-                MsgImage = request.existingMsgImage ?? ""
-            }, tran);
+                throw new InvalidOperationException(
+                    "Kolom MsProg.MsgWA_VoiceTemplateName belum tersedia. Jalankan migration oleh DBA sebelum menyimpan WA Voice Template Name.");
+            }
+
+            if (!hasPhoneNumberId)
+            {
+                throw new InvalidOperationException(
+                    "Kolom MsProg.MsgWA_PhoneNumberId belum tersedia. Jalankan migration oleh DBA sebelum menyimpan WA Phone Number ID.");
+            }
+
+            throw new InvalidOperationException(
+                "Kolom Application Setting pada MsProg belum lengkap. Jalankan migration oleh DBA sebelum menyimpan pengaturan WhatsApp.");
         }
 
         private string NormalizeStorageType(string? storageType)

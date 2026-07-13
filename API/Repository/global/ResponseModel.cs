@@ -88,7 +88,9 @@ public class ResponseModelApplicationSetting
     public string msgLink { get; set; } = "";
     public string msgImage { get; set; } = "";
     public string whatsappTemplateName { get; set; } = "";
+    public string whatsappVoiceTemplateName { get; set; } = "";
     public string whatsappGatewayToken { get; set; } = "";
+    public string whatsappPhoneNumberId { get; set; } = "";
     public string storageType { get; set; } = "";
 }
 
@@ -279,6 +281,7 @@ public class ResponseModelTRBirthdayPrayDateStatus
 public class ResponseModelBirthdayPrayDispatchItem
 {
     public long id_TRBirthdayPray { get; set; }
+    public long id_donatur { get; set; }
     public long id_pendoa { get; set; }
     public string namaDonatur { get; set; } = "";
     public string noHPDonatur { get; set; } = "";
