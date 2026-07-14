@@ -1,4 +1,5 @@
 ﻿using API.Repository.global;
+using API.Service;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -18,13 +19,18 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _config;
     private readonly IDbConnection conn;
     private readonly globalFunctionOutConn funcoutconn;
+    private readonly ProjectDatabaseVersionService projectDatabaseVersionService;
 
     //public AuthController(IConfiguration config) => _config = config;
 
-    public AuthController(IConfiguration config, IDbConnection DB)
+    public AuthController(
+        IConfiguration config,
+        IDbConnection DB,
+        ProjectDatabaseVersionService projectDatabaseVersionService)
     {
         _config = config;
         conn = DB;
+        this.projectDatabaseVersionService = projectDatabaseVersionService;
 
         // ✅ INI YANG BENAR: assign ke field
         funcoutconn = new globalFunctionOutConn(conn);
@@ -42,7 +48,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public IActionResult Login([FromBody] RequestLogin req)
+    public async Task<IActionResult> Login([FromBody] RequestLogin req, CancellationToken cancellationToken)
     {
         GlobalProcedure proc = new GlobalProcedure();
         // ✅ Contoh sederhana (nanti ganti cek ke DB)
@@ -56,6 +62,18 @@ public class AuthController : ControllerBase
 
         ResponseLogin datauser = globalFunction.GetDataUser(req.Userid, req.Userpt);
         //ResponsePt ptinfo = globalFunction.GetDataPt(req.Userpt);
+
+        try
+        {
+            await projectDatabaseVersionService.EnsureDatabaseUpToDateAsync(datauser.Userid, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = $"Database versioning gagal: {ex.Message}"
+            });
+        }
 
         proc.Addlog(new RequestLog
         {

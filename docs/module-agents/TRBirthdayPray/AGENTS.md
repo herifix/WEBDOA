@@ -287,8 +287,9 @@ by assumption:
 ### 4.10 Scheduler setting flow
 
 1. `WhatsAppSchedule.tsx` reads and updates `sendTime` and `isActive`.
-2. `RepoWhatsAppSchedule` auto-creates `WhatsAppScheduleSetting` and
-   `TRBirthdayPrayWASendLog` if missing.
+2. `API/DatabaseVersioning/Main/2026071402__existing_runtime_schema.sql`
+   idempotently creates/seeds `WhatsAppScheduleSetting` and
+   `TRBirthdayPrayWASendLog`; `RepoWhatsAppSchedule` only consumes that schema.
 3. The worker dispatches only when `IsActive = 1`, the run time is past
    `SendTime`, `IsWASent = 0`, and there is no prior successful log row for the
    same `id_TRBirthdayPray` and birthday date.

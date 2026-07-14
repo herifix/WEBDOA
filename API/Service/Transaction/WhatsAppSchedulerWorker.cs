@@ -1,4 +1,5 @@
 using API.Repository.Master;
+using API.Service;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,13 +11,16 @@ namespace API.Service.Transaction
     {
         private readonly IServiceScopeFactory scopeFactory;
         private readonly ILogger<WhatsAppSchedulerWorker> logger;
+        private readonly DatabaseVersioningReadiness databaseVersioningReadiness;
 
         public WhatsAppSchedulerWorker(
             IServiceScopeFactory scopeFactory,
-            ILogger<WhatsAppSchedulerWorker> logger)
+            ILogger<WhatsAppSchedulerWorker> logger,
+            DatabaseVersioningReadiness databaseVersioningReadiness)
         {
             this.scopeFactory = scopeFactory;
             this.logger = logger;
+            this.databaseVersioningReadiness = databaseVersioningReadiness;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,7 +29,14 @@ namespace API.Service.Transaction
             {
                 try
                 {
-                    await ProcessPendingDispatches();
+                    if (!databaseVersioningReadiness.IsReady)
+                    {
+                        logger.LogInformation("WhatsApp birthday scheduler readiness skip: database versioning is not ready.");
+                    }
+                    else
+                    {
+                        await ProcessPendingDispatches();
+                    }
                 }
                 catch (Exception ex)
                 {

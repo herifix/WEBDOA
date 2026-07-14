@@ -6,44 +6,8 @@ namespace API.Repository.Master
 {
     public class RepoWhatsAppSchedule
     {
-        public void EnsureTables(IDbConnection conn, IDbTransaction? tran = null)
-        {
-            const string sql = @"
-IF OBJECT_ID('dbo.WhatsAppScheduleSetting', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.WhatsAppScheduleSetting
-    (
-        id_setting BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        SendTime TIME NOT NULL CONSTRAINT DF_WhatsAppScheduleSetting_SendTime DEFAULT ('08:00:00'),
-        IsActive BIT NOT NULL CONSTRAINT DF_WhatsAppScheduleSetting_IsActive DEFAULT ((0)),
-        CreatedDate DATETIME NOT NULL CONSTRAINT DF_WhatsAppScheduleSetting_CreatedDate DEFAULT (GETDATE()),
-        UpdatedDate DATETIME NOT NULL CONSTRAINT DF_WhatsAppScheduleSetting_UpdatedDate DEFAULT (GETDATE())
-    );
-
-    INSERT INTO dbo.WhatsAppScheduleSetting (SendTime, IsActive)
-    VALUES ('08:00:00', 0);
-END;
-
-IF OBJECT_ID('dbo.TRBirthdayPrayWASendLog', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.TRBirthdayPrayWASendLog
-    (
-        id_sendlog BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        id_TRBirthdayPray BIGINT NOT NULL,
-        BirthdayDate DATE NOT NULL,
-        SentAt DATETIME NOT NULL CONSTRAINT DF_TRBirthdayPrayWASendLog_SentAt DEFAULT (GETDATE()),
-        Success BIT NOT NULL,
-        ResponseMessage NVARCHAR(MAX) NOT NULL CONSTRAINT DF_TRBirthdayPrayWASendLog_ResponseMessage DEFAULT ('')
-    );
-END;";
-
-            conn.Execute(sql, transaction: tran);
-        }
-
         public ResponseModelWhatsAppSchedule GetSetting(IDbConnection conn, IDbTransaction? tran = null)
         {
-            EnsureTables(conn, tran);
-
             const string sql = @"
                 SELECT TOP 1
                     id_setting,
@@ -58,8 +22,6 @@ END;";
 
         public void Upsert(RequestUpdateWhatsAppSchedule request, IDbConnection conn, IDbTransaction tran)
         {
-            EnsureTables(conn, tran);
-
             const string sql = @"
                 UPDATE dbo.WhatsAppScheduleSetting
                 SET
@@ -82,8 +44,6 @@ END;";
 
         public List<ResponseModelBirthdayPrayDispatchItem> GetDueDispatches(DateTime runAt, IDbConnection conn, IDbTransaction? tran = null)
         {
-            EnsureTables(conn, tran);
-
             const string sql = @"
 DECLARE @sendTime TIME = (
     SELECT TOP 1 SendTime
@@ -147,8 +107,6 @@ ORDER BY t.id_TRBirthdayPray";
             IDbConnection conn,
             IDbTransaction? tran = null)
         {
-            EnsureTables(conn, tran);
-
             const string sql = @"
                 INSERT INTO dbo.TRBirthdayPrayWASendLog
                     (id_TRBirthdayPray, BirthdayDate, SentAt, Success, ResponseMessage)

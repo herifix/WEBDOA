@@ -1,6 +1,7 @@
 using API.Repository.global;
 using API.Repository.Master;
 using API.Repository.Transaction;
+using API.Service;
 using API.Service.Master;
 using API.Service.Transaction;
 using Microsoft.AspNetCore.StaticFiles;
@@ -126,6 +127,8 @@ builder.Services.AddScoped<ServiceMediaConversion>();
 builder.Services.AddScoped<ServiceMasterUser>();
 builder.Services.AddScoped<ServiceWhatsAppSchedule>();
 builder.Services.AddScoped<ServiceApplicationSetting>();
+builder.Services.AddSingleton<DatabaseVersioningReadiness>();
+builder.Services.AddScoped<ProjectDatabaseVersionService>();
 builder.Services.AddScoped<API.Helpers.HelperFFmpeg>();
 builder.Services.AddHostedService<WhatsAppSchedulerWorker>();
 
@@ -168,6 +171,25 @@ app.Use(async (context, next) =>
         // Don't strip if it's already handled or specifically for uploads if needed, 
         // but since StaticFiles is above, it's fine.
         context.Request.Path = remaining.HasValue ? remaining : "/";
+    }
+
+    await next();
+});
+
+app.Use(async (context, next) =>
+{
+    var databaseVersioningReadiness = context.RequestServices.GetRequiredService<DatabaseVersioningReadiness>();
+    var isLoginRequest = HttpMethods.IsPost(context.Request.Method) &&
+                         string.Equals(context.Request.Path.Value, "/Auth/login", StringComparison.OrdinalIgnoreCase);
+
+    if (!databaseVersioningReadiness.IsReady && !isLoginRequest)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            message = "Database versioning belum siap. Silakan login terlebih dahulu."
+        });
+        return;
     }
 
     await next();

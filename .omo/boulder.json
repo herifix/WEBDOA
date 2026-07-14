@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "active_work_id": "web-doa-database-versioning",
+  "works": {
+    "web-doa-database-versioning": {
+      "work_id": "web-doa-database-versioning",
+      "active_plan": ".omo/plans/web-doa-database-versioning.md",
+      "plan_name": "web-doa-database-versioning",
+      "session_ids": ["codex:web-doa-database-versioning"],
+      "status": "active",
+      "worktree_path": null
+    }
+  }
+}

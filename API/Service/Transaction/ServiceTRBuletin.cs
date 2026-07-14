@@ -136,8 +136,6 @@ namespace API.Service.Transaction
 
             try
             {
-                repo.EnsureTable(conn, tran);
-
                 string description = request.description?.Trim() ?? "";
                 string pesanText = request.pesanText?.Trim() ?? "";
 
@@ -255,8 +253,6 @@ namespace API.Service.Transaction
 
             try
             {
-                repo.EnsureTable(conn, tran);
-
                 var existing = repo.GetDataById(idTRBuletin, conn, tran);
                 if (existing.id_buletin <= 0)
                 {
@@ -304,8 +300,6 @@ namespace API.Service.Transaction
             {
                 if (conn.State == ConnectionState.Closed)
                     conn.Open();
-
-                repo.EnsureTable(conn);
 
                 if (idTRBuletin <= 0)
                 {
