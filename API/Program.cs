@@ -181,8 +181,10 @@ app.Use(async (context, next) =>
     var databaseVersioningReadiness = context.RequestServices.GetRequiredService<DatabaseVersioningReadiness>();
     var isLoginRequest = HttpMethods.IsPost(context.Request.Method) &&
                          string.Equals(context.Request.Path.Value, "/Auth/login", StringComparison.OrdinalIgnoreCase);
+    var isCompanyListRequest = HttpMethods.IsGet(context.Request.Method) &&
+                               string.Equals(context.Request.Path.Value, "/Auth/GetlistPT", StringComparison.OrdinalIgnoreCase);
 
-    if (!databaseVersioningReadiness.IsReady && !isLoginRequest)
+    if (!databaseVersioningReadiness.IsReady && !isLoginRequest && !isCompanyListRequest)
     {
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
         await context.Response.WriteAsJsonAsync(new
