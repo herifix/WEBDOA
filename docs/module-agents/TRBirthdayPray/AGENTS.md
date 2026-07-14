@@ -158,6 +158,8 @@ Check these files first before making changes:
   `VoiceRecordings`.
 - Application setting table:
   `MsProg`.
+- Deployment migration for the 2026-07-13 WABA setting columns:
+  `scripts/database/2026-07-13-add-whatsapp-template-settings.sql`.
 - Config sections that matter for this cluster:
   `Runtime`, `VoiceStorage`, `WhatsAppGateway`, and `MediaConversion`.
 - `API/Program.cs` exposes local-server birthday audio under

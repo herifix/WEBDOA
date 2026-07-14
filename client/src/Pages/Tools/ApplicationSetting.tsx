@@ -1,4 +1,4 @@
-import { Database, ImagePlus, KeyRound, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
+import { CalendarRange, Database, ImagePlus, KeyRound, Link2, MessageSquareText, RefreshCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import StatusBanner from "../../components/StatusBanner";
 import { FORM_IDS } from "../../config/formIds";
@@ -24,6 +24,7 @@ export default function ApplicationSettingPage() {
   const [whatsappGatewayToken, setWhatsappGatewayToken] = useState("");
   const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState("");
   const [storageType, setStorageType] = useState("LocalServer");
+  const [birthdayDashboardBeginDateOffsetDays, setBirthdayDashboardBeginDateOffsetDays] = useState(0);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
@@ -39,6 +40,7 @@ export default function ApplicationSettingPage() {
     setWhatsappGatewayToken(settingQuery.data.whatsappGatewayToken || "");
     setWhatsappPhoneNumberId(settingQuery.data.whatsappPhoneNumberId || "");
     setStorageType(settingQuery.data.storageType || "LocalServer");
+    setBirthdayDashboardBeginDateOffsetDays(settingQuery.data.birthdayDashboardBeginDateOffsetDays ?? 0);
     setMsgImageFile(null);
     setMsgImagePreviewUrl("");
   }, [settingQuery.data]);
@@ -72,6 +74,7 @@ export default function ApplicationSettingPage() {
       (settingQuery.data.whatsappGatewayToken || "") !== whatsappGatewayToken ||
       (settingQuery.data.whatsappPhoneNumberId || "") !== whatsappPhoneNumberId ||
       (settingQuery.data.storageType || "LocalServer") !== storageType ||
+      (settingQuery.data.birthdayDashboardBeginDateOffsetDays ?? 0) !== birthdayDashboardBeginDateOffsetDays ||
       msgImageFile !== null
     );
   }, [
@@ -81,6 +84,7 @@ export default function ApplicationSettingPage() {
     msgTemplate,
     settingQuery.data,
     storageType,
+    birthdayDashboardBeginDateOffsetDays,
     whatsappGatewayToken,
     whatsappPhoneNumberId,
     whatsappTemplateName,
@@ -119,6 +123,11 @@ export default function ApplicationSettingPage() {
       return;
     }
 
+    if (!Number.isInteger(birthdayDashboardBeginDateOffsetDays) || birthdayDashboardBeginDateOffsetDays < 0) {
+      setFormError("Adjustment Range Begin Date harus berupa bilangan bulat nol atau lebih.");
+      return;
+    }
+
     try {
       const response = await updateMutation.mutateAsync({
         msgTemplate: msgTemplate.trim(),
@@ -130,6 +139,7 @@ export default function ApplicationSettingPage() {
         whatsappGatewayToken: whatsappGatewayToken.trim(),
         whatsappPhoneNumberId: whatsappPhoneNumberId.trim(),
         storageType,
+        birthdayDashboardBeginDateOffsetDays,
       });
       setFormSuccess(response.message || "Application setting berhasil disimpan.");
       await settingQuery.refetch();
@@ -275,6 +285,28 @@ export default function ApplicationSettingPage() {
                 </p>
               </div>
 
+              <label htmlFor="birthday-dashboard-begin-date-offset-days" className="pt-3 text-sm font-semibold text-slate-700">
+                Adjustment Range Begin Date (Hari)
+              </label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <CalendarRange className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+                  <input
+                    id="birthday-dashboard-begin-date-offset-days"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={birthdayDashboardBeginDateOffsetDays}
+                    onChange={(e) => setBirthdayDashboardBeginDateOffsetDays(Number(e.target.value))}
+                    className="h-12 w-full rounded-2xl border border-amber-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    aria-describedby="birthday-dashboard-begin-date-offset-days-help"
+                  />
+                </div>
+                <p id="birthday-dashboard-begin-date-offset-days-help" className="text-xs text-slate-500">
+                  Jumlah hari mundur untuk dashboard TRBirthdayPray. Nilai 1 membuat batas awal menjadi H-1.
+                </p>
+              </div>
+
               <label className="pt-3 text-sm font-semibold text-slate-700">Image Pesan</label>
               <div className="space-y-3">
                 <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-amber-300 bg-white/80 px-4 py-6 text-center transition hover:border-amber-400 hover:bg-amber-50/60">
@@ -412,6 +444,10 @@ export default function ApplicationSettingPage() {
               <p>
                 `StorageType` disimpan ke field `MsProg.StorageType` dan dibaca backend sebagai
                 provider efektif rekaman suara untuk environment/database yang sedang aktif.
+              </p>
+              <p>
+                `BirthdayDashboardBeginDateOffsetDays` menentukan jumlah hari mundur batas awal
+                dashboard TRBirthdayPray; batas akhir tetap enam bulan dari tanggal anchor.
               </p>
               <p>
                 `WA Gateway Token` disimpan ke `MsProg.MsgWA_Token` dan dipakai backend untuk

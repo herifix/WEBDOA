@@ -50,6 +50,16 @@ namespace API.Service.Master
 
         public ResponseData<int> Update(RequestUpdateApplicationSetting request)
         {
+            if (request.birthdayDashboardBeginDateOffsetDays < 0)
+            {
+                return new ResponseData<int>
+                {
+                    success = false,
+                    message = "Adjustment Range Begin Date harus bernilai nol atau lebih.",
+                    data = 0
+                };
+            }
+
             if (conn.State == ConnectionState.Closed)
                 conn.Open();
 

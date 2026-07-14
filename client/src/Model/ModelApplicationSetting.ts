@@ -7,4 +7,5 @@ export type ApplicationSetting = {
   whatsappGatewayToken: string;
   whatsappPhoneNumberId: string;
   storageType: string;
+  birthdayDashboardBeginDateOffsetDays: number;
 };

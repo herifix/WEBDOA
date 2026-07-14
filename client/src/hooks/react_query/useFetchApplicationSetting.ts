@@ -23,6 +23,7 @@ export function useUpdateApplicationSetting() {
       whatsappGatewayToken: string;
       whatsappPhoneNumberId: string;
       storageType: string;
+      birthdayDashboardBeginDateOffsetDays: number;
     }) => updateApplicationSetting(payload),
   });
 }

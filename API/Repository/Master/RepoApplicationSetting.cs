@@ -25,7 +25,8 @@ CREATE TABLE dbo.MsProg
     MsgWA_VoiceTemplateName NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_VoiceTemplateName DEFAULT ('doa_selamat_ulang_tahun'),
     MsgWA_Token NVARCHAR(500) NOT NULL CONSTRAINT DF_MsProg_MsgWA_Token DEFAULT (''),
     MsgWA_PhoneNumberId NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_PhoneNumberId DEFAULT ('cmp3vlf4z01qnwx9k8k1aduwk'),
-    StorageType NVARCHAR(50) NOT NULL CONSTRAINT DF_MsProg_StorageType DEFAULT ('LocalServer')
+    StorageType NVARCHAR(50) NOT NULL CONSTRAINT DF_MsProg_StorageType DEFAULT ('LocalServer'),
+    BirthdayDashboardBeginDateOffsetDays INT NOT NULL CONSTRAINT DF_MsProg_BirthdayDashboardBeginDateOffsetDays DEFAULT ((0))
 );";
                     conn.Execute(createSql, transaction: tran);
                 }
@@ -43,14 +44,15 @@ CREATE TABLE dbo.MsProg
             TryEnsureColumn(conn, tran, "StorageType", "ALTER TABLE dbo.MsProg ADD StorageType NVARCHAR(50) NOT NULL CONSTRAINT DF_MsProg_StorageType_Alter DEFAULT ('LocalServer')");
             TryEnsureColumn(conn, tran, "MsgWA_Token", "ALTER TABLE dbo.MsProg ADD MsgWA_Token NVARCHAR(500) NOT NULL CONSTRAINT DF_MsProg_MsgWA_Token_Alter DEFAULT ('')");
             TryEnsureColumn(conn, tran, "MsgWA_PhoneNumberId", "ALTER TABLE dbo.MsProg ADD MsgWA_PhoneNumberId NVARCHAR(100) NOT NULL CONSTRAINT DF_MsProg_MsgWA_PhoneNumberId_Alter DEFAULT ('cmp3vlf4z01qnwx9k8k1aduwk')");
+            TryEnsureColumn(conn, tran, "BirthdayDashboardBeginDateOffsetDays", "ALTER TABLE dbo.MsProg ADD BirthdayDashboardBeginDateOffsetDays INT NOT NULL CONSTRAINT DF_MsProg_BirthdayDashboardBeginDateOffsetDays_Alter DEFAULT ((0))");
 
             if (!HasAnyRow(conn, tran))
             {
-                if (ColumnExists(conn, tran, "MsgWA_Token") && ColumnExists(conn, tran, "MsgWA_TemplateName") && ColumnExists(conn, tran, "MsgWA_VoiceTemplateName") && ColumnExists(conn, tran, "MsgWA_PhoneNumberId") && ColumnExists(conn, tran, "StorageType"))
+                if (ColumnExists(conn, tran, "MsgWA_Token") && ColumnExists(conn, tran, "MsgWA_TemplateName") && ColumnExists(conn, tran, "MsgWA_VoiceTemplateName") && ColumnExists(conn, tran, "MsgWA_PhoneNumberId") && ColumnExists(conn, tran, "StorageType") && ColumnExists(conn, tran, "BirthdayDashboardBeginDateOffsetDays"))
                 {
                     const string insertSql = @"
-INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_VoiceTemplateName, MsgWA_Token, MsgWA_PhoneNumberId, StorageType)
-VALUES ('', '', '', '', 'doa_selamat_ulang_tahun', '', 'cmp3vlf4z01qnwx9k8k1aduwk', 'LocalServer')";
+INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_VoiceTemplateName, MsgWA_Token, MsgWA_PhoneNumberId, StorageType, BirthdayDashboardBeginDateOffsetDays)
+VALUES ('', '', '', '', 'doa_selamat_ulang_tahun', '', 'cmp3vlf4z01qnwx9k8k1aduwk', 'LocalServer', 0)";
                     conn.Execute(insertSql, transaction: tran);
                 }
                 else
@@ -72,6 +74,7 @@ VALUES ('', '', '')";
             bool hasStorageType = ColumnExists(conn, tran, "StorageType");
             bool hasToken = ColumnExists(conn, tran, "MsgWA_Token");
             bool hasPhoneNumberId = ColumnExists(conn, tran, "MsgWA_PhoneNumberId");
+            bool hasBirthdayDashboardBeginDateOffsetDays = ColumnExists(conn, tran, "BirthdayDashboardBeginDateOffsetDays");
 
             string sql = $@"
             SELECT TOP 1
@@ -82,7 +85,8 @@ VALUES ('', '', '')";
                 {(hasVoiceTemplateName ? "ISNULL(MsgWA_VoiceTemplateName, '')" : $"'{DefaultWhatsAppVoiceTemplateName}'")} AS whatsappVoiceTemplateName,
                 {(hasToken ? "ISNULL(MsgWA_Token, '')" : "''")} AS whatsappGatewayToken,
                 {(hasPhoneNumberId ? "ISNULL(MsgWA_PhoneNumberId, '')" : $"'{DefaultWhatsAppPhoneNumberId}'")} AS whatsappPhoneNumberId,
-                {(hasStorageType ? "ISNULL(StorageType, 'LocalServer')" : "'LocalServer'")} AS storageType
+                {(hasStorageType ? "ISNULL(StorageType, 'LocalServer')" : "'LocalServer'")} AS storageType,
+                {(hasBirthdayDashboardBeginDateOffsetDays ? "ISNULL(BirthdayDashboardBeginDateOffsetDays, 0)" : "0")} AS birthdayDashboardBeginDateOffsetDays
             FROM dbo.MsProg";
 
             return conn.QueryFirstOrDefault<ResponseModelApplicationSetting>(sql, transaction: tran)
@@ -98,8 +102,9 @@ VALUES ('', '', '')";
             bool hasStorageType = ColumnExists(conn, tran, "StorageType");
             bool hasToken = ColumnExists(conn, tran, "MsgWA_Token");
             bool hasPhoneNumberId = ColumnExists(conn, tran, "MsgWA_PhoneNumberId");
+            bool hasBirthdayDashboardBeginDateOffsetDays = ColumnExists(conn, tran, "BirthdayDashboardBeginDateOffsetDays");
 
-            if (hasTemplateName && hasVoiceTemplateName && hasStorageType && hasToken && hasPhoneNumberId)
+            if (hasTemplateName && hasVoiceTemplateName && hasStorageType && hasToken && hasPhoneNumberId && hasBirthdayDashboardBeginDateOffsetDays)
             {
                 const string sql = @"
 UPDATE dbo.MsProg
@@ -111,12 +116,13 @@ SET
     MsgWA_VoiceTemplateName = @MsgWA_VoiceTemplateName,
     MsgWA_Token = @MsgWA_Token,
     MsgWA_PhoneNumberId = @MsgWA_PhoneNumberId,
-    StorageType = @StorageType;
+    StorageType = @StorageType,
+    BirthdayDashboardBeginDateOffsetDays = COALESCE(@BirthdayDashboardBeginDateOffsetDays, BirthdayDashboardBeginDateOffsetDays);
 
 IF @@ROWCOUNT = 0
 BEGIN
-    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_VoiceTemplateName, MsgWA_Token, MsgWA_PhoneNumberId, StorageType)
-    VALUES (@MsgTemplate, @MsgLink, @MsgImage, @MsgWA_TemplateName, @MsgWA_VoiceTemplateName, @MsgWA_Token, @MsgWA_PhoneNumberId, @StorageType);
+    INSERT INTO dbo.MsProg (MsgTemplate, MsgLink, MsgImage, MsgWA_TemplateName, MsgWA_VoiceTemplateName, MsgWA_Token, MsgWA_PhoneNumberId, StorageType, BirthdayDashboardBeginDateOffsetDays)
+    VALUES (@MsgTemplate, @MsgLink, @MsgImage, @MsgWA_TemplateName, @MsgWA_VoiceTemplateName, @MsgWA_Token, @MsgWA_PhoneNumberId, @StorageType, COALESCE(@BirthdayDashboardBeginDateOffsetDays, 0));
 END";
 
                 conn.Execute(sql, new
@@ -128,7 +134,8 @@ END";
                     MsgWA_VoiceTemplateName = request.whatsappVoiceTemplateName?.Trim() ?? "",
                     MsgWA_Token = request.whatsappGatewayToken ?? "",
                     MsgWA_PhoneNumberId = request.whatsappPhoneNumberId?.Trim() ?? "",
-                    StorageType = NormalizeStorageType(request.storageType)
+                    StorageType = NormalizeStorageType(request.storageType),
+                    BirthdayDashboardBeginDateOffsetDays = request.birthdayDashboardBeginDateOffsetDays
                 }, tran);
 
                 return;

@@ -42,6 +42,7 @@ export async function updateApplicationSetting(payload: {
   whatsappGatewayToken: string;
   whatsappPhoneNumberId: string;
   storageType: string;
+  birthdayDashboardBeginDateOffsetDays: number;
 }): Promise<UpdateResponse> {
   try {
     const formData = new FormData();
@@ -53,6 +54,10 @@ export async function updateApplicationSetting(payload: {
     formData.append("whatsappGatewayToken", payload.whatsappGatewayToken);
     formData.append("whatsappPhoneNumberId", payload.whatsappPhoneNumberId);
     formData.append("storageType", payload.storageType);
+    formData.append(
+      "birthdayDashboardBeginDateOffsetDays",
+      String(payload.birthdayDashboardBeginDateOffsetDays)
+    );
 
     if (payload.msgImageFile) {
       formData.append("msgImageFile", payload.msgImageFile);

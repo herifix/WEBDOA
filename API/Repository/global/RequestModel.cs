@@ -205,6 +205,7 @@ public class RequestUpdateApplicationSetting
     public string? whatsappGatewayToken { get; set; }
     public string? whatsappPhoneNumberId { get; set; }
     public string? storageType { get; set; }
+    public int? birthdayDashboardBeginDateOffsetDays { get; set; }
 }
 
 public class RequestSendWhatsApp
