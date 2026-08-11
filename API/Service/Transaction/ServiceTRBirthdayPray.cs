@@ -22,7 +22,7 @@ namespace API.Service.Transaction
     public class ServiceTRBirthdayPray
     {
         private const string MainTemplateLanguageCode = "en_US";
-        private const string VoiceTemplateLanguageCode = "en";
+        private const string VoiceTemplateLanguageCode = "en_US";
         private const string NewTemplateLinkPlaceholder = ".";
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
         private const int MaxWhatsAppPreviewLength = 1024;
