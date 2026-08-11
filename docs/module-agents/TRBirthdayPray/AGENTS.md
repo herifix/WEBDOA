@@ -244,10 +244,11 @@ Check these files first before making changes:
 5. A live `SendWhatsApp` attempt marks `IsWASent` before gateway validation,
    media conversion, or HTTP delivery; this status records that the procedure
    started and does not block a manual resend.
-6. The service sends the WABA-approved `MsgWA_TemplateName` first with language
-   `en_US`, waits briefly, then sends `MsgWA_VoiceTemplateName` as the audio
-   follow-up with language `en`. There is no legacy template, catalog lookup,
-   fallback branch, or hardcoded runtime template name in this procedure.
+6. The service sends the WABA-approved `MsgWA_TemplateName` first with
+   `MainTemplateLanguageCode` (currently `en_US`), waits briefly, then sends
+   `MsgWA_VoiceTemplateName` as the audio follow-up with that same language.
+   There is no legacy template, catalog lookup, fallback branch, or hardcoded
+   runtime template name in this procedure.
 
 ### 4.7 Test send, media debug, and delivery-status lookup
 
@@ -333,11 +334,11 @@ by assumption:
   `ServiceTRBirthdayPray` gateway payloads. Keep the field as
   `whatsapp_phone_number_id` directly after `message_type` in those payloads.
 - `MsgWA_TemplateName` is the required WABA/Meta-approved main greeting
-  template name and always serializes with `language.code = en_US`.
-  `MsgWA_VoiceTemplateName` is the required WABA/Meta-approved second audio
-  template name and always serializes with `language.code = en`. The audio
-  setting defaults to `doa_selamat_ulang_tahun` on new and migrated `MsProg`
-  tables. A missing relevant name blocks the send before conversion or HTTP.
+  template name. `MsgWA_VoiceTemplateName` is the required WABA/Meta-approved
+  second audio template name. Both serialize with `language.code` from
+  `MainTemplateLanguageCode` (currently `en_US`). The audio setting defaults to
+  `doa_selamat_ulang_tahun` on new and migrated `MsProg` tables. A missing
+  relevant name blocks the send before conversion or HTTP.
 - `IsWASent` records that a live send procedure started. Manual resend is
   intentionally allowed even when it is already `1`; only scheduler selection
   and the scheduled-send claim require `IsWASent = 0`.
@@ -452,7 +453,7 @@ cause is proven.
 | Meta `131053` or media upload/fetch failure | Call media debug, then verify the exact delivery URL is public, downloadable without login, and returns the intended media. | Fix public URL/storage configuration first. Do not change duration or MP3-to-MP4 behavior until reachability and content are proven. |
 | Delivery status is `UNKNOWN` | Use `GetWhatsAppDeliveryStatus?debug=true` and inspect normalized phone, message-array path, and outbound/inbound parsing counts. | Distinguish no outbound message from parsing fallback; do not infer a gateway result from `IsWASent` alone. |
 | Settings cannot persist `MsgWA_PhoneNumberId` | Confirm the additive `MsProg` column migration completed. | Return the DBA-migration error; never discard the sender ID. A blank ID blocks conversion and gateway HTTP after the live send status is recorded. |
-| Main or audio template name is blank | Inspect `MsgWA_TemplateName` and `MsgWA_VoiceTemplateName` in Application Setting. | Both names must be WABA/Meta-approved. Main uses `en_US`; audio uses `en`. The relevant stage must stop before conversion or gateway HTTP; never substitute a legacy or hardcoded template name. |
+| Main or audio template name is blank | Inspect `MsgWA_TemplateName` and `MsgWA_VoiceTemplateName` in Application Setting. | Both names must be WABA/Meta-approved and use `MainTemplateLanguageCode` (currently `en_US`). The relevant stage must stop before conversion or gateway HTTP; never substitute a legacy or hardcoded template name. |
 | Main template rejects a body parameter or pendoa phone is missing | Verify `Pendoa.nohp` is normalized/valid and inspect the configured new template. | The greeting template requires exactly five body placeholders; keep pendoa validation in both Master UI and API. |
 
 ### Incident entry template
@@ -607,3 +608,16 @@ Use this template for future notes:
   `DebugSendWhatsApp(runLive: false)` confirmed the main setting name with
   `en_US`, the voice setting name with `en`, the sender ID, five main body
   parameters, and no gateway HTTP request.
+
+### 2026-08-11 - Voice template language follows main template language
+
+- Change: The follow-up voice payload and its debug-stage result use
+  `MainTemplateLanguageCode` (currently `en_US`), not a separate voice-only
+  language constant.
+- Why: Main and voice templates must be sent with the same language code.
+- Source of truth: `ServiceTRBirthdayPray.BuildVoiceTemplatePayload` and the
+  follow-up voice stage in `ExecuteWhatsAppSendAsync`.
+- Risk / sharp edge: Preserve configured template names, media header,
+  main-to-voice send order, and `IsWASent` behavior.
+- Verification: Runtime dry-run confirmed both templates use `en_US`; a live
+  send remains subject to the gateway's sender-account registration.

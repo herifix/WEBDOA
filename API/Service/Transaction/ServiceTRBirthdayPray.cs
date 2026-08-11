@@ -22,7 +22,6 @@ namespace API.Service.Transaction
     public class ServiceTRBirthdayPray
     {
         private const string MainTemplateLanguageCode = "en_US";
-        private const string VoiceTemplateLanguageCode = "en_US";
         private const string NewTemplateLinkPlaceholder = ".";
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
         private const int MaxWhatsAppPreviewLength = 1024;
@@ -1572,7 +1571,7 @@ CreateNoWindow = true
                     effectiveTemplateLink);
 
                 followUpVoiceStage.TemplateName = voiceTemplateName;
-                followUpVoiceStage.LanguageCode = VoiceTemplateLanguageCode;
+                followUpVoiceStage.LanguageCode = MainTemplateLanguageCode;
                 bool followUpVoiceSuccess = await ExecuteGatewayStageAsync(
                     httpClient,
                     gatewayUrl,
@@ -3225,7 +3224,7 @@ CreateNoWindow = true
                 template = new
                 {
                     name = templateName,
-                    language = new { code = VoiceTemplateLanguageCode },
+                    language = new { code = MainTemplateLanguageCode },
                     components = new object[]
                     {
                         new
