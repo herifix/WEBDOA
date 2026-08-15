@@ -137,7 +137,16 @@ var app = builder.Build();
 var voiceStorageRootPath = (builder.Configuration["VoiceStorage:RootPath"] ?? "").Trim();
 if (!string.IsNullOrWhiteSpace(voiceStorageRootPath))
 {
-    Directory.CreateDirectory(voiceStorageRootPath);
+    try
+    {
+        Directory.CreateDirectory(voiceStorageRootPath);
+    }
+    catch (Exception ex) when (ShouldUseLocalVoiceStorageFallback(ex, voiceStorageRootPath))
+    {
+        voiceStorageRootPath = Path.Combine(app.Environment.WebRootPath, "uploads", "birthday-pray");
+        Directory.CreateDirectory(voiceStorageRootPath);
+    }
+
     var contentTypeProvider = new FileExtensionContentTypeProvider();
     contentTypeProvider.Mappings[".mp3"] = "audio/mpeg";
     contentTypeProvider.Mappings[".mp4"] = "video/mp4";
@@ -210,3 +219,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static bool ShouldUseLocalVoiceStorageFallback(Exception exception, string physicalFolder)
+{
+    if (!physicalFolder.StartsWith(@"\\", StringComparison.Ordinal))
+    {
+        return false;
+    }
+
+    return exception is DirectoryNotFoundException ||
+        exception is IOException ioException &&
+        (ioException.HResult == unchecked((int)0x80070035) ||
+            ioException.Message.Contains("network path was not found", StringComparison.OrdinalIgnoreCase));
+}

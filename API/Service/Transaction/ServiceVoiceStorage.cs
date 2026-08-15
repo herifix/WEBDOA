@@ -394,8 +394,14 @@ namespace API.Service.Transaction
             string physicalFolder = GetLocalVoicePhysicalFolder();
             string physicalPath = Path.Combine(physicalFolder, fileName);
 
-            if (!Directory.Exists(physicalFolder))
+            try
             {
+                Directory.CreateDirectory(physicalFolder);
+            }
+            catch (Exception ex) when (ShouldUseWebRootFallback(ex, physicalFolder))
+            {
+                physicalFolder = GetLocalWebRootVoiceFolder();
+                physicalPath = Path.Combine(physicalFolder, fileName);
                 Directory.CreateDirectory(physicalFolder);
             }
 
@@ -573,6 +579,24 @@ namespace API.Service.Transaction
             }
 
             return Path.Combine(env.WebRootPath, "uploads", "birthday-pray", environmentFolder);
+        }
+
+        private string GetLocalWebRootVoiceFolder()
+        {
+            return Path.Combine(env.WebRootPath, "uploads", "birthday-pray", GetLocalEnvironmentFolder());
+        }
+
+        private static bool ShouldUseWebRootFallback(Exception exception, string physicalFolder)
+        {
+            if (!physicalFolder.StartsWith(@"\\", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return exception is DirectoryNotFoundException ||
+                exception is IOException ioException &&
+                (ioException.HResult == unchecked((int)0x80070035) ||
+                    ioException.Message.Contains("network path was not found", StringComparison.OrdinalIgnoreCase));
         }
 
         private string GetLocalEnvironmentFolder()
