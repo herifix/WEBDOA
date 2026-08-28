@@ -1,0 +1,76 @@
+manualQa
+
+overallVerdict: PASS_FOR_CODE_FLOW_WITH_EXTERNAL_PUBLIC_TLS_BLOCK
+confidence: High
+blockingExternalCondition: Existing MP4 was found under the configured UNC/prod voice root and a derived public URL was produced. Public HTTPS media fetch is blocked by the host certificate validity, not by this WhatsApp flow change. .NET HttpClient reported a certificate-validity failure and native curl.exe without -k reported SEC_E_CERT_EXPIRED. No TLS bypass, substitute media, upload, conversion, DB mutation, gateway call, or config edit was performed.
+
+surfaceEvidence:
+- scenarioId: S1-new6-blank-voice
+  criterionRef: main setting ucapan_ulang_tahun_new6 combines text and audio into one main template message
+  surface: public ServiceTRBirthdayPray.DebugSendWhatsApp via durable net8 reflection-backed manual harness, using API.Tests fixture types as fake service infrastructure
+  exactInvocation: dotnet run --project .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj -- .omo/evidence/whatsapp-new6-combined-template
+  binaryObservable: assertions.passed=true; mainHeaderType=video; followAttempted=false; followSkippedReason=audio_embedded_in_main_template; mutationCount=0
+  verdict: PASS
+  artifactRefs: [dry-run-json, harness-run, public-media, qa-report]
+- scenarioId: S2-new5-follow-up
+  criterionRef: main setting ucapan_ulang_tahun_new5 preserves current image header plus configured voice follow-up
+  surface: public ServiceTRBirthdayPray.DebugSendWhatsApp via durable net8 reflection-backed manual harness
+  exactInvocation: dotnet run --project .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj -- .omo/evidence/whatsapp-new6-combined-template
+  binaryObservable: assertions.passed=true; mainHeaderType=image; followAttempted=true; followTemplateName=voice_template_configured; followHeaderType=video; mutationCount=0
+  verdict: PASS
+  artifactRefs: [dry-run-json, harness-run, public-media, qa-report]
+- scenarioId: S3-new6-trim-case
+  criterionRef: mode selection is trim and case-insensitive, while outbound template.name remains the trimmed configured setting value
+  surface: public ServiceTRBirthdayPray.DebugSendWhatsApp via durable net8 reflection-backed manual harness
+  exactInvocation: dotnet run --project .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj -- .omo/evidence/whatsapp-new6-combined-template
+  binaryObservable: mainTemplateName=UCAPAN_ULANG_TAHUN_NEW6; mainHeaderType=video; followAttempted=false; mutationCount=0
+  verdict: PASS
+  artifactRefs: [dry-run-json, harness-run, qa-report]
+- scenarioId: S4-public-mp4-reachability
+  criterionRef: real public MP4 URL should be unauthenticated 2xx video/mp4 or MP4 ftyp signature with nonzero content
+  surface: API/appsettings.Development.json read-only config inspection; configured UNC root read-only MP4 discovery; .NET HttpClient Range GET; native curl.exe Range GET without -k
+  exactInvocation: dotnet run --project .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj -- .omo/evidence/whatsapp-new6-combined-template; node inline curl.exe --fail --range 0-31 --silent --show-error <redacted-public-mp4-url>
+  binaryObservable: candidateRootAccessible=True; candidateUnderConfiguredRoot=True; publicMediaVerdict=EXTERNAL_TLS_BLOCKED; curl exitCode=35; stderr contains SEC_E_CERT_EXPIRED
+  verdict: EXTERNAL_BLOCK
+  artifactRefs: [public-media, curl-run]
+- scenarioId: S5-no-side-effects
+  criterionRef: dry-run does not mutate fake DB/IsWASent, does not call gateway, and does not perform conversion/upload
+  surface: fake IDbConnection MutationCount, dry-run artifact metadata, harness metadata
+  exactInvocation: dotnet run --project .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj -- .omo/evidence/whatsapp-new6-combined-template
+  binaryObservable: every observation mutationCount=0; gatewayNetworkCalls=0; mp3ConversionTriggered=false
+  verdict: PASS
+  artifactRefs: [dry-run-json, harness-run]
+
+buildAndTestEvidence:
+- scenarioId: T1-full-api-tests
+  exactInvocation: dotnet test API.Tests/API.Tests.csproj --logger "console;verbosity=minimal"
+  binaryObservable: Passed 11; Failed 0; Skipped 0
+  artifact: .omo/evidence/whatsapp-new6-combined-template/task-2-build-api-tests.txt
+- scenarioId: T2-api-build
+  exactInvocation: dotnet build API/API.csproj --nologo
+  binaryObservable: Build succeeded; 0 Warning(s); 0 Error(s)
+  artifact: .omo/evidence/whatsapp-new6-combined-template/task-2-build-api-tests.txt
+- scenarioId: T3-whatsapp-focused-tests
+  exactInvocation: dotnet test API.Tests/API.Tests.csproj --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests --logger "console;verbosity=minimal"
+  binaryObservable: Passed 10; Failed 0; Skipped 0
+  artifact: .omo/evidence/whatsapp-new6-combined-template/task-2-build-api-tests.txt
+
+artifactRefs:
+- id: dry-run-json
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-dry-run.json
+- id: qa-report
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-qa.txt
+- id: public-media
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-public-media.txt
+- id: build-api-tests
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-build-api-tests.txt
+- id: harness-run
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-harness-run.txt
+- id: curl-run
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-curl-run.txt
+- id: manual-probe-program
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/Program.cs
+- id: manual-probe-project
+  path: .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj
+
+No mutation/side effects: no config, database, gateway, frontend, production data, or application setting was edited by this QA finalization; no live gateway request was sent; no MP3 conversion/upload was performed; full media URL/path and donor PII are not persisted in final evidence.

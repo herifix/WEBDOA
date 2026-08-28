@@ -1,0 +1,14 @@
+task2ManualProbeSourceRetained=true
+manualProbeSourcePath=.omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src
+manualProbeProgramSha256=c21c01c35970a4d04773d7f5969c20aaa8aae48a5907332a8f72a131bc158f33
+manualProbeProjectSha256=02a8a33e2324d91bd97829db1481e72e0580e935b65b6f896c800c3602e7becc
+manualProbeBinExists=false
+manualProbeObjExists=false
+supersededPowerShellAssemblyLoadFailureRecorded=true
+legacyManualProbeRemoved=true
+tempRoot=not_used
+tempRootExists=false
+agentOwnedPort=not_used
+gatewayNetworkCalls=0
+mp3ConversionTriggered=false
+secretPublicUrlFileExists=false

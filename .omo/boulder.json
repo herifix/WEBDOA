@@ -9,6 +9,14 @@
       "session_ids": ["codex:web-doa-database-versioning"],
       "status": "active",
       "worktree_path": null
+    },
+    "whatsapp-new6-combined-template": {
+      "work_id": "whatsapp-new6-combined-template",
+      "active_plan": ".omo/plans/whatsapp-new6-combined-template.md",
+      "plan_name": "whatsapp-new6-combined-template",
+      "session_ids": ["codex:root"],
+      "status": "blocked",
+      "worktree_path": null
     }
   }
 }

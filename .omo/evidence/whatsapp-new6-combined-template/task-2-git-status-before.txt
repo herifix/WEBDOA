@@ -1,0 +1,8 @@
+ M .omo/boulder.json
+ M .omo/start-work/ledger.jsonl
+ M API/Service/Transaction/ServiceTRBirthdayPray.cs
+?? .omo/drafts/whatsapp-new6-combined-template.md
+?? .omo/evidence/whatsapp-new6-combined-template-gate-review.md
+?? .omo/evidence/whatsapp-new6-combined-template/
+?? .omo/plans/whatsapp-new6-combined-template.md
+?? API.Tests/ServiceTRBirthdayPrayWhatsAppPayloadTests.cs

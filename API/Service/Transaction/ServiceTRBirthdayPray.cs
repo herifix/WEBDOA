@@ -22,6 +22,7 @@ namespace API.Service.Transaction
     public class ServiceTRBirthdayPray
     {
         private const string MainTemplateLanguageCode = "en_US";
+        private const string CombinedVoiceMainTemplateName = "ucapan_ulang_tahun_new6";
         private const string NewTemplateLinkPlaceholder = ".";
         private const string NewTemplateFallbackHeaderImageUrl = "https://yobel.intsoftware.co.id/api/uploads/birthday-pray/prod/cake.jpg";
         private const int MaxWhatsAppPreviewLength = 1024;
@@ -1329,6 +1330,10 @@ CreateNoWindow = true
                 string whatsappPhoneNumberId = (setting.whatsappPhoneNumberId ?? "").Trim();
                 string mainTemplateName = (setting.whatsappTemplateName ?? "").Trim();
                 string voiceTemplateName = (setting.whatsappVoiceTemplateName ?? "").Trim();
+                bool useCombinedVoiceMainTemplate = ShouldUseCombinedVoiceMainTemplate(mainTemplateName);
+                bool shouldSendFollowUpVoice = ShouldSendFollowUpVoice(
+                    mainTemplateName,
+                    options.IncludeFollowUpVoice);
 
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
                 {
@@ -1369,7 +1374,7 @@ CreateNoWindow = true
                         followUpVoiceStage);
                 }
 
-                if (options.IncludeFollowUpVoice && string.IsNullOrWhiteSpace(voiceTemplateName))
+                if (shouldSendFollowUpVoice && string.IsNullOrWhiteSpace(voiceTemplateName))
                 {
                     return CreateSendResponse(
                         false,
@@ -1443,6 +1448,20 @@ CreateNoWindow = true
                         followUpVoiceStage);
                 }
 
+                if (useCombinedVoiceMainTemplate &&
+                    !Uri.TryCreate(effectiveTemplateLink, UriKind.Absolute, out _))
+                {
+                    return CreateSendResponse(
+                        false,
+                        "URL rekaman suara tidak valid untuk header template utama.",
+                        "",
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
                 var templateValidation = ValidateWhatsAppTemplateParameters(
                     mainTemplateName,
                     setting.msgTemplate,
@@ -1475,16 +1494,32 @@ CreateNoWindow = true
                         new AuthenticationHeaderValue("Bearer", gatewayToken);
                 }
 
-                string headerImageUrl = ResolveNewTemplateHeaderImageUrl(setting.msgLink, publicBaseUrl);
-                var payload = BuildNewTemplatePayload(
-                    phoneNumber,
-                    whatsappPhoneNumberId,
-                    mainTemplateName,
-                    headerImageUrl,
-                    prayData.namaDonatur,
-                    prayData.namaPendoa,
-                    prayData.pesan ?? "",
-                    pendoaPhoneNumber);
+                object payload;
+                if (useCombinedVoiceMainTemplate)
+                {
+                    payload = BuildCombinedMainTemplatePayload(
+                        phoneNumber,
+                        whatsappPhoneNumberId,
+                        mainTemplateName,
+                        effectiveTemplateLink,
+                        prayData.namaDonatur,
+                        prayData.namaPendoa,
+                        prayData.pesan ?? "",
+                        pendoaPhoneNumber);
+                }
+                else
+                {
+                    string headerImageUrl = ResolveNewTemplateHeaderImageUrl(setting.msgLink, publicBaseUrl);
+                    payload = BuildNewTemplatePayload(
+                        phoneNumber,
+                        whatsappPhoneNumberId,
+                        mainTemplateName,
+                        headerImageUrl,
+                        prayData.namaDonatur,
+                        prayData.namaPendoa,
+                        prayData.pesan ?? "",
+                        pendoaPhoneNumber);
+                }
 
                 mainTemplateStage.TemplateName = mainTemplateName;
                 mainTemplateStage.LanguageCode = MainTemplateLanguageCode;
@@ -1501,6 +1536,25 @@ CreateNoWindow = true
                     return CreateSendResponse(
                         false,
                         mainTemplateStage.Message,
+                        mainTemplateStage.GatewayResponse,
+                        options,
+                        normalizedPhoneNumber,
+                        effectiveAudioUrl,
+                        mainTemplateStage,
+                        followUpVoiceStage);
+                }
+
+                if (useCombinedVoiceMainTemplate)
+                {
+                    followUpVoiceStage.Skipped = true;
+                    followUpVoiceStage.Success = true;
+                    followUpVoiceStage.Message = "Follow-up voice dilewati karena audio sudah tergabung di main template.";
+                    followUpVoiceStage.SkippedReason = "audio_embedded_in_main_template";
+                    followUpVoiceStage.LanguageCode = MainTemplateLanguageCode;
+
+                    return CreateSendResponse(
+                        true,
+                        $"Pesan WhatsApp berhasil dikirim (template: {mainTemplateName}, language: {MainTemplateLanguageCode}) dengan audio tergabung di main template.",
                         mainTemplateStage.GatewayResponse,
                         options,
                         normalizedPhoneNumber,
@@ -3208,6 +3262,53 @@ CreateNoWindow = true
             };
         }
 
+        private object BuildCombinedMainTemplatePayload(
+            string phoneNumber,
+            string whatsappPhoneNumberId,
+            string templateName,
+            string videoUrl,
+            string namaDonatur,
+            string namaPendoa,
+            string isiDoa,
+            string noHPPendoa)
+        {
+            return new
+            {
+                phone_number = phoneNumber,
+                channel = "whatsapp",
+                message_type = "template",
+                whatsapp_phone_number_id = whatsappPhoneNumberId,
+                template = new
+                {
+                    name = templateName,
+                    language = new { code = MainTemplateLanguageCode },
+                    components = new object[]
+                    {
+                        new
+                        {
+                            type = "header",
+                            parameters = new object[]
+                            {
+                                new { type = "video", video = new { link = videoUrl } }
+                            }
+                        },
+                        new
+                        {
+                            type = "body",
+                            parameters = new object[]
+                            {
+                                new { type = "text", text = namaDonatur ?? "" },
+                                new { type = "text", text = namaPendoa ?? "" },
+                                new { type = "text", text = NewTemplateLinkPlaceholder },
+                                new { type = "text", text = isiDoa ?? "" },
+                                new { type = "text", text = noHPPendoa ?? "" }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
         private object BuildVoiceTemplatePayload(
             string phoneNumber,
             string whatsappPhoneNumberId,
@@ -3261,6 +3362,18 @@ CreateNoWindow = true
             }
 
             return NewTemplateFallbackHeaderImageUrl;
+        }
+
+        private bool ShouldUseCombinedVoiceMainTemplate(string templateName)
+        {
+            return (templateName ?? "").Trim().Equals(
+                CombinedVoiceMainTemplateName,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool ShouldSendFollowUpVoice(string mainTemplateName, bool includeFollowUpVoice)
+        {
+            return includeFollowUpVoice && !ShouldUseCombinedVoiceMainTemplate(mainTemplateName);
         }
 
         private bool TemplateNameMatches(string templateName, List<string> candidates)

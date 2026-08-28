@@ -1,0 +1,37 @@
+Scenario: full API.Tests after new6 combined-template implementation
+Invocation: dotnet test API.Tests/API.Tests.csproj --logger "console;verbosity=minimal"
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    11, Skipped:     0, Total:    11, Duration: 1 s - API.Tests.dll (net8.0)
+Scenario: API build after new6 combined-template implementation
+Invocation: dotnet build API/API.csproj --nologo
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.42
+Scenario: WhatsApp payload focused tests
+Invocation: dotnet test API.Tests/API.Tests.csproj --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests --logger "console;verbosity=minimal"
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 114 ms - API.Tests.dll (net8.0)

@@ -1,0 +1,47 @@
+### full API.Tests
+Invocation: dotnet test API.Tests/API.Tests.csproj --logger "console;verbosity=minimal"
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    11, Skipped:     0, Total:    11, Duration: 1 s - API.Tests.dll (net8.0)
+
+### API build
+Invocation: dotnet build API/API.csproj --nologo
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.43
+
+### WhatsApp focused tests
+Invocation: dotnet test API.Tests/API.Tests.csproj --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests --logger "console;verbosity=minimal"
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 120 ms - API.Tests.dll (net8.0)
+
+### DebugSendWhatsApp dry-run harness
+Invocation: dotnet run --project .omo/evidence/whatsapp-new6-combined-template/task-2-manual-probe-src/ManualProbe.csproj -- .omo/evidence/whatsapp-new6-combined-template
+manual probe PASS
+publicMediaVerdict=EXTERNAL_TLS_BLOCKED
+publicUrlSha256=3238d9eff604f8cccef53018066be689d86120a4ae36d8168765bb43b7fc56e6
+sourceProgramSha256=f1002f0382d33224ba745cc0dd654ee716d652a4c618b39f87371fd54dcebf05
+sourceProjectSha256=02a8a33e2324d91bd97829db1481e72e0580e935b65b6f896c800c3602e7becc

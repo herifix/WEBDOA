@@ -244,11 +244,24 @@ Check these files first before making changes:
 5. A live `SendWhatsApp` attempt marks `IsWASent` before gateway validation,
    media conversion, or HTTP delivery; this status records that the procedure
    started and does not block a manual resend.
-6. The service sends the WABA-approved `MsgWA_TemplateName` first with
-   `MainTemplateLanguageCode` (currently `en_US`), waits briefly, then sends
-   `MsgWA_VoiceTemplateName` as the audio follow-up with that same language.
-   There is no legacy template, catalog lookup, fallback branch, or hardcoded
-   runtime template name in this procedure.
+6. The outbound main template name always comes from
+   `MsgWA_TemplateName` in Application Setting. The service trims that value
+   and compares it case-insensitively only to choose the send mode; it does not
+   replace the configured outbound name with a hardcoded template name.
+7. When the configured main template is `ucapan_ulang_tahun_new6`, the service
+   sends one main template with `MainTemplateLanguageCode` (currently `en_US`):
+   the header is `VIDEO` and uses the MP4 URL from
+   `EnsureWhatsAppMp4VoiceAsync`, while the five body parameters remain donor
+   name, pendoa name, `.`, prayer text, and pendoa phone number.
+   `MsgWA_VoiceTemplateName` is not required for this mode, there is no delay,
+   and there is no second gateway request. Debug output records the
+   follow-up stage as skipped with `audio_embedded_in_main_template`.
+8. When the configured main template is `ucapan_ulang_tahun_new5` or any name
+   other than `ucapan_ulang_tahun_new6`, the service keeps the established
+   behavior: main template with IMAGE header first, then the configured
+   `MsgWA_VoiceTemplateName` follow-up template with VIDEO header after the
+   existing delay. There is no legacy template, catalog lookup, fallback branch,
+   or hardcoded runtime outbound template name in this procedure.
 
 ### 4.7 Test send, media debug, and delivery-status lookup
 
@@ -334,11 +347,20 @@ by assumption:
   `ServiceTRBirthdayPray` gateway payloads. Keep the field as
   `whatsapp_phone_number_id` directly after `message_type` in those payloads.
 - `MsgWA_TemplateName` is the required WABA/Meta-approved main greeting
-  template name. `MsgWA_VoiceTemplateName` is the required WABA/Meta-approved
-  second audio template name. Both serialize with `language.code` from
-  `MainTemplateLanguageCode` (currently `en_US`). The audio setting defaults to
-  `doa_selamat_ulang_tahun` on new and migrated `MsProg` tables. A missing
-  relevant name blocks the send before conversion or HTTP.
+  template name for every manual and scheduler send. For both
+  `ucapan_ulang_tahun_new5` and `ucapan_ulang_tahun_new6`, that outbound name
+  remains the Application Setting value after trim; the code only compares the
+  configured value to select image-plus-follow-up mode versus combined-video
+  mode.
+- `MsgWA_VoiceTemplateName` is the required WABA/Meta-approved second audio
+  template name only for `ucapan_ulang_tahun_new5` and other non-`new6` main
+  template names. `ucapan_ulang_tahun_new6` embeds the voice MP4 in the main
+  template header, so this setting is not required and no follow-up voice
+  template is sent. Both main and relevant follow-up templates serialize with
+  `language.code` from `MainTemplateLanguageCode` (currently `en_US`). The
+  audio setting defaults to `doa_selamat_ulang_tahun` on new and migrated
+  `MsProg` tables. A missing relevant name blocks the send before conversion or
+  HTTP.
 - `IsWASent` records that a live send procedure started. Manual resend is
   intentionally allowed even when it is already `1`; only scheduler selection
   and the scheduled-send claim require `IsWASent = 0`.
@@ -348,8 +370,10 @@ by assumption:
 - The main birthday greeting template has exactly five body parameters in this
   order: donor name, pendoa name, link, prayer text, then pendoa phone number.
   `Pendoa.nohp` must be a valid international value such as `+628123456789`.
-  The scheduler uses this same greeting payload; test text/voice and the
-  voice follow-up do not add this body parameter.
+  The scheduler uses this same greeting payload. In `ucapan_ulang_tahun_new6`,
+  this same five-parameter body is paired with a VIDEO header from the existing
+  MP4 conversion/delivery URL. Test text/voice and the separate voice follow-up
+  do not add this body parameter.
 - `GetDateStatuses` and `UpcomingBirthdayByTgl` are API contracts that should
   stay behaviorally stable even though current dashboard rendering is driven by
   `GetDashboard`.
@@ -453,7 +477,7 @@ cause is proven.
 | Meta `131053` or media upload/fetch failure | Call media debug, then verify the exact delivery URL is public, downloadable without login, and returns the intended media. | Fix public URL/storage configuration first. Do not change duration or MP3-to-MP4 behavior until reachability and content are proven. |
 | Delivery status is `UNKNOWN` | Use `GetWhatsAppDeliveryStatus?debug=true` and inspect normalized phone, message-array path, and outbound/inbound parsing counts. | Distinguish no outbound message from parsing fallback; do not infer a gateway result from `IsWASent` alone. |
 | Settings cannot persist `MsgWA_PhoneNumberId` | Confirm the additive `MsProg` column migration completed. | Return the DBA-migration error; never discard the sender ID. A blank ID blocks conversion and gateway HTTP after the live send status is recorded. |
-| Main or audio template name is blank | Inspect `MsgWA_TemplateName` and `MsgWA_VoiceTemplateName` in Application Setting. | Both names must be WABA/Meta-approved and use `MainTemplateLanguageCode` (currently `en_US`). The relevant stage must stop before conversion or gateway HTTP; never substitute a legacy or hardcoded template name. |
+| Main or relevant audio template name is blank | Inspect `MsgWA_TemplateName` and `MsgWA_VoiceTemplateName` in Application Setting. | `MsgWA_TemplateName` is always required and always remains the outbound main template name. `MsgWA_VoiceTemplateName` is required only when the configured main template is not `ucapan_ulang_tahun_new6`. The relevant stage must stop before conversion or gateway HTTP; never substitute a legacy or hardcoded template name. |
 | Main template rejects a body parameter or pendoa phone is missing | Verify `Pendoa.nohp` is normalized/valid and inspect the configured new template. | The greeting template requires exactly five body placeholders; keep pendoa validation in both Master UI and API. |
 
 ### Incident entry template
@@ -545,10 +569,11 @@ Use this template for future notes:
 
 ### 2026-07-13 - Unified main-template and audio send package
 
-- Change: Live manual send now marks `IsWASent` at procedure start, always
-  sends the configured main template followed by the configured audio template,
-  and no longer selects a legacy template path. The concrete template names are
-  defined by the later WABA-setting entry.
+- Change: Live manual send now marks `IsWASent` at procedure start, sends the
+  configured main template through the shared service flow, and no longer
+  selects a legacy template path. For non-`new6` main templates this sends the
+  configured audio follow-up; the later 2026-08-28 entry documents the
+  `ucapan_ulang_tahun_new6` combined-template exception.
   Manual resend remains valid when `IsWASent = 1`.
 - Why: The greeting and audio must be one ordered send procedure, while the
   status records a started attempt instead of a confirmed gateway delivery.
@@ -585,8 +610,9 @@ Use this template for future notes:
 - Source of truth: `ServiceMasterPendoa` validates the stored number;
   `ServiceTRBirthdayPray` validates it before media work and serializes it in
   the main-template body.
-- Risk / sharp edge: Keep the video follow-up and test payloads unchanged.
-  Scheduler uses the same main-template contract.
+- Risk / sharp edge: Keep the relevant video follow-up for non-`new6` template
+  names and test payloads unchanged. Scheduler uses the same main-template
+  contract.
 - Verification: Code-verified; API/client builds passed and the local
   `DebugSendWhatsApp` dry-run confirmed five body parameters.
 
@@ -594,7 +620,7 @@ Use this template for future notes:
 
 - Change: `MsProg.MsgWA_TemplateName` is now the runtime main-template name
   with `en_US`, while the new `MsProg.MsgWA_VoiceTemplateName` is the runtime
-  audio follow-up name with `en`; the latter defaults to
+  audio follow-up setting for non-`new6` main templates; the latter defaults to
   `doa_selamat_ulang_tahun` for new and migrated settings tables.
 - Why: Template names must be managed from Master Setting and must match the
   WABA/Meta-approved templates instead of being hardcoded in the send service.
@@ -621,3 +647,32 @@ Use this template for future notes:
   main-to-voice send order, and `IsWASent` behavior.
 - Verification: Runtime dry-run confirmed both templates use `en_US`; a live
   send remains subject to the gateway's sender-account registration.
+
+### 2026-08-28 - Combined voice main template for new6
+
+- Change: `ServiceTRBirthdayPray` now selects WhatsApp send mode from the
+  configured `MsgWA_TemplateName` after trim and case-insensitive comparison.
+  `ucapan_ulang_tahun_new6` sends one main template with VIDEO header using the
+  existing `EnsureWhatsAppMp4VoiceAsync` MP4 delivery URL and the same five body
+  parameters/order. `ucapan_ulang_tahun_new5` and other template names keep the
+  established IMAGE-header main template plus configured voice follow-up
+  behavior.
+- Why: WABA template `ucapan_ulang_tahun_new6` combines greeting text and voice
+  media in one approved template, while existing `new5` and other settings must
+  stay compatible.
+- Source of truth: `API/Service/Transaction/ServiceTRBirthdayPray.cs`,
+  `API.Tests/ServiceTRBirthdayPrayWhatsAppPayloadTests.cs`,
+  `.omo/evidence/whatsapp-new6-combined-template/`, and this rulebook.
+- Risk / sharp edge: The outbound main template name still comes from
+  Application Setting; do not hardcode or rewrite it. Preserve
+  `ServiceVoiceStorage`, MP3-to-MP4 conversion, storage output, public URL
+  rules, scheduler reuse, and `IsWASent` ordering. Debug `new6` should show the
+  follow-up stage skipped with `audio_embedded_in_main_template`.
+- Verification: Code-verified and Runtime-verified through `API.Tests` and a
+  local dry-run manual harness. API build passed, API tests passed, `new5`
+  serialized IMAGE plus follow-up, `new6` serialized VIDEO and skipped the
+  second stage, and dry-run did not mutate `IsWASent`. A real existing UNC MP4
+  was found and matched the derived public URL shape, but live public media
+  fetch against `yobel.intsoftware.co.id` is blocked by external TLS certificate
+  validity (`NotTimeValid` / curl `SEC_E_CERT_EXPIRED`), so this task does not
+  claim a live gateway send or public-download success.

@@ -1,0 +1,6 @@
+invocation=curl.exe --fail --range 0-31 --silent --show-error <redacted-public-mp4-url>
+publicBaseHost=yobel.intsoftware.co.id
+exitCode=35
+stdoutBytes=0
+stderr=curl: (35) schannel: next InitializeSecurityContext failed: SEC_E_CERT_EXPIRED (0x80090328) - The received certificate has expired.
+externalClassification=public TLS certificate validity

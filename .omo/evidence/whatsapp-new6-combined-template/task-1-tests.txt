@@ -1,0 +1,436 @@
+# Task 1 WhatsApp new6 combined template evidence
+Timestamp: 2026-08-28T03:27:38Z
+Scenario: baseline unchanged-code characterization for new5 image header and default follow-up selection
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.NewTemplatePayload_UsesImageHeaderFiveBodyParametersAndDefaultFollowUp --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1, Duration: 71 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: failing-first proof for new6 combined mode before production change
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.Combined --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.CombinedTemplateMode_OnlyMatchesTrimmedCaseInsensitiveNew6 [12 ms]
+  Error Message:
+   Assert.NotNull() Failure: Value is null
+  Stack Trace:
+     at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.InvokePrivate[T](Object instance, String methodName, Object[] args) in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 120
+   at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.CombinedTemplateMode_OnlyMatchesTrimmedCaseInsensitiveNew6() in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 64
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.CombinedMainTemplatePayload_UsesVideoHeaderAndSameFiveBodyParameters [1 ms]
+  Error Message:
+   Assert.NotNull() Failure: Value is null
+  Stack Trace:
+     at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.InvokePrivate[T](Object instance, String methodName, Object[] args) in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 120
+   at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.CombinedMainTemplatePayload_UsesVideoHeaderAndSameFiveBodyParameters() in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 76
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     2, Passed:     0, Skipped:     0, Total:     2, Duration: 15 ms - API.Tests.dll (net8.0)
+ExitCode: 1
+
+Scenario: final focused payload and routing seam tests after production change
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests --logger 'console;verbosity=minimal'
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(25,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(27,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(32,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(34,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(42,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(44,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(51,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(53,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(106,19): warning CS8618: Non-nullable property 'code' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(107,19): warning CS8618: Non-nullable property 'name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(108,19): warning CS8618: Non-nullable property 'classcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(109,19): warning CS8618: Non-nullable property 'img1' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(110,19): warning CS8618: Non-nullable property 'usercreate' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(117,19): warning CS8618: Non-nullable property 'code' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(118,19): warning CS8618: Non-nullable property 'name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(119,19): warning CS8618: Non-nullable property 'classcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(120,19): warning CS8618: Non-nullable property 'baseunitcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(123,19): warning CS8618: Non-nullable property 'userupdate' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(226,19): warning CS8618: Non-nullable property 'Userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(227,19): warning CS8618: Non-nullable property 'Password' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(230,19): warning CS8618: Non-nullable property 'Userpt' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(235,19): warning CS8618: Non-nullable property 'Userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(236,19): warning CS8618: Non-nullable property 'Jenistr' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(237,19): warning CS8618: Non-nullable property 'Notr' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(238,19): warning CS8618: Non-nullable property 'FromModul' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(239,19): warning CS8618: Non-nullable property 'Act' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(240,19): warning CS8618: Non-nullable property 'Ket' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(241,19): warning CS8618: Non-nullable property 'Kodearea' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(253,23): warning CS8618: Non-nullable property 'typebcfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(255,23): warning CS8618: Non-nullable property 'typebcto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(257,23): warning CS8618: Non-nullable property 'itemfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(259,23): warning CS8618: Non-nullable property 'itemto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(286,23): warning CS8618: Non-nullable property 'itemfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(288,23): warning CS8618: Non-nullable property 'itemto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(5,19): warning CS8618: Non-nullable property 'message' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(6,14): warning CS8618: Non-nullable property 'data' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(26,19): warning CS8618: Non-nullable property 'Userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(27,19): warning CS8618: Non-nullable property 'Userpt' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(28,19): warning CS8618: Non-nullable property 'Username' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(29,19): warning CS8618: Non-nullable property 'Password' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(30,19): warning CS8618: Non-nullable property 'Userlvl' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(38,19): warning CS8618: Non-nullable property 'PtCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(39,19): warning CS8618: Non-nullable property 'PtName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(40,19): warning CS8618: Non-nullable property 'TahunAktifInv' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(41,19): warning CS8618: Non-nullable property 'TahunAktifGl' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(103,19): warning CS8618: Non-nullable property 'code' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(104,19): warning CS8618: Non-nullable property 'name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(105,19): warning CS8618: Non-nullable property 'img1' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(106,19): warning CS8618: Non-nullable property 'classcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(107,19): warning CS8618: Non-nullable property 'classname' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(108,19): warning CS8618: Non-nullable property 'baseunitcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(109,19): warning CS8618: Non-nullable property 'baseunitname' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(325,19): warning CS8618: Non-nullable property 'ItemCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(326,19): warning CS8618: Non-nullable property 'ItemName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(328,19): warning CS8618: Non-nullable property 'UnitName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(334,19): warning CS8618: Non-nullable property 'ItemCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(335,19): warning CS8618: Non-nullable property 'ItemName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(336,19): warning CS8618: Non-nullable property 'UnitName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(348,19): warning CS8618: Non-nullable property 'UserID' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(349,19): warning CS8618: Non-nullable property 'JenisTR' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(350,19): warning CS8618: Non-nullable property 'NoTR' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(351,19): warning CS8618: Non-nullable property 'Act' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(352,19): warning CS8618: Non-nullable property 'Waktu' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(353,19): warning CS8618: Non-nullable property 'Ket' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(303,19): warning CS8618: Non-nullable property 'TipeBC' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(304,19): warning CS8618: Non-nullable property 'NoBC' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(306,19): warning CS8618: Non-nullable property 'TRNo' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(308,19): warning CS8618: Non-nullable property 'InvNo' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(310,19): warning CS8618: Non-nullable property 'SuppName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(311,19): warning CS8618: Non-nullable property 'ItemCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(312,19): warning CS8618: Non-nullable property 'ItemName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(313,19): warning CS8618: Non-nullable property 'Alias' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(314,19): warning CS8618: Non-nullable property 'UnitName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(318,19): warning CS8618: Non-nullable property 'CurrCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(319,19): warning CS8618: Non-nullable property 'HSNO' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(273,23): warning CS8618: Non-nullable property 'itemfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(275,23): warning CS8618: Non-nullable property 'itemto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(299,23): warning CS8618: Non-nullable property 'userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(301,23): warning CS8618: Non-nullable property 'trno' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\Master\RepoMasterItem.cs(64,40): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\Master\RepoMasterPendoa.cs(123,42): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\GlobalFunction.cs(49,24): warning CS8603: Possible null reference return. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\GlobalFunction.cs(90,20): warning CS8603: Possible null reference return. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(29,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(30,51): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelListBC> RepoReportBC.ListBC(RequestModelListBC BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(38,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(39,53): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelPosisisWIP> RepoReportBC.PosisiWIP(RequestModelPosisiWIP BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(47,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(48,52): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiBB(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(56,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(57,52): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiFG(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(65,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(67,57): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiReject(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(75,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(77,54): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiMSN(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(85,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(88,52): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelHistLog> RepoReportBC.HistLOG(RequestModelHistLog BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Master\ServiceMasterItem.cs(72,45): warning CS8602: Dereference of a possibly null reference. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Master\ServiceMasterItem.cs(81,40): warning CS8602: Dereference of a possibly null reference. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Transaction\ServiceTRBirthdayPray.cs(379,74): warning CS8604: Possible null reference argument for parameter 'storedValue' in 'string ServiceTRBirthdayPray.ResolveStoredAudioPreviewUrl(string storedValue)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Transaction\ServiceTRBuletin.cs(413,41): warning CS8604: Possible null reference argument for parameter 'item' in 'void List<string>.Add(string item)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 197 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: final focused payload/routing tests after adding follow-up selection seam
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests --logger 'console;verbosity=minimal'
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(25,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(27,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(32,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(34,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(42,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(44,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(51,19): warning CS8618: Non-nullable property 'nama' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(53,19): warning CS8618: Non-nullable property 'nohp' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(106,19): warning CS8618: Non-nullable property 'code' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(107,19): warning CS8618: Non-nullable property 'name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(108,19): warning CS8618: Non-nullable property 'classcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(109,19): warning CS8618: Non-nullable property 'img1' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(110,19): warning CS8618: Non-nullable property 'usercreate' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(117,19): warning CS8618: Non-nullable property 'code' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(118,19): warning CS8618: Non-nullable property 'name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(119,19): warning CS8618: Non-nullable property 'classcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(120,19): warning CS8618: Non-nullable property 'baseunitcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(123,19): warning CS8618: Non-nullable property 'userupdate' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(226,19): warning CS8618: Non-nullable property 'Userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(227,19): warning CS8618: Non-nullable property 'Password' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(230,19): warning CS8618: Non-nullable property 'Userpt' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(235,19): warning CS8618: Non-nullable property 'Userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(236,19): warning CS8618: Non-nullable property 'Jenistr' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(237,19): warning CS8618: Non-nullable property 'Notr' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(238,19): warning CS8618: Non-nullable property 'FromModul' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(239,19): warning CS8618: Non-nullable property 'Act' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(240,19): warning CS8618: Non-nullable property 'Ket' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(241,19): warning CS8618: Non-nullable property 'Kodearea' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(253,23): warning CS8618: Non-nullable property 'typebcfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(255,23): warning CS8618: Non-nullable property 'typebcto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(257,23): warning CS8618: Non-nullable property 'itemfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(259,23): warning CS8618: Non-nullable property 'itemto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(299,23): warning CS8618: Non-nullable property 'userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(301,23): warning CS8618: Non-nullable property 'trno' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(5,19): warning CS8618: Non-nullable property 'message' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(6,14): warning CS8618: Non-nullable property 'data' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(286,23): warning CS8618: Non-nullable property 'itemfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(288,23): warning CS8618: Non-nullable property 'itemto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(273,23): warning CS8618: Non-nullable property 'itemfrom' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\RequestModel.cs(275,23): warning CS8618: Non-nullable property 'itemto' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(26,19): warning CS8618: Non-nullable property 'Userid' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(27,19): warning CS8618: Non-nullable property 'Userpt' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(28,19): warning CS8618: Non-nullable property 'Username' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(29,19): warning CS8618: Non-nullable property 'Password' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(30,19): warning CS8618: Non-nullable property 'Userlvl' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(38,19): warning CS8618: Non-nullable property 'PtCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(39,19): warning CS8618: Non-nullable property 'PtName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(40,19): warning CS8618: Non-nullable property 'TahunAktifInv' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(41,19): warning CS8618: Non-nullable property 'TahunAktifGl' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(103,19): warning CS8618: Non-nullable property 'code' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(104,19): warning CS8618: Non-nullable property 'name' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(105,19): warning CS8618: Non-nullable property 'img1' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(106,19): warning CS8618: Non-nullable property 'classcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(107,19): warning CS8618: Non-nullable property 'classname' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(108,19): warning CS8618: Non-nullable property 'baseunitcode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(109,19): warning CS8618: Non-nullable property 'baseunitname' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(325,19): warning CS8618: Non-nullable property 'ItemCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(326,19): warning CS8618: Non-nullable property 'ItemName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(328,19): warning CS8618: Non-nullable property 'UnitName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(348,19): warning CS8618: Non-nullable property 'UserID' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(349,19): warning CS8618: Non-nullable property 'JenisTR' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(350,19): warning CS8618: Non-nullable property 'NoTR' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(351,19): warning CS8618: Non-nullable property 'Act' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(352,19): warning CS8618: Non-nullable property 'Waktu' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(353,19): warning CS8618: Non-nullable property 'Ket' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(303,19): warning CS8618: Non-nullable property 'TipeBC' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(304,19): warning CS8618: Non-nullable property 'NoBC' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(306,19): warning CS8618: Non-nullable property 'TRNo' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(308,19): warning CS8618: Non-nullable property 'InvNo' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(310,19): warning CS8618: Non-nullable property 'SuppName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(311,19): warning CS8618: Non-nullable property 'ItemCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(312,19): warning CS8618: Non-nullable property 'ItemName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(313,19): warning CS8618: Non-nullable property 'Alias' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(314,19): warning CS8618: Non-nullable property 'UnitName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(318,19): warning CS8618: Non-nullable property 'CurrCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(319,19): warning CS8618: Non-nullable property 'HSNO' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(334,19): warning CS8618: Non-nullable property 'ItemCode' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(335,19): warning CS8618: Non-nullable property 'ItemName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\ResponseModel.cs(336,19): warning CS8618: Non-nullable property 'UnitName' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\Master\RepoMasterItem.cs(64,40): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\Master\RepoMasterPendoa.cs(123,42): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\GlobalFunction.cs(49,24): warning CS8603: Possible null reference return. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Repository\global\GlobalFunction.cs(90,20): warning CS8603: Possible null reference return. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(29,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(30,51): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelListBC> RepoReportBC.ListBC(RequestModelListBC BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(38,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(39,53): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelPosisisWIP> RepoReportBC.PosisiWIP(RequestModelPosisiWIP BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(47,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(48,52): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiBB(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(56,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(57,52): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiFG(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(65,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(67,57): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiReject(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(75,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(77,54): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelMutStok> RepoReportBC.MutasiMSN(RequestModelMutStok BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(85,29): warning CS8600: Converting null literal or possible null value to non-nullable type. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Controllers\Reports\BC\Controller.ReportBCList.cs(88,52): warning CS8604: Possible null reference argument for parameter 'userid' in 'List<ResponseModelHistLog> RepoReportBC.HistLOG(RequestModelHistLog BodyRequest, IDbConnection conn, string userid)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Transaction\ServiceTRBirthdayPray.cs(379,74): warning CS8604: Possible null reference argument for parameter 'storedValue' in 'string ServiceTRBirthdayPray.ResolveStoredAudioPreviewUrl(string storedValue)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Transaction\ServiceTRBuletin.cs(413,41): warning CS8604: Possible null reference argument for parameter 'item' in 'void List<string>.Add(string item)'. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Master\ServiceMasterItem.cs(72,45): warning CS8602: Dereference of a possibly null reference. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+D:\KANTOR\Project VB\WEB DOA\API\Service\Master\ServiceMasterItem.cs(81,40): warning CS8602: Dereference of a possibly null reference. [D:\KANTOR\Project VB\WEB DOA\API\API.csproj]
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 189 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: full API.Tests after new6 combined-template change
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     5, Skipped:     0, Total:     5, Duration: 1 s - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: API build after new6 combined-template change
+Invocation: dotnet build API/API.csproj --no-restore --nologo
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.00
+ExitCode: 0
+
+Scenario: behavior-level DebugSendWhatsApp public path tests run 1
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(378,47): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeBirthdayPrayConnection.ConnectionString.set' doesn't match implicitly implemented member 'void IDbConnection.ConnectionString.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(496,46): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeCommand.CommandText.set' doesn't match implicitly implemented member 'void IDbCommand.CommandText.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(604,44): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeParameter.ParameterName.set' doesn't match implicitly implemented member 'void IDataParameter.ParameterName.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(605,43): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeParameter.SourceColumn.set' doesn't match implicitly implemented member 'void IDataParameter.SourceColumn.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_New6UsesOneDryRunVideoStageAndSkipsBlankVoiceTemplate [313 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.HeaderParameter(JToken payload) in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 354
+   at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_New6UsesOneDryRunVideoStageAndSkipsBlankVoiceTemplate() in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 152
+--- End of stack trace from previous location ---
+  Failed API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_UnrelatedTemplateWithFollowUpDisabledKeepsImageMainAndDisabledSkip [5 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.HeaderParameter(JToken payload) in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 354
+   at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_UnrelatedTemplateWithFollowUpDisabledKeepsImageMainAndDisabledSkip() in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 218
+--- End of stack trace from previous location ---
+  Failed API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_New5UsesImageMainAndConfiguredVoiceFollowUpDryRunStages [1 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.HeaderParameter(JToken payload) in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 354
+   at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_New5UsesImageMainAndConfiguredVoiceFollowUpDryRunStages() in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 187
+--- End of stack trace from previous location ---
+  Failed API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_New6NormalizationKeepsTrimmedConfiguredOutboundTemplateName [3 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at API.Tests.ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp_New6NormalizationKeepsTrimmedConfiguredOutboundTemplateName() in D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs:line 259
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     4, Passed:     1, Skipped:     0, Total:     5, Duration: 322 ms - API.Tests.dll (net8.0)
+ExitCode: 1
+
+Scenario: behavior-level DebugSendWhatsApp public path tests run 1 after parser fix
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(396,47): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeBirthdayPrayConnection.ConnectionString.set' doesn't match implicitly implemented member 'void IDbConnection.ConnectionString.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(514,46): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeCommand.CommandText.set' doesn't match implicitly implemented member 'void IDbCommand.CommandText.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(622,44): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeParameter.ParameterName.set' doesn't match implicitly implemented member 'void IDataParameter.ParameterName.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(623,43): warning CS8767: Nullability of reference types in type of parameter 'value' of 'void FakeParameter.SourceColumn.set' doesn't match implicitly implemented member 'void IDataParameter.SourceColumn.set' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     5, Skipped:     0, Total:     5, Duration: 192 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: behavior-level DebugSendWhatsApp public path tests final run 1
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(396,43): warning CS8766: Nullability of reference types in return type of 'string? FakeBirthdayPrayConnection.ConnectionString.get' doesn't match implicitly implemented member 'string IDbConnection.ConnectionString.get' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(514,42): warning CS8766: Nullability of reference types in return type of 'string? FakeCommand.CommandText.get' doesn't match implicitly implemented member 'string IDbCommand.CommandText.get' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(622,40): warning CS8766: Nullability of reference types in return type of 'string? FakeParameter.ParameterName.get' doesn't match implicitly implemented member 'string IDataParameter.ParameterName.get' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+D:\KANTOR\Project VB\WEB DOA\API.Tests\ServiceTRBirthdayPrayWhatsAppPayloadTests.cs(623,39): warning CS8766: Nullability of reference types in return type of 'string? FakeParameter.SourceColumn.get' doesn't match implicitly implemented member 'string IDataParameter.SourceColumn.get' (possibly because of nullability attributes). [D:\KANTOR\Project VB\WEB DOA\API.Tests\API.Tests.csproj]
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     5, Skipped:     0, Total:     5, Duration: 119 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: behavior-level DebugSendWhatsApp public path tests clean final run 1
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     5, Skipped:     0, Total:     5, Duration: 127 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: behavior-level DebugSendWhatsApp public path tests clean final run 2
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --filter FullyQualifiedName~ServiceTRBirthdayPrayWhatsAppPayloadTests.DebugSendWhatsApp --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     5, Skipped:     0, Total:     5, Duration: 106 ms - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: full API.Tests after behavior-level DebugSendWhatsApp coverage
+Invocation: dotnet test API.Tests/API.Tests.csproj --no-restore --logger 'console;verbosity=minimal'
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+  API.Tests -> D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll
+Test run for D:\KANTOR\Project VB\WEB DOA\API.Tests\bin\Debug\net8.0\API.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.14.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 1 s - API.Tests.dll (net8.0)
+ExitCode: 0
+
+Scenario: API build after behavior-level DebugSendWhatsApp coverage
+Invocation: dotnet build API/API.csproj --no-restore --nologo
+  API -> D:\KANTOR\Project VB\WEB DOA\API\bin\Debug\net8.0\API.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.02
+ExitCode: 0
+
+Scenario: git whitespace/error diff check
+Invocation: git diff --check
+ExitCode: 0
+
+Scenario: cleanup aborted local API listener
+Invocation: taskkill /PID 10084 /T /F
+SUCCESS: The process with PID 10084 (child process of PID 18852) has been terminated.
+ExitCode: 0
+Invocation: netstat -ano | grep ':5178' || true
+  TCP    127.0.0.1:51780        0.0.0.0:0              LISTENING       4728
+  TCP    127.0.0.1:51781        0.0.0.0:0              LISTENING       4728
+  TCP    127.0.0.1:51782        0.0.0.0:0              LISTENING       4728
