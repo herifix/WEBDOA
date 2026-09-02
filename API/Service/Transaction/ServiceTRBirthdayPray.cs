@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -219,7 +220,7 @@ namespace API.Service.Transaction
         public async Task<ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>> SendNextTodayCompleteUnsentWhatsApp()
         {
             DateTime now = DateTime.Now;
-            if (now.TimeOfDay < TimeSpan.FromHours(5))
+            if (now.TimeOfDay < TimeSpan.FromHours(4))
             {
                 return new ResponseData<ResponseModelTRBirthdayPrayAutoSendResult>
                 {
@@ -1893,6 +1894,43 @@ CreateNoWindow = true
                     };
                 }
 
+                WhatsAppDeliveryReceipt? webhookReceipt = repo.GetLatestWhatsAppDeliveryReceipt(
+                    phoneNumber,
+                    prayData.waSentDate,
+                    conn);
+                if (webhookReceipt != null)
+                {
+                    var webhookMessage = new GatewayMessageStatus
+                    {
+                        id = webhookReceipt.gatewayMessageId,
+                        wamId = webhookReceipt.gatewayMessageId,
+                        messageType = "WEBHOOK_RECEIPT",
+                        status = webhookReceipt.status,
+                        timestamp = webhookReceipt.occurredAt?.ToString("o", CultureInfo.InvariantCulture) ?? ""
+                    };
+                    var webhookDebug = new GatewayDeliveryStatusDebug
+                    {
+                        normalizedPhone = phoneNumber,
+                        messageArrayPath = "webhook-receipt",
+                        rawMessageCount = 1,
+                        parsedOutboundCount = 1
+                    };
+
+                    return new ResponseData<object>
+                    {
+                        success = true,
+                        message = $"Status WA dari webhook: {webhookMessage.status}.",
+                        data = new
+                        {
+                            phoneNumber,
+                            checkedAt = DateTime.Now,
+                            latestOutboundMessages = new List<GatewayMessageStatus> { webhookMessage },
+                            debug = debug ? webhookDebug : null,
+                            gatewayResponse = (object?)null
+                        }
+                    };
+                }
+
                 string gatewayUrl = configuration["WhatsAppGateway:Url"] ?? "";
                 if (string.IsNullOrWhiteSpace(gatewayUrl))
                 {
@@ -1949,6 +1987,76 @@ CreateNoWindow = true
             {
                 if (conn.State == ConnectionState.Open)
                     conn.Close();
+            }
+        }
+
+        public ResponseData<object> ReceiveWhatsAppDeliveryWebhook(string? suppliedToken, JsonElement payload)
+        {
+            string configuredToken = (configuration["WhatsAppGateway:WebhookToken"] ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(configuredToken))
+            {
+                return new ResponseData<object>
+                {
+                    success = false,
+                    message = "WhatsAppGateway:WebhookToken belum diatur."
+                };
+            }
+
+            byte[] expectedToken = Encoding.UTF8.GetBytes(configuredToken);
+            byte[] receivedToken = Encoding.UTF8.GetBytes((suppliedToken ?? "").Trim());
+            if (expectedToken.Length != receivedToken.Length ||
+                !CryptographicOperations.FixedTimeEquals(expectedToken, receivedToken))
+            {
+                return new ResponseData<object>
+                {
+                    success = false,
+                    message = "Webhook token tidak valid."
+                };
+            }
+
+            IReadOnlyList<WhatsAppDeliveryReceipt> receipts = WhatsAppWebhookReceiptParser.Parse(payload);
+            if (receipts.Count == 0)
+            {
+                return new ResponseData<object>
+                {
+                    success = false,
+                    message = "Webhook tidak berisi delivery receipt WhatsApp yang dikenali."
+                };
+            }
+
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+
+                foreach (WhatsAppDeliveryReceipt receipt in receipts)
+                {
+                    repo.UpsertWhatsAppDeliveryReceipt(receipt, conn);
+                }
+
+                return new ResponseData<object>
+                {
+                    success = true,
+                    message = $"{receipts.Count} receipt WhatsApp diterima.",
+                    data = new
+                    {
+                        receiptCount = receipts.Count,
+                        statuses = receipts.Select(receipt => receipt.status).Distinct().ToArray()
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<object> { success = false, message = ex.Message };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
             }
         }
 

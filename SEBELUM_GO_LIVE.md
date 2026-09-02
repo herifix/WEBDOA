@@ -11,6 +11,7 @@ Checklist singkat ini dipakai sebelum aplikasi benar-benar digunakan user.
 - [ ] `Runtime:AspNetCoreUrls` tidak kosong
 - [ ] `VITE_API_BASE_URL` tidak kosong
 - [ ] `WhatsAppGateway:PublicBaseUrl` tidak kosong
+- [ ] `WhatsAppGateway:WebhookToken` diisi secret acak dan tidak disimpan di repository
 - [ ] `VITE_API_BASE_URL` dan `WhatsAppGateway:PublicBaseUrl` sudah mengarah ke API yang sama
 
 ## 2. Server
@@ -51,6 +52,8 @@ Checklist singkat ini dipakai sebelum aplikasi benar-benar digunakan user.
 - [ ] `WhatsAppGateway:Url` sudah benar jika dipakai
 - [ ] `WhatsAppGateway:Token` sudah benar jika dipakai
 - [ ] `WhatsAppGateway:PublicBaseUrl` sudah mengarah ke URL API yang bisa diakses client/gateway
+- [ ] webhook Api.co memakai endpoint HTTPS publik, token yang sama dengan konfigurasi production, serta event WhatsApp `Delivered`, `Read`, dan `Failed`
+- [ ] sertifikat HTTPS endpoint webhook masih valid
 - [ ] link file/gambar/audio yang dibagikan aplikasi membuka host yang benar, bukan `localhost` atau IP lama
 - [ ] proses scheduler jalan tanpa error
 

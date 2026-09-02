@@ -107,6 +107,7 @@ Check these files first before making changes:
 | Phone numbers | `GET api/Transaction/TRBirthdayPray/GetPhoneNumbers` | Gateway phone-number lookup utility. |
 | Media debug | `GET api/Transaction/TRBirthdayPray/GetMediaDebugInfo?idDonatur=...&year=...` | Audio URL and storage diagnostics. |
 | Delivery status | `GET api/Transaction/TRBirthdayPray/GetWhatsAppDeliveryStatus?idDonatur=...&year=...&debug=...` | Conversation-message status lookup. |
+| Delivery receipt webhook | `POST api/Transaction/TRBirthdayPray/WhatsAppDeliveryWebhook?token=...` | Public callback for Api.co WhatsApp `DELIVERED`/`READ`/`FAILED` receipts; token is required. |
 | Voice upload | `POST api/voice/upload-mp3` | Current UI handoff to `ServiceVoiceStorage`. |
 | Voice signed URL | `GET api/voice/{id}/signed-url` | Signed/public playback lookup. |
 | Voice redirect | `GET api/voice/{id}/redirect` | Redirects to the resolved playback URL. |
@@ -161,7 +162,8 @@ Check these files first before making changes:
 - Deployment migration for the 2026-07-13 WABA setting columns:
   `scripts/database/2026-07-13-add-whatsapp-template-settings.sql`.
 - Config sections that matter for this cluster:
-  `Runtime`, `VoiceStorage`, `WhatsAppGateway`, and `MediaConversion`.
+  `Runtime`, `VoiceStorage`, `WhatsAppGateway` (including the secret
+  `WebhookToken`), and `MediaConversion`.
 - `API/Program.cs` exposes local-server birthday audio under
   `/api/uploads/birthday-pray` and also wires `WhatsAppSchedulerWorker` as a
   hosted background service.
@@ -271,9 +273,14 @@ Check these files first before making changes:
 - `GetMediaDebugInfo` is the first diagnostic step for storage/provider/public
   URL issues. It returns public base URL, storage provider, root path,
   environment folder, preview URL, and delivery URL facts.
-- `GetWhatsAppDeliveryStatus` reads conversation messages from the gateway and
-  summarizes the latest outbound status. In debug mode it also returns parsing
-  metadata such as normalized phone, message path, and fallback reasoning.
+- `GetWhatsAppDeliveryStatus` first reads a matching terminal webhook receipt
+  (`DELIVERED`, `READ`, or `FAILED`), then falls back to the gateway
+  conversation messages. A webhook `SENT` receipt deliberately cannot mask a
+  later gateway receipt or keep the dashboard at an intermediate state.
+- `WhatsAppDeliveryWebhook` validates the query-token against
+  `WhatsAppGateway:WebhookToken`, accepts known Api.co envelope and Meta status
+  array variants, and persistently upserts receipt state by gateway message ID.
+  It does not log raw callbacks or accept anonymous unprotected posts.
 
 ### 4.8 Dashboard send/status behavior
 
@@ -389,7 +396,8 @@ by assumption:
 | Voice-only backend save | `ControllerTRBirthdayPray.SaveVoice` or `SaveVoiceFFmpeg` -> `ServiceTRBirthdayPray.SaveVoice*` | Supported API paths, but not the current page's primary save behavior. |
 | Manual WhatsApp send | `TRBirthdayPray.tsx` or dashboard action -> `SendWhatsApp` -> `ServiceTRBirthdayPray.SendWhatsApp` -> gateway | This is the path that can mark `IsWASent`. |
 | Media debug | `TRBirthdayPray.tsx.handleGetMediaDebugInfo` -> `GetMediaDebugInfo` -> `ServiceTRBirthdayPray.GetMediaDebugInfo` | First stop for public URL/storage issues. |
-| Delivery status | `TRBirthdayPray.tsx` or `Dashboard.tsx` -> `GetWhatsAppDeliveryStatus` -> `ServiceTRBirthdayPray.GetWhatsAppDeliveryStatus` | Uses gateway conversation messages, not the send log table. |
+| Delivery status | `TRBirthdayPray.tsx` or `Dashboard.tsx` -> `GetWhatsAppDeliveryStatus` -> `ServiceTRBirthdayPray.GetWhatsAppDeliveryStatus` | Uses a matching terminal webhook receipt first, then gateway conversation messages; not the send log table. |
+| Delivery receipt | Api.co webhook -> `WhatsAppDeliveryWebhook` -> `ServiceTRBirthdayPray.ReceiveWhatsAppDeliveryWebhook` -> `RepoTRBirthdayPray.UpsertWhatsAppDeliveryReceipt` | Configure only WhatsApp `Delivered`, `Read`, and `Failed` events with a high-entropy query token. |
 | Scheduler worker | hosted service -> `WhatsAppSchedulerWorker` -> `RepoWhatsAppSchedule.GetDueDispatches` -> gateway -> `InsertSendLog` | Separate from manual send status tracking. |
 | Scheduler config | `WhatsAppSchedule.tsx` -> schedule hook/service -> `RepoWhatsAppSchedule` | Controls send time and activation only. |
 | Application config | `ApplicationSetting.tsx` -> setting hook/service -> `RepoApplicationSetting` | Feeds template, token, image, link, storage type, and sender phone-number ID behavior. |
@@ -420,6 +428,9 @@ Before shipping any TRBirthdayPray change, verify these points:
 - For a suspected provider failure, record the classification and evidence
   separately from application bugs; do not change application flow merely to
   hide an external condition.
+- For webhook delivery status, set `WhatsAppGateway:WebhookToken` outside
+  version control, deploy the receipt migration, and make a live post before
+  treating dashboard status as verified.
 
 ## 8. Self-Learning And Update Protocol
 
@@ -676,3 +687,89 @@ Use this template for future notes:
   fetch against `yobel.intsoftware.co.id` is blocked by external TLS certificate
   validity (`NotTimeValid` / curl `SEC_E_CERT_EXPIRED`), so this task does not
   claim a live gateway send or public-download success.
+
+### 2026-09-01 - Production delivery status remains SENT
+
+- Classification: gateway-provider.
+- Symptom and scope: The 11 birthday-pray rows marked sent in the production
+  dashboard all displayed `SENT`; none displayed `DELIVERED` or `READ`.
+- Trace and affected state: `Dashboard.tsx` calls
+  `GetWhatsAppDeliveryStatus`, which reads the gateway conversation endpoint.
+  The endpoint returned HTTP 200 and `success=true` for all 11 checks, with one
+  outbound `TEMPLATE` parsed per row and normalized status `SENT`.
+- Confirmed root cause or condition: The provider conversation payloads contain
+  no delivery/read receipt for the queried outbound messages. One conversation
+  contained 15 inbound messages after the outbound template, but still no
+  `DELIVERED`/`READ` marker. The application parser did not transform an
+  available receipt into `SENT`. Api.co.id's official guidance identifies this
+  symptom as a missing or incorrect real-time delivery-status webhook; its
+  dashboard/account configuration and callback payload contract still require
+  administrator verification.
+- Prevention / regression guard: Treat this as a gateway delivery-receipt
+  availability/configuration issue. Preserve the status parser and capture its
+  debug counts before changing application logic; do not add an unauthenticated
+  receiver or persist guessed payload fields. The dashboard refresh control can
+  only show statuses the gateway exposes.
+- Evidence: Runtime-verified against production on 2026-09-01; no donor names,
+  phone numbers, gateway token, or raw payloads retained.
+- Source of truth: `ServiceTRBirthdayPray.GetWhatsAppDeliveryStatus`,
+  `ServiceTRBirthdayPray.NormalizeGatewayDeliveryStatus`, and the production
+  `GetWhatsAppDeliveryStatus?debug=true` responses.
+
+### 2026-09-01 - Api.co delivery-receipt callback support
+
+- Change: Added the token-protected
+  `POST Transaction/TRBirthdayPray/WhatsAppDeliveryWebhook` endpoint, resilient
+  receipt parsing, idempotent `TRBirthdayPrayWADeliveryReceipt` migration, and
+  terminal-receipt priority in the delivery-status lookup.
+- Why: Embedded Signup registers the Meta-to-Api.co connection, but the
+  application still needs its own Api.co callback to receive `DELIVERED`,
+  `READ`, and `FAILED` status transitions.
+- Source of truth: `ControllerTRBirthdayPray`, `ServiceTRBirthdayPray`,
+  `WhatsAppWebhookReceiptParser`, `RepoTRBirthdayPray`, and
+  `2026090101__whatsapp_delivery_receipts.sql`.
+- Risk / sharp edge: Do not commit `WhatsAppGateway:WebhookToken`. Configure
+  only the WhatsApp delivery/read/failure events in Api.co and keep the public
+  API TLS certificate valid. Receipt-to-birthday correlation is by normalized
+  recipient plus send time because the stable send flow is intentionally not
+  changed to persist a gateway message ID.
+- Verification: Code-verified. Parser and service tests cover Api.co-style and
+  Meta-style receipt payloads plus invalid-token rejection; API build and all
+  15 API tests passed. On 2026-09-01, the API package and idempotent receipt
+  migration were deployed to `gtc-server`; the receipt table and index were
+  verified. The public callback correctly returns `503` until the first login
+  completes the application's versioning-readiness gate. Live Api.co dashboard
+  and receipt QA remain pending a dashboard URL update and TLS certificate
+  renewal; the existing public certificate was verified expired.
+
+### 2026-09-01 - Local dashboard receipt interpretation
+
+- Classification: environment boundary, not status-parser regression.
+- Trace: `127.0.0.1:5173` proxies dashboard API calls to
+  `127.0.0.1:5178`; it does not read the production receipt table. The Api.co
+  callback targets the public production API and therefore cannot update a
+  local development dashboard.
+- Confirmed condition: For a test send at `2026-09-01 12:49 WIB`, the gateway
+  conversation response was stable across two checks and its newest outbound
+  event was `TEMPLATE:SENT` at `05:49:55Z`. The visible `READ` events were from
+  15 August, so selecting them would falsely mark the current send as read.
+- Prevention: Never reorder a mixed conversation history merely to prefer an
+  older terminal receipt. Verify the Api.co delivery history for the current
+  event (expected callback HTTP 200) and inspect the production dashboard when
+  validating the production webhook.
+
+### 2026-09-01 - Production callback wiring repair
+
+- Confirmed root cause: Production `appsettings.Production.json` did not
+  contain `WhatsAppGateway:WebhookToken`; therefore a callback could not be
+  authenticated or persisted. For the verified birthday-pray send window, the
+  receipt table had zero matching rows.
+- Repair: A new 32-byte Base64Url secret was stored only in the production
+  configuration. The public receiver subsequently returned `401` for an
+  invalid token and `400` for a valid-token, non-receipt payload, proving that
+  the deployed application loaded the token and reached the parser.
+- Remaining external action: Replace the Api.co webhook URL's token placeholder
+  or obsolete token with the new production secret. Do not copy the secret into
+  source control or chat. The public TLS certificate still fails independent
+  validation (`SEC_E_CERT_EXPIRED`), so renew it before expecting Api.co to
+  deliver `DELIVERED`, `READ`, or `FAILED` callbacks.

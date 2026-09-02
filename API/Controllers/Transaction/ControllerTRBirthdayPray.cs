@@ -1,6 +1,8 @@
 using API.Repository.global;
 using API.Service.Transaction;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace API.Controllers
 {
@@ -138,6 +140,25 @@ namespace API.Controllers
             [FromQuery] bool debug = false)
         {
             return await service.GetWhatsAppDeliveryStatus(idDonatur, year, debug);
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [Route("Transaction/TRBirthdayPray/WhatsAppDeliveryWebhook")]
+        public ActionResult<ResponseData<object>> ReceiveWhatsAppDeliveryWebhook(
+            [FromQuery] string? token,
+            [FromBody] JsonElement payload)
+        {
+            ResponseData<object> response = service.ReceiveWhatsAppDeliveryWebhook(token, payload);
+            if (response.success)
+            {
+                return Ok(response);
+            }
+
+            return response.message.StartsWith("Webhook token", StringComparison.OrdinalIgnoreCase) ||
+                response.message.StartsWith("WhatsAppGateway:WebhookToken", StringComparison.OrdinalIgnoreCase)
+                ? Unauthorized(response)
+                : BadRequest(response);
         }
     }
 }

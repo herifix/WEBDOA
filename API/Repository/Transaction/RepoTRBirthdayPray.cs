@@ -18,6 +18,8 @@ internal interface iRepoTRBirthdayPray
     void UpdateVoicePath(long idTRBirthdayPray, string pathPesanSuara, IDbConnection conn, IDbTransaction tran);
     void MarkWASent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null);
     bool TryMarkWASentFromUnsent(long idTRBirthdayPray, IDbConnection conn, IDbTransaction? tran = null);
+    void UpsertWhatsAppDeliveryReceipt(WhatsAppDeliveryReceipt receipt, IDbConnection conn);
+    WhatsAppDeliveryReceipt? GetLatestWhatsAppDeliveryReceipt(string phoneNumber, DateTime? sentAt, IDbConnection conn);
 }
 
 public class RepoTRBirthdayPray : iRepoTRBirthdayPray
@@ -538,5 +540,65 @@ ORDER BY d.namaDonatur, d.id_donatur;";
               AND ISNULL(IsWASent, 0) = 0";
 
         return conn.Execute(sql, new { idTRBirthdayPray }, transaction: tran) == 1;
+    }
+
+    public void UpsertWhatsAppDeliveryReceipt(WhatsAppDeliveryReceipt receipt, IDbConnection conn)
+    {
+        const string sql = @"
+MERGE dbo.TRBirthdayPrayWADeliveryReceipt WITH (HOLDLOCK) AS target
+USING (SELECT @gatewayMessageId AS GatewayMessageId) AS source
+ON target.GatewayMessageId = source.GatewayMessageId
+WHEN MATCHED THEN
+    UPDATE SET
+        DeliveryStatus = CASE
+            WHEN target.DeliveryStatus = 'READ' THEN target.DeliveryStatus
+            WHEN @status = 'READ' THEN @status
+            WHEN @occurredAt >= target.OccurredAt THEN @status
+            ELSE target.DeliveryStatus
+        END,
+        RecipientPhoneNumber = CASE
+            WHEN @recipientPhoneNumber <> '' THEN @recipientPhoneNumber
+            ELSE target.RecipientPhoneNumber
+        END,
+        OccurredAt = CASE WHEN @occurredAt >= target.OccurredAt THEN @occurredAt ELSE target.OccurredAt END,
+        ReceivedAt = GETDATE()
+WHEN NOT MATCHED THEN
+    INSERT (GatewayMessageId, DeliveryStatus, RecipientPhoneNumber, OccurredAt, ReceivedAt)
+    VALUES (@gatewayMessageId, @status, @recipientPhoneNumber, @occurredAt, GETDATE());";
+
+        conn.Execute(sql, new
+        {
+            receipt.gatewayMessageId,
+            receipt.status,
+            receipt.recipientPhoneNumber,
+            occurredAt = receipt.occurredAt?.UtcDateTime ?? DateTime.UtcNow
+        });
+    }
+
+    public WhatsAppDeliveryReceipt? GetLatestWhatsAppDeliveryReceipt(
+        string phoneNumber,
+        DateTime? sentAt,
+        IDbConnection conn)
+    {
+        const string sql = @"
+SELECT TOP 1
+    GatewayMessageId AS gatewayMessageId,
+    DeliveryStatus AS status,
+    RecipientPhoneNumber AS recipientPhoneNumber,
+    OccurredAt AS occurredAt
+FROM dbo.TRBirthdayPrayWADeliveryReceipt
+WHERE RecipientPhoneNumber = @phoneNumber
+  AND DeliveryStatus IN ('DELIVERED', 'READ', 'FAILED')
+  AND (@sentAt IS NULL OR OccurredAt >= DATEADD(MINUTE, -2, @sentAt))
+ORDER BY
+    CASE DeliveryStatus
+        WHEN 'READ' THEN 4
+        WHEN 'DELIVERED' THEN 3
+        WHEN 'FAILED' THEN 2
+        ELSE 1
+    END DESC,
+    OccurredAt DESC;";
+
+        return conn.QuerySingleOrDefault<WhatsAppDeliveryReceipt>(sql, new { phoneNumber, sentAt });
     }
 }
