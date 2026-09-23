@@ -551,105 +551,257 @@ export default function DashboardPage() {
   }, [flatRows, focusDonaturId, location.pathname, navigate]);
 
 
- const handleDownloadDateRecordings = async (
-  dateKey: string
-) => {
-  clearFormMessage();
+//  const handleDownloadDateRecordings = async (
+//   dateKey: string
+// ) => {
+//   clearFormMessage();
 
-  try {
-    setDownloadingDateKey(dateKey);
+//   try {
+//     setDownloadingDateKey(dateKey);
 
-    const rowsToDownload = sourceRows.filter(
-      (row) =>
-        getDatePart(row.birthdayDate) === dateKey &&
-        row.sudahAdaPesanSuara
-    );
+//     const rowsToDownload = sourceRows.filter(
+//       (row) =>
+//         getDatePart(row.birthdayDate) === dateKey &&
+//         row.sudahAdaPesanSuara
+//     );
 
-    if (rowsToDownload.length === 0) {
-      setFormError(
-        "Tidak ada rekaman pada tanggal tersebut."
+//     if (rowsToDownload.length === 0) {
+//       setFormError(
+//         "Tidak ada rekaman pada tanggal tersebut."
+//       );
+//       return;
+//     }
+
+//     let downloadedCount = 0;
+//     const nonMp4Rows: string[] = [];
+
+//     for (const row of rowsToDownload) {
+//       let mediaUrl =
+//         row.mediaUrl ?? "";
+
+//       const extension =
+//         getMediaExtension(mediaUrl);
+
+//       console.log("MEDIA:", {
+//         nama: row.nama,
+//         mediaUrl,
+//         extension,
+//       });
+
+//       if (!isMp4Url(mediaUrl)) {
+//         mediaUrl = await ensureBirthdayPrayMp4(
+//           row.id_donatur,
+//           Number(
+//             getDatePart(row.birthdayDate)
+//               .slice(0, 4)
+//           )
+//         );
+//       }
+      
+//       if (!mediaUrl) {
+//         continue;
+//       }
+
+//       const fileName =
+//         `${sanitizeDownloadFileName(row.nama)} (${row.noHP}).mp4`;
+
+//       await downloadMediaFile(
+//         mediaUrl,
+//         fileName
+//       );
+
+//       downloadedCount++;
+
+//       await new Promise(
+//         (resolve) =>
+//           setTimeout(resolve, 500)
+//       );
+//     }
+
+//     if (nonMp4Rows.length > 0) {
+//       console.warn(
+//         "File bukan MP4:",
+//         nonMp4Rows
+//       );
+//     }
+
+//     if (downloadedCount === 0) {
+//       setFormError(
+//         "Tidak ada rekaman MP4 yang dapat didownload."
+//       );
+//       return;
+//     }
+
+//     setFormSuccess(
+//       `${downloadedCount} file MP4 berhasil didownload.` +
+//         (
+//           nonMp4Rows.length > 0
+//             ? ` ${nonMp4Rows.length} file dilewati karena bukan MP4.`
+//             : ""
+//         )
+//     );
+//   } catch (error) {
+//     setFormError(
+//       error instanceof Error
+//         ? error.message
+//         : "Gagal download rekaman."
+//     );
+//   } finally {
+//     setDownloadingDateKey(null);
+//   }
+// };
+
+  const handleDownloadDateRecordings = async (
+    dateKey: string
+  ) => {
+    clearFormMessage();
+
+    try {
+      setDownloadingDateKey(dateKey);
+
+      const rowsToDownload = sourceRows.filter(
+        (row) =>
+          getDatePart(row.birthdayDate) === dateKey &&
+          row.sudahAdaPesanSuara
       );
-      return;
-    }
 
-    let downloadedCount = 0;
-    const nonMp4Rows: string[] = [];
+      console.log(
+        "JUMLAH DOWNLOAD:",
+        rowsToDownload.length
+      );
 
-    for (const row of rowsToDownload) {
-      let mediaUrl =
-        row.mediaUrl ?? "";
+      if (rowsToDownload.length === 0) {
+        setFormError(
+          "Tidak ada rekaman pada tanggal tersebut."
+        );
+        return;
+      }
 
-      const extension =
-        getMediaExtension(mediaUrl);
+      const windowWithPicker = window as Window & {
+        showDirectoryPicker?: () => Promise<any>;
+      };
 
-      console.log("MEDIA:", {
-        nama: row.nama,
-        mediaUrl,
-        extension,
-      });
-
-      if (!isMp4Url(mediaUrl)) {
-        mediaUrl = await ensureBirthdayPrayMp4(
-          row.id_donatur,
-          Number(
-            getDatePart(row.birthdayDate)
-              .slice(0, 4)
-          )
+      if (!windowWithPicker.showDirectoryPicker) {
+        throw new Error(
+          "Browser belum mendukung pemilihan folder. Gunakan Chrome atau Edge terbaru."
         );
       }
-      
-      if (!mediaUrl) {
-        continue;
+
+      // User pilih folder sekali
+      const directoryHandle =
+        await windowWithPicker.showDirectoryPicker();
+
+      let downloadedCount = 0;
+
+      for (const row of rowsToDownload) {
+        let mediaUrl = row.mediaUrl ?? "";
+
+        console.log("PROCESS:", {
+          nama: row.nama,
+          mediaUrl,
+        });
+
+        // Jika bukan MP4 → convert dahulu
+        if (!isMp4Url(mediaUrl)) {
+          mediaUrl =
+            await ensureBirthdayPrayMp4(
+              row.id_donatur,
+              Number(
+                getDatePart(
+                  row.birthdayDate
+                ).slice(0, 4)
+              )
+            );
+        }
+
+        if (!mediaUrl) {
+          console.warn(
+            `Media ${row.nama} kosong`
+          );
+          continue;
+        }
+
+        const fileName =
+          `${sanitizeDownloadFileName(row.nama)} (${row.noHP}).mp4`;
+
+        // Ambil file lewat endpoint backend proxy
+        const params = new URLSearchParams();
+
+        params.set(
+          "mediaUrl",
+          mediaUrl
+        );
+
+        params.set(
+          "fileName",
+          fileName
+        );
+
+        const response = await fetch(
+          `/api/Transaction/TRBirthdayPray/DownloadMedia?${params.toString()}`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Gagal download ${fileName}. HTTP ${response.status}`
+          );
+        }
+
+        const blob =
+          await response.blob();
+
+        // Buat file di folder pilihan user
+        const fileHandle =
+          await directoryHandle.getFileHandle(
+            fileName,
+            {
+              create: true,
+            }
+          );
+
+        const writable =
+          await fileHandle.createWritable();
+
+        await writable.write(blob);
+        await writable.close();
+
+        downloadedCount++;
       }
 
-      const fileName =
-        `${sanitizeDownloadFileName(row.nama)} (${row.noHP}).mp4`;
+      if (downloadedCount === 0) {
+        setFormError(
+          "Tidak ada rekaman yang berhasil didownload."
+        );
+        return;
+      }
 
-      await downloadMediaFile(
-        mediaUrl,
-        fileName
+      setFormSuccess(
+        `${downloadedCount} rekaman berhasil disimpan.`
       );
 
-      downloadedCount++;
+      await dashboardQuery.refetch();
+    } catch (error) {
+      // User menekan Cancel pada pilih folder
+      if (
+        error instanceof DOMException &&
+        error.name === "AbortError"
+      ) {
+        return;
+      }
 
-      await new Promise(
-        (resolve) =>
-          setTimeout(resolve, 500)
-      );
-    }
-
-    if (nonMp4Rows.length > 0) {
-      console.warn(
-        "File bukan MP4:",
-        nonMp4Rows
-      );
-    }
-
-    if (downloadedCount === 0) {
       setFormError(
-        "Tidak ada rekaman MP4 yang dapat didownload."
+        error instanceof Error
+          ? error.message
+          : "Gagal download rekaman."
       );
-      return;
+    } finally {
+      setDownloadingDateKey(null);
     }
+  };
 
-    setFormSuccess(
-      `${downloadedCount} file MP4 berhasil didownload.` +
-        (
-          nonMp4Rows.length > 0
-            ? ` ${nonMp4Rows.length} file dilewati karena bukan MP4.`
-            : ""
-        )
-    );
-  } catch (error) {
-    setFormError(
-      error instanceof Error
-        ? error.message
-        : "Gagal download rekaman."
-    );
-  } finally {
-    setDownloadingDateKey(null);
-  }
-};
   const handleSendWAWeb = async (row: DashboardDetailRow) => {
     clearFormMessage();
 
