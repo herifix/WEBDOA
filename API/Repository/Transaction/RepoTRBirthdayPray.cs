@@ -65,7 +65,7 @@ public class RepoTRBirthdayPray : iRepoTRBirthdayPray
             b.Nama,
             b.TglLahir,
             b.birthdayDate,
-            b.NoHP,
+            Case when left(b.NoHP, 1) = '0' then '+62' + substring(b.NoHP, 2, len(b.NoHP)) else b.NoHP end as NoHP,
             b.Status,
             b.LastDonation,
             CAST(
@@ -136,7 +136,7 @@ public class RepoTRBirthdayPray : iRepoTRBirthdayPray
             b.Nama,
             b.TglLahir,
             b.birthdayDate,
-            b.NoHP,
+            Case when left(b.NoHP, 1) = '0' then '+62' + substring(b.NoHP, 2, len(b.NoHP)) else b.NoHP end as NoHP,
             b.Status,
             b.LastDonation,
             CAST(
