@@ -322,27 +322,27 @@ async function ensureBirthdayPrayMp4(
   return String(result.data || "");
 }
 
-function downloadMediaFile(
-  fileUrl: string,
-  fileName: string
-) {
-  const params = new URLSearchParams();
+// function downloadMediaFile(
+//   fileUrl: string,
+//   fileName: string
+// ) {
+//   const params = new URLSearchParams();
 
-  params.set("mediaUrl", fileUrl);
-  params.set("fileName", fileName);
+//   params.set("mediaUrl", fileUrl);
+//   params.set("fileName", fileName);
 
-  const downloadUrl =
-    `/api/Transaction/TRBirthdayPray/DownloadMedia?${params.toString()}`;
+//   const downloadUrl =
+//     `/api/Transaction/TRBirthdayPray/DownloadMedia?${params.toString()}`;
 
-  const anchor = document.createElement("a");
+//   const anchor = document.createElement("a");
 
-  anchor.href = downloadUrl;
-  anchor.download = fileName;
+//   anchor.href = downloadUrl;
+//   anchor.download = fileName;
 
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-}
+//   document.body.appendChild(anchor);
+//   anchor.click();
+//   anchor.remove();
+// }
 
 export default function DashboardPage() {
   const applicationSettingQuery = useFetchApplicationSetting();
