@@ -27,84 +27,87 @@ public class RepoTRBirthdayPray : iRepoTRBirthdayPray
     public List<ResponseModelDashboardBirthday> GetUpcomingBirthdayDashboard(DateTime anchorDate, DateTime beginDate, IDbConnection conn)
     {
         const string sql = @"
-WITH DonaturBirthday AS (
-    SELECT
-        d.id_donatur,
-        d.Nama,
-        d.TglLahir,
-        d.NoHP,
-        d.Status,
-        d.LastDonation,
-        CASE
-            WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@beginDate), 2, 1))) < 29
-                THEN EOMONTH(DATEFROMPARTS(YEAR(@beginDate), 2, 1))
-            ELSE DATEFROMPARTS(YEAR(@beginDate), MONTH(d.TglLahir), DAY(d.TglLahir))
-        END AS birthdayDateThisYear
-    FROM Donatur d
-),
-UpcomingBirthday AS (
-    SELECT
-        b.id_donatur,
-        b.Nama,
-        b.TglLahir,
-        b.NoHP,
-        b.Status,
-        b.LastDonation,
-        CASE
-            WHEN CAST(b.birthdayDateThisYear AS date) >= CAST(@beginDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
-            ELSE CAST(CASE
-                WHEN MONTH(b.TglLahir) = 2 AND DAY(b.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@beginDate) + 1, 2, 1))) < 29
-                    THEN EOMONTH(DATEFROMPARTS(YEAR(@beginDate) + 1, 2, 1))
-                ELSE DATEFROMPARTS(YEAR(@beginDate) + 1, MONTH(b.TglLahir), DAY(b.TglLahir))
-            END AS date)
-        END AS birthdayDate
-    FROM DonaturBirthday b
-)
-SELECT
-    b.id_donatur,
-    b.Nama,
-    b.TglLahir,
-    b.birthdayDate,
-    b.NoHP,
-    b.Status,
-    b.LastDonation,
-    CAST(
-        CASE
-            WHEN pray.id_TRBirthdayPray IS NULL THEN 0
-            WHEN LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) = '' THEN 0
-            WHEN LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) = '' THEN 0
-            ELSE 1
-        END AS bit
-    ) AS sudahDidoakan,
-    CAST(
-        CASE
-            WHEN pray.id_TRBirthdayPray IS NULL THEN 0
-            WHEN LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) = '' THEN 0
-            ELSE 1
-        END AS bit
-    ) AS sudahAdaPesanDoa,
-    CAST(
-        CASE
-            WHEN pray.id_TRBirthdayPray IS NULL THEN 0
-            WHEN LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) = '' THEN 0
-            ELSE 1
-        END AS bit
-    ) AS sudahAdaPesanSuara,
-    pray.id_TRBirthdayPray,
-    pray.CreatedDate AS prayCreatedDate,
-    ISNULL(pray.IsWASent, 0) AS isWASent,
-    pray.WASentDate AS waSentDate
-FROM UpcomingBirthday b
-OUTER APPLY (
-    SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent, t.WASentDate
-    FROM TRBirthdayPray t
-    WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(b.Nama))
-      AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
-    ORDER BY t.CreatedDate DESC, t.id_TRBirthdayPray DESC
-) pray
-WHERE CAST(b.birthdayDate AS date) >= CAST(@beginDate AS date)
-  AND CAST(b.birthdayDate AS date) <= CAST(DATEADD(MONTH, 6, @anchorDate) AS date)
-ORDER BY b.birthdayDate, b.Nama;";
+        WITH DonaturBirthday AS (
+            SELECT
+                d.id_donatur,
+                d.Nama,
+                d.TglLahir,
+                d.NoHP,
+                d.Status,
+                d.LastDonation,
+                CASE
+                    WHEN MONTH(d.TglLahir) = 2 AND DAY(d.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@beginDate), 2, 1))) < 29
+                        THEN EOMONTH(DATEFROMPARTS(YEAR(@beginDate), 2, 1))
+                    ELSE DATEFROMPARTS(YEAR(@beginDate), MONTH(d.TglLahir), DAY(d.TglLahir))
+                END AS birthdayDateThisYear
+            FROM Donatur d
+        ),
+        UpcomingBirthday AS (
+            SELECT
+                b.id_donatur,
+                b.Nama,
+                b.TglLahir,
+                b.NoHP,
+                b.Status,
+                b.LastDonation,
+                CASE
+                    WHEN CAST(b.birthdayDateThisYear AS date) >= CAST(@beginDate AS date) THEN CAST(b.birthdayDateThisYear AS date)
+                    ELSE CAST(CASE
+                        WHEN MONTH(b.TglLahir) = 2 AND DAY(b.TglLahir) = 29 AND DAY(EOMONTH(DATEFROMPARTS(YEAR(@beginDate) + 1, 2, 1))) < 29
+                            THEN EOMONTH(DATEFROMPARTS(YEAR(@beginDate) + 1, 2, 1))
+                        ELSE DATEFROMPARTS(YEAR(@beginDate) + 1, MONTH(b.TglLahir), DAY(b.TglLahir))
+                    END AS date)
+                END AS birthdayDate
+            FROM DonaturBirthday b
+        )
+        SELECT
+            b.id_donatur,
+            b.Nama,
+            b.TglLahir,
+            b.birthdayDate,
+            b.NoHP,
+            b.Status,
+            b.LastDonation,
+            CAST(
+                CASE
+                    WHEN pray.id_TRBirthdayPray IS NULL THEN 0
+                    WHEN LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) = '' THEN 0
+                    WHEN LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) = '' THEN 0
+                    ELSE 1
+                END AS bit
+            ) AS sudahDidoakan,
+            CAST(
+                CASE
+                    WHEN pray.id_TRBirthdayPray IS NULL THEN 0
+                    WHEN LTRIM(RTRIM(ISNULL(pray.Pesan, ''))) = '' THEN 0
+                    ELSE 1
+                END AS bit
+            ) AS sudahAdaPesanDoa,
+            CAST(
+                CASE
+                    WHEN pray.id_TRBirthdayPray IS NULL THEN 0
+                    WHEN LTRIM(RTRIM(ISNULL(pray.PathPesanSuara, ''))) = '' THEN 0
+                    ELSE 1
+                END AS bit
+            ) AS sudahAdaPesanSuara,
+            pray.id_TRBirthdayPray,
+            pray.CreatedDate AS prayCreatedDate,
+            ISNULL(pray.IsWASent, 0) AS isWASent,
+            pray.WASentDate AS waSentDate,
+            pray.Pesan AS pesan,
+            pray.PathPesanSuara AS mediaUrl,isnull((select top 1 nama from pendoa where dfl=1),'') as namaPendoa
+            ,isnull((select top 1 nohp from pendoa where dfl=1),'') as noHPPendoa
+        FROM UpcomingBirthday b
+        OUTER APPLY (
+            SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent, t.WASentDate
+            FROM TRBirthdayPray t
+            WHERE LTRIM(RTRIM(t.Nama)) = LTRIM(RTRIM(b.Nama))
+            AND CAST(t.BirthdayDate AS date) = CAST(b.birthdayDate AS date)
+            ORDER BY t.CreatedDate DESC, t.id_TRBirthdayPray DESC
+        ) pray
+        WHERE CAST(b.birthdayDate AS date) >= CAST(@beginDate AS date)
+        AND CAST(b.birthdayDate AS date) <= CAST(DATEADD(MONTH, 6, @anchorDate) AS date)
+        ORDER BY b.birthdayDate, b.Nama;";
 
         return conn.Query<ResponseModelDashboardBirthday>(sql, new { anchorDate, beginDate }).ToList();
     }
@@ -161,7 +164,7 @@ ORDER BY b.birthdayDate, b.Nama;";
             isnull(pray.id_TRBirthdayPray,0) id_TRBirthdayPray,
             pray.CreatedDate AS prayCreatedDate,
             ISNULL(pray.IsWASent, 0) AS isWASent,
-            pray.WASentDate AS waSentDate
+            pray.WASentDate AS waSentDate,pray.Pesan,pray.PathPesanSuara
         FROM DonaturBirthday b
         OUTER APPLY (
             SELECT TOP 1 t.id_TRBirthdayPray, t.CreatedDate, t.Pesan, t.PathPesanSuara, t.IsWASent, t.WASentDate

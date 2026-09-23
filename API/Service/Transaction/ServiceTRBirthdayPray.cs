@@ -882,7 +882,77 @@ CreateNoWindow = true
                     }
             }
 
+        public async Task<ResponseData<string>> EnsureBirthdayPrayMp4(
+            long idDonatur,
+            int? year = null
+        )
+        {
+            int targetYear = year ?? DateTime.Today.Year;
 
+            try
+            {
+                if (conn.State == ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+
+                var prayData = repo.GetDataByDonaturId(
+                    idDonatur,
+                    targetYear,
+                    conn
+                ).data;
+
+                if (
+                    prayData == null ||
+                    prayData.id_donatur <= 0
+                )
+                {
+                    return new ResponseData<string>
+                    {
+                        success = false,
+                        message = "Data birthday pray tidak ditemukan.",
+                        data = ""
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(prayData.pathPesanSuara))
+                {
+                    return new ResponseData<string>
+                    {
+                        success = false,
+                        message = "Rekaman tidak tersedia.",
+                        data = ""
+                    };
+                }
+
+                string mp4Url = await EnsureWhatsAppMp4VoiceAsync(
+                    prayData
+                );
+
+                return new ResponseData<string>
+                {
+                    success = true,
+                    message = "MP4 siap.",
+                    data = mp4Url
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseData<string>
+                {
+                    success = false,
+                    message = ex.Message,
+                    data = ""
+                };
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+            }
+        }
         public ResponseData<long> Save(RequestSaveTRBirthdayPray bodyRequest)
         {
             var response = new ResponseData<long> { data = 0 };
@@ -4573,6 +4643,34 @@ CreateNoWindow = true
             return long.TryParse(storedValue[prefix.Length..], out id) && id > 0;
         }
 
+        public async Task<(byte[] bytes, string contentType)> DownloadMediaFile(
+            string mediaUrl
+        )
+        {
+            if (string.IsNullOrWhiteSpace(mediaUrl))
+            {
+                throw new InvalidOperationException("URL media kosong.");
+            }
+
+            using var client = new HttpClient();
+
+            using var response = await client.GetAsync(mediaUrl);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException(
+                    $"Gagal mengambil media. HTTP {(int)response.StatusCode}."
+                );
+            }
+
+            byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+
+            string contentType =
+                response.Content.Headers.ContentType?.MediaType
+                ?? "video/mp4";
+
+            return (bytes, contentType);
+        }
         private string SanitizeFileName(string value)
         {
             var invalidChars = Path.GetInvalidFileNameChars();

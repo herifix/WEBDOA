@@ -126,6 +126,47 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [Route("Transaction/TRBirthdayPray/EnsureMp4")]
+        public async Task<ResponseData<string>> EnsureMp4(
+            [FromQuery] long idDonatur,
+            [FromQuery] int? year = null
+        )
+        {
+            return await service.EnsureBirthdayPrayMp4(
+                idDonatur,
+                year
+            );
+        }
+
+        [HttpGet]
+        [Route("Transaction/TRBirthdayPray/DownloadMedia")]
+        public async Task<IActionResult> DownloadMedia(
+            [FromQuery] string mediaUrl,
+            [FromQuery] string fileName
+        )
+        {
+            try
+            {
+                var result =
+                    await service.DownloadMediaFile(mediaUrl);
+
+                return File(
+                    result.bytes,
+                    result.contentType,
+                    fileName
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet]
         [Route("Transaction/TRBirthdayPray/GetMediaDebugInfo")]
         public ResponseData<ResponseModelTRBirthdayPrayMediaDebug> GetMediaDebugInfo([FromQuery] long idDonatur, [FromQuery] int? year = null)
         {

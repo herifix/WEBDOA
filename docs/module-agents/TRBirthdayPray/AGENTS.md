@@ -483,7 +483,7 @@ cause is proven.
 
 | Symptom / category | Diagnose first | Confirmed prevention rule |
 | --- | --- | --- |
-| `133010`, `PhoneNotRegistered`, or `Account not registered` on test text | Inspect normalized gateway error and sender/business registration state. | Treat it as sender/business registration or gateway synchronization, not a donor-number or template-path defect. `SendTestWhatsAppText` remains a real `message_type: text` probe. |
+| `133010`, `PhoneNotRegistered`, or `Account not registered` on test text | Inspect normalized gateway error and sender/business registration state. Cross-check the configured sender ID with `GetPhoneNumbers`, but do not treat gateway `connected` or license `ACTIVE` labels alone as proof that Meta Cloud API registration completed. | Treat it as sender/business registration or gateway synchronization, not a donor-number or template-path defect. Re-register/resynchronize the sender through the provider/Meta onboarding path; `SendTestWhatsAppText` remains a real `message_type: text` probe. |
 | `WindowClosed` gateway response | Inspect the gateway error mapping and conversation-window context. | This is the 24-hour messaging-window condition; use the established template flow rather than rewriting the text payload. |
 | Meta `131053` or media upload/fetch failure | Call media debug, then verify the exact delivery URL is public, downloadable without login, and returns the intended media. | Fix public URL/storage configuration first. Do not change duration or MP3-to-MP4 behavior until reachability and content are proven. |
 | Delivery status is `UNKNOWN` | Use `GetWhatsAppDeliveryStatus?debug=true` and inspect normalized phone, message-array path, and outbound/inbound parsing counts. | Distinguish no outbound message from parsing fallback; do not infer a gateway result from `IsWASent` alone. |
@@ -773,3 +773,29 @@ Use this template for future notes:
   source control or chat. The public TLS certificate still fails independent
   validation (`SEC_E_CERT_EXPIRED`), so renew it before expecting Api.co to
   deliver `DELIVERED`, `READ`, or `FAILED` callbacks.
+
+### 2026-09-17 - Gateway inventory can be connected while Meta registration is missing
+
+- Classification: gateway-provider.
+- Symptom and scope: A live `DebugSendWhatsApp` request returned gateway
+  `BadRequest` normalized from `133010`, `PhoneNotRegistered`, or
+  `Account not registered` for the business sender.
+- Trace and affected state: The same local configuration successfully called
+  `GetPhoneNumbers`; its configured sender ID was present in the authenticated
+  response, with gateway `connection_status=connected` and license
+  `status=ACTIVE`. No application setting or send-flow state was changed.
+- Confirmed condition: The gateway's inventory/connection labels do not prove
+  that the sender completed or retained its separate Meta Cloud API phone-number
+  registration. Meta's registration contract requires that registration step
+  for account creation and again after an approved display-name change.
+- Prevention / regression guard: For sender-registration errors, first confirm
+  the configured ID appears in `GetPhoneNumbers`, then repair the provider/Meta
+  registration or embedded-signup synchronization. Do not change the donor
+  number, template payload, voice conversion, send order, or `IsWASent` logic.
+- Evidence: Code-verified, Runtime-verified, and Provider-confirmed on
+  2026-09-17. No sender identifier, phone number, token, or raw provider payload
+  was retained.
+- Source of truth: `ServiceTRBirthdayPray.DebugSendWhatsApp`,
+  `ServiceTRBirthdayPray.GetWhatsAppPhoneNumbers`,
+  `ServiceTRBirthdayPray.ExtractGatewayErrorDetail`, and Meta's WhatsApp
+  Business Platform registration collection.

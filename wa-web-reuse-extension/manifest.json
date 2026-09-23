@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "WA Web Reuse Tab",
+  "version": "1.0.0",
+  "description": "Membuka atau menggunakan kembali satu tab WhatsApp Web untuk chat dan pesan baru.",
+  "permissions": [
+    "tabs"
+    "windows"
+  ],
+  "host_permissions": [
+    "https://yobel.intsoftware.co.id/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "https://localhost/*",
+        "http://127.0.0.1/*",
+        "https://127.0.0.1/*",
+        "https://your-domain.example.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}

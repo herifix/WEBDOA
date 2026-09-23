@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ExternalLink, RefreshCcw, Send } from "lucide-react";
+import { Download,ExternalLink, RefreshCcw, Send } from "lucide-react";
 import ERPGridTable, { type Column } from "../components/GridFullParent";
 import {
   useFetchBirthdayDashboard,
@@ -12,6 +12,7 @@ import type {
   TRBirthdayPrayWhatsAppMessageStatus,
 } from "../Model/ModelTRBirthdayPray";
 import StatusBanner from "../components/StatusBanner";
+import { useFetchApplicationSetting } from "../hooks/react_query/useFetchApplicationSetting";
 
 type DashboardRow =
   | {
@@ -50,6 +51,10 @@ type DashboardRow =
       sudahAdaPesanSuara: boolean;
       isWASent: boolean;
       waSentDate: string | null;
+
+      namaPendoa: string;
+      pesan: string;
+      mediaUrl: string;
     };
 
 type DashboardDetailRow = Extract<DashboardRow, { rowType: "detail" }>;
@@ -207,7 +212,142 @@ function getDeliveryStatusClass(status: string) {
   return "bg-slate-100 text-slate-600";
 }
 
+
+function buildTemplateMessage(
+  template: string,
+  replacements: {
+    donatur: string;
+    pendoa: string;
+    link: string;
+    pesandoa: string;
+  }
+) {
+  return template
+    .replace(/<donatur>/gi, replacements.donatur)
+    .replace(/<pendoa>/gi, replacements.pendoa)
+    .replace(/<link>/gi, replacements.link)
+    .replace(/<pesandoa>/gi, replacements.pesandoa)
+    ;
+}
+
+function buildBirthdayPreviewMessage(
+  template: string,
+  replacements: {
+    donatur: string;
+    pendoa: string;
+    link: string;
+  },
+  pesanDoa: string
+) {
+  const hasPesanDoaPlaceholder = /<pesandoa>/i.test(template);
+
+  const templateMessage = template.trim()
+    ? buildTemplateMessage(template, {
+        ...replacements,
+        pesandoa: pesanDoa,
+      }).trim()
+    : "";
+
+  const sections = [templateMessage];
+  const trimmedPesan = pesanDoa.trim();
+
+  if (trimmedPesan && !hasPesanDoaPlaceholder) {
+    sections.push(trimmedPesan);
+  }
+
+  return sections.filter(Boolean).join("\n\n");
+}
+
+function getMediaExtension(
+  value?: string | null
+) {
+  if (!value) return "";
+
+  const cleanUrl = value
+    .split("?")[0]
+    .split("#")[0]
+    .toLowerCase();
+
+  const lastDot = cleanUrl.lastIndexOf(".");
+
+  if (lastDot < 0) {
+    return "";
+  }
+
+  return cleanUrl.substring(lastDot);
+}
+
+function isMp4Url(
+  value?: string | null
+) {
+  return getMediaExtension(value) === ".mp4";
+}
+function sanitizeDownloadFileName(
+  value: string
+) {
+  return (value || "Donatur")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .trim();
+}
+
+async function ensureBirthdayPrayMp4(
+  idDonatur: number,
+  year?: number
+) {
+  const params = new URLSearchParams();
+
+  params.set("idDonatur", String(idDonatur));
+
+  if (year) {
+    params.set("year", String(year));
+  }
+
+  const response = await fetch(
+    `/api/Transaction/TRBirthdayPray/EnsureMp4?${params.toString()}`,
+    {
+      method: "GET",
+      credentials: "include",
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result?.success) {
+    throw new Error(
+      result?.message ||
+        "Gagal menyiapkan file MP4."
+    );
+  }
+
+  return String(result.data || "");
+}
+
+function downloadMediaFile(
+  fileUrl: string,
+  fileName: string
+) {
+  const params = new URLSearchParams();
+
+  params.set("mediaUrl", fileUrl);
+  params.set("fileName", fileName);
+
+  const downloadUrl =
+    `/api/Transaction/TRBirthdayPray/DownloadMedia?${params.toString()}`;
+
+  const anchor = document.createElement("a");
+
+  anchor.href = downloadUrl;
+  anchor.download = fileName;
+
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 export default function DashboardPage() {
+  const applicationSettingQuery = useFetchApplicationSetting();
+  //const waWebWindowRef = useRef<Window | null>(null);
+  const [downloadingDateKey, setDownloadingDateKey] =   useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const today = getTodayLocalDate();
@@ -334,6 +474,11 @@ export default function DashboardPage() {
             id_TRBirthdayPray: item.id_TRBirthdayPray,
             nama: item.nama,
             noHP: item.noHP,
+
+            namaPendoa: item.namaPendoa ?? "",
+            pesan: item.pesan ?? "",
+            mediaUrl: item.mediaUrl ?? "",
+            
             birthdayDate: item.birthdayDate,
             sudahDidoakan: item.sudahDidoakan,
             sudahAdaPesanDoa: item.sudahAdaPesanDoa,
@@ -347,6 +492,24 @@ export default function DashboardPage() {
 
     return result;
   }, [expandedDates, expandedMonths, firstMonthKey, sourceRows]);
+
+  const [waExtensionReady, setWaExtensionReady] = useState(false);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+
+      if (event.data?.type === "WA_WEB_EXTENSION_READY") {
+        setWaExtensionReady(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, []);
 
   useEffect(() => {
     if (!focusDonaturId || sourceRows.length === 0) return;
@@ -386,6 +549,266 @@ export default function DashboardPage() {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [flatRows, focusDonaturId, location.pathname, navigate]);
+
+
+ const handleDownloadDateRecordings = async (
+  dateKey: string
+) => {
+  clearFormMessage();
+
+  try {
+    setDownloadingDateKey(dateKey);
+
+    const rowsToDownload = sourceRows.filter(
+      (row) =>
+        getDatePart(row.birthdayDate) === dateKey &&
+        row.sudahAdaPesanSuara
+    );
+
+    if (rowsToDownload.length === 0) {
+      setFormError(
+        "Tidak ada rekaman pada tanggal tersebut."
+      );
+      return;
+    }
+
+    let downloadedCount = 0;
+    const nonMp4Rows: string[] = [];
+
+    for (const row of rowsToDownload) {
+      let mediaUrl =
+        row.mediaUrl ?? "";
+
+      const extension =
+        getMediaExtension(mediaUrl);
+
+      console.log("MEDIA:", {
+        nama: row.nama,
+        mediaUrl,
+        extension,
+      });
+
+      if (!isMp4Url(mediaUrl)) {
+        mediaUrl = await ensureBirthdayPrayMp4(
+          row.id_donatur,
+          Number(
+            getDatePart(row.birthdayDate)
+              .slice(0, 4)
+          )
+        );
+      }
+      
+      if (!mediaUrl) {
+        continue;
+      }
+
+      const fileName =
+        `${sanitizeDownloadFileName(row.nama)} (${row.noHP}).mp4`;
+
+      await downloadMediaFile(
+        mediaUrl,
+        fileName
+      );
+
+      downloadedCount++;
+
+      await new Promise(
+        (resolve) =>
+          setTimeout(resolve, 500)
+      );
+    }
+
+    if (nonMp4Rows.length > 0) {
+      console.warn(
+        "File bukan MP4:",
+        nonMp4Rows
+      );
+    }
+
+    if (downloadedCount === 0) {
+      setFormError(
+        "Tidak ada rekaman MP4 yang dapat didownload."
+      );
+      return;
+    }
+
+    setFormSuccess(
+      `${downloadedCount} file MP4 berhasil didownload.` +
+        (
+          nonMp4Rows.length > 0
+            ? ` ${nonMp4Rows.length} file dilewati karena bukan MP4.`
+            : ""
+        )
+    );
+  } catch (error) {
+    setFormError(
+      error instanceof Error
+        ? error.message
+        : "Gagal download rekaman."
+    );
+  } finally {
+    setDownloadingDateKey(null);
+  }
+};
+  const handleSendWAWeb = async (row: DashboardDetailRow) => {
+    clearFormMessage();
+
+    let phone = row.noHP ?? "";
+    
+    phone = phone.replace(/\D/g, "");
+
+    if (phone.startsWith("0")) {
+      phone = "62" + phone.substring(1);
+    }
+
+    if (!phone) {
+      setFormError(`Nomor WhatsApp ${row.nama} belum tersedia.`);
+      return;
+    }
+
+    try {
+      
+
+      const template = applicationSettingQuery.data?.msgTemplate ?? "";
+       if (!template.trim()) {
+        setFormError(
+          "Template WhatsApp belum tersedia di Application Setting."
+        );
+        return;
+      }
+      
+      console.log("WA Web Row:", {
+        nama: row.nama,
+        namaPendoa: row.namaPendoa,
+        pesan: row.pesan,
+      });
+
+      const message = buildBirthdayPreviewMessage(
+        template,
+        {
+          donatur: row.nama || "-",
+          pendoa: row.namaPendoa || "-",
+          link: "",
+        },
+        row.pesan || ""
+      );
+
+      if (!message.trim()) {
+        setFormError("Pesan WhatsApp masih kosong.");
+        return;
+      }
+
+      // let encodedMessage = encodeURIComponent(message);
+
+      // <cake> encoded = %3Ccake%3E
+      // 🎂 UTF-8 encoded = %F0%9F%8E%82
+      // encodedMessage = encodedMessage.replace(
+      //   /%3Ccake%3E/gi,
+      //   "%F0%9F%8E%82"
+      // );
+
+      const cakeEmoji = String.fromCodePoint(0x1F382);
+
+      let finalMessage = message.replace(
+        /<cake>/gi,
+        cakeEmoji
+      );
+        finalMessage = finalMessage.replace(
+        /Happy Birthday\s*�/gi,
+        `Happy Birthday ${cakeEmoji}`
+      );
+
+      console.log("TEMPLATE:", template);
+    console.log("MESSAGE:", message);
+    console.log("FINAL MESSAGE:", finalMessage);
+    console.log(
+      "CAKE CODEPOINT:",
+      cakeEmoji.codePointAt(0)?.toString(16)
+    );
+
+      const encodedMessage = encodeURIComponent(finalMessage);
+
+      console.log("encodedMessage:", encodedMessage);
+      
+      // const url =
+      //   `https://web.whatsapp.com/send?phone=${phone}` +
+      //   `&text=${encodeURIComponent(finalMessage)}`;
+
+      if (waExtensionReady) {
+        // Extension terpasang:
+        // extension akan cari/reuse tab WhatsApp Web.
+        window.postMessage(
+          {
+            type: "OPEN_WHATSAPP_WEB",
+            phone,
+            message: finalMessage,
+          },
+          window.location.origin
+        );
+
+        return;
+      }
+
+      // Fallback jika extension tidak terpasang.
+      // const url =
+      //   `https://web.whatsapp.com/send?phone=${phone}` +
+      //   `&text=${encodeURIComponent(finalMessage)}`;
+
+      // window.open(
+      //   url,
+      //   "_blank",
+      //   "noopener,noreferrer"
+      // );
+      // Tanpa extension
+      const url =
+        `https://wa.me/${phone}?text=${encodeURIComponent(finalMessage)}`;
+
+      window.open(
+        url,
+        "waweb",
+        "noopener,noreferrer"
+      );
+
+      // window.postMessage(
+      //   {
+      //     type: "OPEN_WHATSAPP_WEB",
+      //     phone,
+      //     message: finalMessage,
+      //   },
+      //   window.location.origin
+      // );
+
+      // // const url = `https://wa.me/${phone}?text=${encodeURIComponent(finalMessage)}`;
+
+      // // if (
+      // //   !waWebWindowRef.current ||
+      // //   waWebWindowRef.current.closed
+      // // ) {
+      // //   // Pertama kali: buka WA Web
+      // //   waWebWindowRef.current = window.open(url, "_blank");
+
+      // //   if (!waWebWindowRef.current) {
+      // //     setFormError("Popup WhatsApp Web diblokir browser.");
+      // //     return;
+      // //   }
+      // // } else {
+      // //   // Berikutnya: gunakan tab WA Web yang sama
+      // //   waWebWindowRef.current.location.href = url;
+      // // }
+
+      // waWebWindowRef.current.focus();
+
+      // window.open(url, "waweb", "noopener,noreferrer");
+
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil data Birthday Pray.";
+
+      setFormError(message);
+    }
+  };
 
   const handleCheckDeliveryStatus = useCallback(
     async (row: DashboardDetailRow, options: { silent?: boolean } = {}) => {
@@ -526,7 +949,11 @@ export default function DashboardPage() {
         }
 
         if (row.rowType === "date") {
-          return <span className="pl-6 font-medium">{row.dateLabel}</span>;
+          return (
+            <span className="pl-6 font-medium">
+              {row.dateLabel}
+            </span>
+          );
         }
 
         return <span className="pl-12 text-slate-400">-</span>;
@@ -568,31 +995,73 @@ export default function DashboardPage() {
         if (row.rowType === "date") {
           const dateExpandKey = `${row.monthKey}|${row.dateKey}`;
 
-          const isComplete = row.totalCount > 0 && row.completeCount === row.totalCount;
-        return (
-          <div className="ml-6 flex min-w-0 items-center justify-between gap-3">
-            <button
-              type="button"
-              className="min-w-0 flex-1 truncate rounded px-2 py-1 text-left font-medium text-sky-700 hover:bg-sky-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpandedDates((prev) => ({
-                  ...prev,
-                  [dateExpandKey]: !row.isExpanded,
-                }));
-              }}
-            >
-              {row.groupLabel}
-            </button>
-            <span
-              className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold text-white ${
-                isComplete ? "bg-emerald-600" : "bg-rose-500"
-              }`}
-            >
-              {isComplete ? "Selesai Rekam" : "Belum Rekam"} ({row.completeCount}/{row.totalCount})
-            </span>
-          </div>
-        );
+          const isComplete =
+            row.totalCount > 0 &&
+            row.completeCount === row.totalCount;
+
+          const isDownloading =
+            downloadingDateKey === row.dateKey;
+
+          return (
+            <div className="ml-6 flex min-w-0 items-center justify-between gap-3">
+              {/* Lihat donatur */}
+              <button
+                type="button"
+                className="min-w-0 flex-1 truncate rounded px-2 py-1 text-left font-medium text-sky-700 hover:bg-sky-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+
+                  setExpandedDates((prev) => ({
+                    ...prev,
+                    [dateExpandKey]: !row.isExpanded,
+                  }));
+                }}
+              >
+                {row.groupLabel}
+              </button>
+
+              {/* DOWNLOAD REKAMAN */}
+              <button
+                type="button"
+                disabled={
+                  isDownloading ||
+                  row.completeCount === 0
+                }
+                className="inline-flex shrink-0 items-center gap-1 rounded bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+
+                  void handleDownloadDateRecordings(
+                    row.dateKey
+                  );
+                }}
+              >
+                {isDownloading ? (
+                  <RefreshCcw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3" />
+                )}
+
+                {isDownloading
+                  ? "Preparing..."
+                  : "Download Rekaman"}
+              </button>
+
+              {/* STATUS */}
+              <span
+                className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold text-white ${
+                  isComplete
+                    ? "bg-emerald-600"
+                    : "bg-rose-500"
+                }`}
+              >
+                {isComplete
+                  ? "Selesai Rekam"
+                  : "Belum Rekam"}{" "}
+                ({row.completeCount}/{row.totalCount})
+              </span>
+            </div>
+          );
         }
 
         return (
@@ -813,6 +1282,36 @@ export default function DashboardPage() {
               <Send className="h-3 w-3" />
             )}
             {row.isWASent ? "Resend WA" : "Send WA"}
+          </button>
+        );
+      },
+      cellClassName: "text-center",
+      headerClassName: "text-center",
+    },
+    {
+      key: "waweb",
+      label: "Send WA Web",
+      width: "110px",
+      render: (row) => {
+        if (row.rowType !== "detail") return null;
+
+        return (
+          <button
+            type="button"
+            // className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600"
+            // onClick={(e) => {
+            //   e.stopPropagation();
+
+            //   void handleSendWAWeb(row);
+            // }}
+            // disabled={!waExtensionReady}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleSendWAWeb(row);
+              }}
+              className="rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Send
           </button>
         );
       },

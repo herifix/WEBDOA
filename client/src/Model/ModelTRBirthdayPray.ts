@@ -4,6 +4,10 @@ export interface DashboardBirthdayItem {
   tglLahir: string | null;
   birthdayDate: string | null;
   noHP: string;
+  namaPendoa: string;
+  pesan: string;
+  mediaUrl: string;
+
   status: boolean;
   lastDonation: string | null;
   sudahDidoakan: boolean;

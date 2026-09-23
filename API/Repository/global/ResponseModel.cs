@@ -165,6 +165,10 @@ public class ResponseModelDashboardBirthday
     public DateTime? tglLahir { get; set; }
     public DateTime? birthdayDate { get; set; }
     public string noHP { get; set; } = "";
+    public string namaPendoa { get; set; } = "";
+    public string pesan { get; set; } = "";
+    public string mediaUrl { get; set; } = "";
+
     public bool status { get; set; }
     public DateTime? lastDonation { get; set; }
     public bool sudahDidoakan { get; set; }
